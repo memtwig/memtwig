@@ -1,0 +1,229 @@
+---
+// 4 bespoke monochrome schematic SVG cards explaining memtwig visually
+---
+
+<div class="grid gap-4 md:grid-cols-2">
+  <!-- Card 1: One vault per client -->
+  <div class="overflow-hidden rounded-lg border border-border bg-card">
+    <svg
+      viewBox="0 0 480 220"
+      class="block w-full h-auto border-b border-border bg-[#0b0b0e]"
+      style='font-family: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, sans-serif;'
+      role="img"
+      aria-label="Diagram showing workspace acme connected to acme and personal vaults while client-b stays blocked"
+    >
+      <defs>
+        <pattern id="grid-vaults" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="0.7" fill="#1b1b21" />
+        </pattern>
+      </defs>
+      <rect width="480" height="220" fill="url(#grid-vaults)" />
+
+      <!-- Active wires -->
+      <path d="M 172 97 C 218 97, 218 48, 264 48" fill="none" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.9" />
+      <path d="M 172 97 C 218 97, 218 110, 264 110" fill="none" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.7" />
+      <circle cx="264" cy="48" r="2.5" fill="#34d399" />
+      <circle cx="264" cy="110" r="2.5" fill="#34d399" />
+
+      <!-- Left workspace card -->
+      <rect x="24" y="68" width="148" height="58" rx="6" fill="#0f0f13" stroke="#2a2a32" stroke-width="1" />
+      <circle cx="40" cy="86" r="3" fill="#34d399" />
+      <text x="50" y="90" fill="#8a8a93" font-size="10.5">workspace</text>
+      <text x="37" y="111" fill="#f4f4f5" font-size="12.5" font-weight="500">~/work/acme</text>
+
+      <!-- Active vault: acme -->
+      <rect x="264" y="24" width="192" height="48" rx="6" fill="#121217" stroke="#2f2f38" stroke-width="1" />
+      <text x="280" y="46" fill="#f4f4f5" font-size="12.5" font-weight="500">acme</text>
+      <text x="280" y="61" fill="#8a8a93" font-size="10.5">client vault · propose</text>
+      <circle cx="438" cy="48" r="3" fill="#34d399" />
+
+      <!-- Active vault: personal -->
+      <rect x="264" y="86" width="192" height="48" rx="6" fill="#121217" stroke="#2f2f38" stroke-width="1" />
+      <text x="280" y="108" fill="#f4f4f5" font-size="12.5" font-weight="500">personal</text>
+      <text x="280" y="123" fill="#8a8a93" font-size="10.5">shared rules · direct</text>
+      <circle cx="438" cy="110" r="3" fill="#34d399" />
+
+      <!-- Blocked vault: client-b -->
+      <g opacity="0.45">
+        <rect x="264" y="148" width="192" height="48" rx="6" fill="#0d0d10" stroke="#2a2a30" stroke-width="1" stroke-dasharray="4 3" />
+        <text x="280" y="170" fill="#8a8a93" font-size="12.5" font-weight="500">client-b</text>
+        <text x="280" y="185" fill="#71717a" font-size="10.5">isolated · blocked</text>
+        <circle cx="438" cy="172" r="5" fill="none" stroke="#71717a" stroke-width="1.2" />
+        <line x1="434.5" y1="175.5" x2="441.5" y2="168.5" stroke="#71717a" stroke-width="1.2" />
+      </g>
+    </svg>
+    <div class="px-6 py-5">
+      <h3 class="text-lg font-medium text-foreground">One vault per client</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Work in Client A's repo, never leak Client B.</p>
+    </div>
+  </div>
+
+  <!-- Card 2: Plain Markdown in Git -->
+  <div class="overflow-hidden rounded-lg border border-border bg-card">
+    <svg
+      viewBox="0 0 480 220"
+      class="block w-full h-auto border-b border-border bg-[#0b0b0e]"
+      style='font-family: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, sans-serif;'
+      role="img"
+      aria-label="Diagram showing Markdown files committed to Git and indexed locally for fast search"
+    >
+      <defs>
+        <pattern id="grid-git" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="0.7" fill="#1b1b21" />
+        </pattern>
+      </defs>
+      <rect width="480" height="220" fill="url(#grid-git)" />
+
+      <!-- Back markdown file -->
+      <rect x="34" y="34" width="150" height="72" rx="5" fill="#0d0d11" stroke="#232329" stroke-width="1" />
+      <text x="46" y="53" fill="#71717a" font-size="10.5">decisions/2026-11.md</text>
+      <rect x="46" y="64" width="96" height="4" rx="1" fill="#1f1f26" />
+      <rect x="46" y="74" width="76" height="4" rx="1" fill="#1f1f26" />
+
+      <!-- Front markdown file -->
+      <rect x="22" y="64" width="156" height="96" rx="6" fill="#121217" stroke="#2e2e36" stroke-width="1" />
+      <text x="35" y="85" fill="#f4f4f5" font-size="11.5" font-weight="500">infra/deploy.md</text>
+      <line x1="35" y1="95" x2="165" y2="95" stroke="#222228" stroke-width="1" />
+      <rect x="35" y="106" width="108" height="5" rx="1.5" fill="#2a2a33" />
+      <rect x="35" y="118" width="84" height="5" rx="1.5" fill="#34d399" fill-opacity="0.45" />
+      <rect x="35" y="130" width="116" height="5" rx="1.5" fill="#23232b" />
+      <rect x="35" y="142" width="68" height="5" rx="1.5" fill="#23232b" />
+
+      <!-- Git commit rail -->
+      <line x1="178" y1="112" x2="292" y2="112" stroke="#2c2c34" stroke-width="1.5" />
+      <text x="235" y="94" text-anchor="middle" fill="#8a8a93" font-size="10.5">git · main</text>
+      <circle cx="204" cy="112" r="4" fill="#141418" stroke="#52525b" stroke-width="1.5" />
+      <circle cx="235" cy="112" r="4" fill="#141418" stroke="#52525b" stroke-width="1.5" />
+      <circle cx="266" cy="112" r="7" fill="#34d399" fill-opacity="0.18" />
+      <circle cx="266" cy="112" r="4" fill="#34d399" />
+
+      <!-- Local search index card -->
+      <rect x="292" y="48" width="164" height="122" rx="6" fill="#121217" stroke="#2e2e36" stroke-width="1" />
+      <circle cx="310" cy="68" r="4" fill="none" stroke="#a1a1aa" stroke-width="1.3" />
+      <line x1="313" y1="71" x2="317" y2="75" stroke="#a1a1aa" stroke-width="1.3" stroke-linecap="round" />
+      <text x="323" y="72" fill="#f4f4f5" font-size="11.5" font-weight="500">deploy</text>
+      <text x="444" y="72" text-anchor="end" fill="#34d399" font-size="10">local</text>
+      <line x1="304" y1="84" x2="444" y2="84" stroke="#222228" stroke-width="1" />
+
+      <rect x="304" y="94" width="140" height="30" rx="4" fill="#0c0c0f" stroke="#222228" stroke-width="1" />
+      <text x="313" y="108" fill="#e4e4e7" font-size="10.5" font-weight="500">infra/deploy.md</text>
+      <rect x="313" y="114" width="84" height="3" rx="1" fill="#34d399" fill-opacity="0.4" />
+
+      <rect x="304" y="130" width="140" height="30" rx="4" fill="#0c0c0f" stroke="#222228" stroke-width="1" />
+      <text x="313" y="144" fill="#a1a1aa" font-size="10.5">decisions/2026-11.md</text>
+      <rect x="313" y="150" width="66" height="3" rx="1" fill="#272730" />
+    </svg>
+    <div class="px-6 py-5">
+      <h3 class="text-lg font-medium text-foreground">Plain Markdown in Git</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Readable files and fast local search, no cloud DB.</p>
+    </div>
+  </div>
+
+  <!-- Card 3: Agents propose, you approve -->
+  <div class="overflow-hidden rounded-lg border border-border bg-card">
+    <svg
+      viewBox="0 0 480 220"
+      class="block w-full h-auto border-b border-border bg-[#0b0b0e]"
+      style='font-family: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, sans-serif;'
+      role="img"
+      aria-label="Diagram showing an AI agent proposing a diff on a locked org note with Approve and Reject controls"
+    >
+      <defs>
+        <pattern id="grid-diff" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="0.7" fill="#1b1b21" />
+        </pattern>
+      </defs>
+      <rect width="480" height="220" fill="url(#grid-diff)" />
+
+      <!-- Wire from Agent to Diff card -->
+      <path d="M 64 48 C 64 70, 64 82, 82 82" fill="none" stroke="#52525b" stroke-width="1.5" />
+      <circle cx="82" cy="82" r="2.5" fill="#a1a1aa" />
+
+      <!-- Agent chip -->
+      <rect x="26" y="20" width="76" height="28" rx="4" fill="#141418" stroke="#2e2e36" stroke-width="1" />
+      <circle cx="40" cy="34" r="3" fill="#34d399" />
+      <text x="50" y="38" fill="#e4e4e7" font-size="11.5" font-weight="500">Agent</text>
+
+      <!-- Diff card -->
+      <rect x="82" y="54" width="368" height="142" rx="6" fill="#121217" stroke="#2e2e36" stroke-width="1" />
+
+      <!-- Lock icon -->
+      <rect x="98" y="70" width="9" height="7" rx="1.5" fill="none" stroke="#8a8a93" stroke-width="1.2" />
+      <path d="M 100 70 V 67.5 A 2.5 2.5 0 0 1 105 67.5 V 70" fill="none" stroke="#8a8a93" stroke-width="1.2" />
+      <text x="115" y="77" fill="#f4f4f5" font-size="12" font-weight="500">infra/postgres.md</text>
+      <text x="434" y="77" text-anchor="end" fill="#8a8a93" font-size="10.5">proposed</text>
+      <line x1="82" y1="90" x2="450" y2="90" stroke="#232329" stroke-width="1" />
+
+      <!-- Removed line -->
+      <rect x="98" y="100" width="336" height="24" rx="3" fill="#ef4444" fill-opacity="0.12" />
+      <text x="108" y="116" fill="#fca5a5" font-size="11.5">- region: us-east-1</text>
+
+      <!-- Added line -->
+      <rect x="98" y="128" width="336" height="24" rx="3" fill="#34d399" fill-opacity="0.14" />
+      <text x="108" y="144" fill="#6ee7b7" font-size="11.5">+ region: eu-central-1</text>
+
+      <!-- Actions -->
+      <rect x="288" y="162" width="68" height="24" rx="4" fill="#18181b" stroke="#2e2e36" stroke-width="1" />
+      <text x="322" y="178" text-anchor="middle" fill="#d4d4d8" font-size="11" font-weight="500">Reject</text>
+
+      <rect x="364" y="162" width="70" height="24" rx="4" fill="#fafafa" />
+      <text x="399" y="178" text-anchor="middle" fill="#09090b" font-size="11" font-weight="600">Approve</text>
+    </svg>
+    <div class="px-6 py-5">
+      <h3 class="text-lg font-medium text-foreground">Agents propose, you approve</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Org notes stay protected behind reviewable diffs.</p>
+    </div>
+  </div>
+
+  <!-- Card 4: Works with every agent -->
+  <div class="overflow-hidden rounded-lg border border-border bg-card">
+    <svg
+      viewBox="0 0 480 220"
+      class="block w-full h-auto border-b border-border bg-[#0b0b0e]"
+      style='font-family: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, sans-serif;'
+      role="img"
+      aria-label="Diagram showing memtwig hub connected to Claude Code, Cursor, Codex, Antigravity, and Studio UI"
+    >
+      <defs>
+        <pattern id="grid-agents" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="0.7" fill="#1b1b21" />
+        </pattern>
+      </defs>
+      <rect width="480" height="220" fill="url(#grid-agents)" />
+
+      <!-- Symmetrical wires -->
+      <path d="M 146 48 C 170 48, 172 90, 196 90" fill="none" stroke="#3f3f46" stroke-width="1.4" />
+      <path d="M 146 132 C 170 132, 172 106, 196 106" fill="none" stroke="#3f3f46" stroke-width="1.4" />
+      <path d="M 284 90 C 308 90, 310 48, 334 48" fill="none" stroke="#3f3f46" stroke-width="1.4" />
+      <path d="M 284 106 C 308 106, 310 132, 334 132" fill="none" stroke="#3f3f46" stroke-width="1.4" />
+      <line x1="240" y1="126" x2="240" y2="162" stroke="#2c2c34" stroke-width="1.4" stroke-dasharray="3 3" />
+
+      <!-- Central memtwig hub -->
+      <rect x="196" y="70" width="88" height="56" rx="6" fill="#141418" stroke="#3f3f48" stroke-width="1.2" />
+      <circle cx="240" cy="88" r="3" fill="#34d399" />
+      <text x="240" y="109" text-anchor="middle" fill="#fafafa" font-size="12.5" font-weight="600">memtwig</text>
+
+      <!-- Left agent nodes -->
+      <rect x="24" y="28" width="122" height="40" rx="5" fill="#121217" stroke="#2a2a32" stroke-width="1" />
+      <text x="85" y="52" text-anchor="middle" fill="#e4e4e7" font-size="12" font-weight="500">Claude Code</text>
+
+      <rect x="24" y="112" width="122" height="40" rx="5" fill="#121217" stroke="#2a2a32" stroke-width="1" />
+      <text x="85" y="136" text-anchor="middle" fill="#e4e4e7" font-size="12" font-weight="500">Cursor</text>
+
+      <!-- Right agent nodes -->
+      <rect x="334" y="28" width="122" height="40" rx="5" fill="#121217" stroke="#2a2a32" stroke-width="1" />
+      <text x="395" y="52" text-anchor="middle" fill="#e4e4e7" font-size="12" font-weight="500">Codex</text>
+
+      <rect x="334" y="112" width="122" height="40" rx="5" fill="#121217" stroke="#2a2a32" stroke-width="1" />
+      <text x="395" y="136" text-anchor="middle" fill="#e4e4e7" font-size="12" font-weight="500">Antigravity</text>
+
+      <!-- Studio UI node -->
+      <rect x="184" y="162" width="112" height="32" rx="5" fill="#0e0e12" stroke="#232329" stroke-width="1" />
+      <text x="240" y="182" text-anchor="middle" fill="#8a8a93" font-size="11.5" font-weight="500">Studio UI</text>
+    </svg>
+    <div class="px-6 py-5">
+      <h3 class="text-lg font-medium text-foreground">Works with every agent</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Switch tools anytime without rebuilding your context.</p>
+    </div>
+  </div>
+</div>

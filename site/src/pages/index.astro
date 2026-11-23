@@ -4,6 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MobileNav } from "@/components/MobileNav";
 import { StudioShowcase } from "@/components/StudioShowcase";
+import FeatureGrid from "@/components/FeatureGrid.astro";
 import { ScopeDemo } from "@/components/ScopeDemo";
 import { QuickstartTabs } from "@/components/QuickstartTabs";
 
@@ -12,84 +13,34 @@ const repoUrl = "https://github.com/memtwig/memtwig";
 const releasesUrl = "https://github.com/memtwig/memtwig/releases";
 const docsUrl = "https://github.com/memtwig/memtwig/tree/main/docs";
 
-const title = "memtwig — Git-native, multi-org memory layer for AI agents";
+const title = "memtwig — Git-native memory for AI agents";
 const description =
-  "Curated Markdown vaults routed by Git remote. Single static Go binary with SQLite FTS5, embedded dark Studio Web UI, proposal governance, MCP, and hooks for Claude Code, Codex, and Cursor.";
+  "Plain Markdown vaults, isolated per client, in one local Go binary with embedded Studio UI for Claude Code, Codex, and Cursor.";
 
-const metrics = [
-  { value: "105 ms", label: "109 Markdown notes indexed into SQLite FTS5" },
-  { value: "14 MB", label: "Single static Go binary with embedded Studio UI" },
-  { value: "0", label: "External vector databases required" },
-];
-
-const pillars = [
-  {
-    title: "Git + Markdown",
-    body: "Every vault is a plain Git repository. Notes use YAML frontmatter or lightweight headers, an 8 KB soft cap, and append-only archives instead of silent deletion.",
-  },
-  {
-    title: "Hybrid FTS5 + RRF",
-    body: "Local SQLite FTS5 BM25 fused with optional 1024-dim embeddings via Ollama, OpenRouter, DeepInfra, OpenAI, or Cloudflare. Degrades cleanly to BM25 offline.",
-  },
-  {
-    title: "Studio UI + RBAC",
-    body: "Ships with an embedded local Studio Web UI (memtwig ui) and TUI for Overview, Knowledge Graph, Markdown editing, proposal diffs, audit logs, and self-service Settings.",
-  },
-];
-
-const comparison = [
-  {
-    dimension: "Storage format",
-    memtwig: "Plain Markdown in Git",
-    vectorApi: "Proprietary cloud DB",
-    staticFiles: "Unindexed flat files",
-  },
-  {
-    dimension: "Multi-org isolation",
-    memtwig: "cwd & git remote routing in SQL",
-    vectorApi: "Manual tenant IDs in app code",
-    staticFiles: "Per-repo only",
-  },
-  {
-    dimension: "Agent write safety",
-    memtwig: "owner-lock + proposal queue",
-    vectorApi: "Autonomous overwrite",
-    staticFiles: "Unrestricted edits",
-  },
-  {
-    dimension: "Secret scanning",
-    memtwig: "Built-in linter blocks sync",
-    vectorApi: "None",
-    staticFiles: "Manual hooks",
-  },
-  {
-    dimension: "Cross-harness",
-    memtwig: "CLI, Studio UI, TUI, stdio/HTTP MCP, hooks",
-    vectorApi: "SDK integration required",
-    staticFiles: "Tool-specific filenames",
-  },
-];
+const matrix = [
+  { capability: "Plain Git files", memtwig: "check", cloud: "dash", staticMd: "check" },
+  { capability: "Per-client isolation", memtwig: "check", cloud: "Manual", staticMd: "dash" },
+  { capability: "Works offline", memtwig: "check", cloud: "dash", staticMd: "check" },
+  { capability: "Diff approval", memtwig: "check", cloud: "dash", staticMd: "dash" },
+  { capability: "Multi-agent", memtwig: "check", cloud: "SDK", staticMd: "dash" },
+] as const;
 
 const faqs = [
   {
-    q: "What is memtwig?",
-    a: "memtwig is an open-source, single-binary Go memory layer for AI agents that stores curated facts in Git-backed Markdown vaults with multi-org isolation, hybrid SQLite FTS5 search, an embedded local Studio Web UI, MCP, and proposal governance.",
+    q: "How does per-client isolation work?",
+    a: "Each folder maps to a vault by path or Git remote, so an agent in Client A's repo never sees Client B's notes.",
   },
   {
-    q: "How does memtwig isolate memory across multiple client orgs?",
-    a: "Each org vault defines match_paths and match_git_remotes. memtwig resolves active vaults from the current working directory and enforces vault_id IN (...) directly inside SQLite queries, so agents in Client A's repo never see Client B's notes.",
+    q: "Do I need a cloud database or API key?",
+    a: "No. Local search and the embedded Studio UI run out of the box offline; optional embeddings and LLM curation can be added anytime.",
   },
   {
-    q: "How does memtwig compare to Mem0 or vector memory APIs?",
-    a: "Vector memory APIs store extracted facts in opaque databases and allow autonomous overwrites. memtwig keeps plain Markdown in Git, works offline with zero external services, scans for leaked secrets, and requires human approval for proposals on org or owner-locked notes.",
+    q: "Can agents overwrite my team notes?",
+    a: "Protected vaults queue reviewable diffs that you approve or reject from the CLI, TUI, or Studio UI.",
   },
   {
-    q: "Which AI coding agents work with memtwig?",
-    a: "memtwig works with Claude Code, Cursor, Codex, Antigravity, Hermes, and any MCP-compatible client via stdio MCP (memtwig mcp), Streamable HTTP MCP (memtwig serve), and native per-turn hooks (memtwig install).",
-  },
-  {
-    q: "Does memtwig require a vector database or paid API key?",
-    a: "No. memtwig embeds pure-Go SQLite with FTS5 BM25 and the local Studio Web UI out of the box. Optional 1024-dim embeddings (Ollama, OpenRouter, DeepInfra, OpenAI, Cloudflare) and semantic curation (curate --llm via Groq, OpenRouter, OpenAI, Ollama) degrade cleanly to local BM25 offline.",
+    q: "Which coding agents are supported?",
+    a: "Claude Code, Cursor, Codex, Antigravity, Hermes, and any client supporting standard MCP.",
   },
 ];
 
@@ -188,10 +139,9 @@ const jsonLd = {
 
         <nav class="hidden items-center gap-1 md:flex">
           <a href="#studio" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Studio</a>
+          <a href="#features" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">How it works</a>
           <a href="#isolation" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Isolation</a>
-          <a href="#architecture" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Architecture</a>
-          <a href="#comparison" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Comparison</a>
-          <a href="#faq" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">FAQ</a>
+          <a href="#install" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Install</a>
           <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Docs</a>
         </nav>
 
@@ -211,13 +161,13 @@ const jsonLd = {
     </header>
 
     <main>
-      <section class="mx-auto max-w-6xl px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-24">
-        <div class="mx-auto max-w-4xl text-center">
-          <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-6xl xl:text-7xl leading-[1.06]">
-            Git-native memory for AI agents across every org.
+      <section class="mx-auto max-w-6xl px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-20">
+        <div class="mx-auto max-w-3xl text-center">
+          <h1 class="text-balance text-5xl font-normal tracking-tight text-foreground sm:text-6xl xl:text-7xl leading-[1.05]">
+            Git-native memory for AI agents.
           </h1>
           <p class="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
-            Curated Markdown vaults routed by Git remote. One Go binary with embedded Studio UI for every harness.
+            Plain Markdown vaults, isolated per client, in one local binary.
           </p>
           <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
             <a href="#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
@@ -237,71 +187,71 @@ const jsonLd = {
         </div>
       </section>
 
-      <section class="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-        <div class="grid gap-4 sm:grid-cols-3">
-          {metrics.map((m) => (
-            <div class="rounded-lg border border-border bg-card p-6">
-              <div class="text-4xl font-light tracking-tight text-foreground tabular-nums sm:text-5xl">
-                {m.value}
-              </div>
-              <p class="mt-2.5 text-sm text-muted-foreground">{m.label}</p>
-            </div>
-          ))}
+      <section id="features" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
+        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+          How it works
+        </h2>
+        <div class="mt-8">
+          <FeatureGrid />
         </div>
       </section>
 
-      <section id="isolation" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-20">
+      <section id="isolation" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
         <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
-          Multi-org isolation
+          Try vault switching
         </h2>
         <div class="mt-8">
           <ScopeDemo client:load />
         </div>
       </section>
 
-      <section id="architecture" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-20">
-        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
-          Architecture
-        </h2>
-        <div class="mt-8 grid gap-4 md:grid-cols-3">
-          {pillars.map((item) => (
-            <div class="space-y-2.5 rounded-lg border border-border bg-card p-6">
-              <h3 class="text-xl font-medium text-foreground">{item.title}</h3>
-              <p class="text-sm leading-relaxed text-muted-foreground sm:text-base">{item.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="comparison" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-20">
+      <section id="comparison" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
         <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
           How it compares
         </h2>
         <div class="mt-8 overflow-x-auto rounded-lg border border-border bg-card">
-          <table class="w-full min-w-[600px] border-collapse text-left text-sm sm:text-base">
+          <table class="w-full min-w-[520px] border-collapse text-left text-sm sm:text-base">
             <thead>
               <tr class="border-b border-border bg-muted">
-                <th class="px-5 py-3.5 font-medium text-muted-foreground">Capability</th>
-                <th class="px-5 py-3.5 font-medium text-foreground">memtwig</th>
-                <th class="px-5 py-3.5 font-medium text-muted-foreground">Vector Memory APIs</th>
-                <th class="px-5 py-3.5 font-medium text-muted-foreground">Static Rules Files</th>
+                <th class="px-5 py-3.5 font-medium text-muted-foreground"></th>
+                <th class="px-5 py-3.5 text-center font-medium text-foreground">memtwig</th>
+                <th class="px-5 py-3.5 text-center font-medium text-muted-foreground">Cloud Memory APIs</th>
+                <th class="px-5 py-3.5 text-center font-medium text-muted-foreground">Static .md files</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
-              {comparison.map((row) => (
+              {matrix.map((row) => (
                 <tr>
-                  <td class="px-5 py-3.5 font-medium text-foreground">{row.dimension}</td>
-                  <td class="px-5 py-3.5 text-foreground">{row.memtwig}</td>
-                  <td class="px-5 py-3.5 text-muted-foreground">{row.vectorApi}</td>
-                  <td class="px-5 py-3.5 text-muted-foreground">{row.staticFiles}</td>
+                  <td class="px-5 py-3.5 font-medium text-foreground">{row.capability}</td>
+                  <td class="px-5 py-3.5 text-center">
+                    <span class="font-medium text-emerald-400" aria-label="Yes">✓</span>
+                  </td>
+                  <td class="px-5 py-3.5 text-center text-muted-foreground">
+                    {row.cloud === "dash" ? (
+                      <span aria-label="No">—</span>
+                    ) : (
+                      <span class="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{row.cloud}</span>
+                    )}
+                  </td>
+                  <td class="px-5 py-3.5 text-center text-muted-foreground">
+                    {row.staticMd === "check" ? (
+                      <span class="font-medium text-zinc-300" aria-label="Yes">✓</span>
+                    ) : (
+                      <span aria-label="No">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <div class="mt-4 flex flex-wrap gap-6 text-sm text-muted-foreground">
+          <a href="/vs/mem0" class="transition-colors hover:text-foreground">Compare vs Mem0 →</a>
+          <a href="/vs/claude-md" class="transition-colors hover:text-foreground">Compare vs CLAUDE.md →</a>
+        </div>
       </section>
 
-      <section id="install" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-20">
+      <section id="install" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
             Quickstart
@@ -312,7 +262,7 @@ const jsonLd = {
             rel="noreferrer"
             class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            Download prebuilt binaries (Linux, macOS, Windows)
+            Download prebuilt binaries
           </a>
         </div>
         <div class="mt-8">
@@ -326,10 +276,13 @@ const jsonLd = {
         </h2>
         <div class="mt-8 divide-y divide-border rounded-lg border border-border bg-card px-6 sm:px-8">
           {faqs.map((item) => (
-            <div class="py-6">
-              <h3 class="text-lg font-medium text-foreground">{item.q}</h3>
-              <p class="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">{item.a}</p>
-            </div>
+            <details class="group py-5">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-medium text-foreground sm:text-lg [&::-webkit-details-marker]:hidden">
+                <span>{item.q}</span>
+                <span class="shrink-0 text-muted-foreground transition-transform duration-150 group-open:rotate-45">+</span>
+              </summary>
+              <p class="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">{item.a}</p>
+            </details>
           ))}
         </div>
       </section>

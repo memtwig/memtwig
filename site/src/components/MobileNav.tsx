@@ -5,9 +5,8 @@ import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/com
 
 const links = [
   { href: "/#studio", label: "Studio" },
+  { href: "/#features", label: "How it works" },
   { href: "/#isolation", label: "Isolation" },
-  { href: "/#architecture", label: "Architecture" },
-  { href: "/#comparison", label: "Comparison" },
   { href: "/#install", label: "Install" },
   { href: "https://github.com/memtwig/memtwig", label: "GitHub", external: true },
 ];
