@@ -434,6 +434,60 @@ func (s *Server) handleNotes(w http.ResponseWriter, r *http.Request, p principal
 }
 
 func (s *Server) handleNote(w http.ResponseWriter, r *http.Request, p principal) {
+	if r.Method == http.MethodPut {
+		if !p.allowsRole("writer") {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "requires writer role"})
+			return
+		}
+		var req struct {
+			Vault   string `json:"vault"`
+			Path    string `json:"path"`
+			Content string `json:"content"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		relPath := filepath.ToSlash(strings.TrimPrefix(req.Path, "/"))
+		if req.Vault == "" || relPath == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "vault and path are required"})
+			return
+		}
+		for _, av := range s.activeVaultsFor(p, req.Vault) {
+			if av.Name != req.Vault || !av.AllowsPath(relPath) {
+				continue
+			}
+			if av.Config.DefaultWrite != "direct" {
+				writeJSON(w, http.StatusConflict, map[string]string{"error": "vault requires proposals; use POST /api/v1/proposals"})
+				return
+			}
+			root := config.ExpandHome(av.Config.Path)
+			target, err := safeJoin(root, relPath)
+			if err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			if existing, err := vault.ParseNote(req.Vault, root, relPath); err == nil && existing.Owner != "" {
+				writeJSON(w, http.StatusConflict, map[string]string{"error": "note is owner-locked (" + existing.Owner + "); use POST /api/v1/proposals"})
+				return
+			}
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
+			}
+			if err := os.WriteFile(target, []byte(req.Content), 0o644); err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
+			}
+			_, _ = s.Store.EnsureFresh(r.Context(), s.Cfg)
+			_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "note_write", Vault: req.Vault, Path: relPath, Outcome: "ok"})
+			writeJSON(w, http.StatusOK, map[string]any{"saved": true, "vault": req.Vault, "path": relPath})
+			return
+		}
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "access denied"})
+		return
+	}
+
 	vName := r.URL.Query().Get("vault")
 	relPath := filepath.ToSlash(strings.TrimPrefix(r.URL.Query().Get("path"), "/"))
 	if vName == "" || relPath == "" {
@@ -455,14 +509,17 @@ func (s *Server) handleNote(w http.ResponseWriter, r *http.Request, p principal)
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{
-			"vault":      n.VaultName,
-			"path":       n.RelPath,
-			"title":      n.Title,
-			"status":     n.Status,
-			"updated":    n.Updated,
-			"owner":      n.Owner,
-			"size_bytes": n.SizeBytes,
-			"raw":        n.Raw,
+			"vault":         n.VaultName,
+			"path":          n.RelPath,
+			"title":         n.Title,
+			"status":        n.Status,
+			"valid_from":    n.ValidFrom,
+			"updated":       n.Updated,
+			"owner":         n.Owner,
+			"size_bytes":    n.SizeBytes,
+			"max_bytes":     av.Config.MaxNoteBytes,
+			"default_write": av.Config.DefaultWrite,
+			"raw":           n.Raw,
 		})
 		return
 	}

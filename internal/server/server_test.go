@@ -286,7 +286,16 @@ func TestServerUIAndNoteEndpoints(t *testing.T) {
 		t.Fatalf("expected non-empty diff with added line, got %+v", propsResp.Proposals)
 	}
 
-	// 6. POST /api/v1/reindex & /api/v1/curate enforce writer role
+	// 6. PUT /api/v1/note enforces default_write=direct (rejects propose vault with 409)
+	req, _ = http.NewRequest(http.MethodPut, ts.URL+"/api/v1/note", strings.NewReader(`{"vault":"acme","path":"projects/api.md","content":"# overwrite"}`))
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 on PUT to propose vault, got %d", resp.StatusCode)
+	}
+
+	// 7. POST /api/v1/reindex & /api/v1/curate enforce writer role
 	for _, ep := range []string{"/api/v1/reindex", "/api/v1/curate"} {
 		req, _ = http.NewRequest(http.MethodPost, ts.URL+ep, nil)
 		req.Header.Set("Authorization", "Bearer tok-read")
