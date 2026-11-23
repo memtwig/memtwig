@@ -67,27 +67,27 @@ export function QuickstartTabs() {
 
   return (
     <Tabs defaultValue="install" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 gap-1 sm:inline-flex sm:w-auto sm:gap-0">
+      <TabsList className="grid w-full grid-cols-2 gap-1 rounded-2xl sm:inline-flex sm:w-auto sm:gap-0 sm:rounded-full">
         {snippets.map((s) => (
-          <TabsTrigger key={s.id} value={s.id} className="px-2.5 text-xs sm:px-3.5 sm:text-sm">
+          <TabsTrigger key={s.id} value={s.id} className="rounded-xl px-3 text-xs sm:rounded-full sm:px-4 sm:text-sm">
             {s.label}
           </TabsTrigger>
         ))}
       </TabsList>
 
       {snippets.map((s) => (
-        <TabsContent key={s.id} value={s.id}>
-          <div className="relative rounded-lg border border-border bg-card p-5 pr-14 sm:p-6 sm:pr-16">
+        <TabsContent key={s.id} value={s.id} className="mt-5">
+          <div className="relative rounded-[24px] border border-white/[0.08] bg-[#1c1c1f] p-6 pr-16 sm:p-7 sm:pr-20">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               aria-label={`Copy ${s.label} commands`}
               onClick={() => handleCopy(s.id, s.code)}
-              className="absolute top-3.5 right-3.5"
+              className="absolute top-4 right-4"
             >
-              {copiedId === s.id ? <Check size={18} className="text-emerald-400" /> : <Copy size={18} />}
+              {copiedId === s.id ? <Check size={17} className="text-[#58cc7d]" /> : <Copy size={17} />}
             </Button>
-            <pre className="overflow-x-auto text-sm leading-relaxed text-foreground whitespace-pre">
+            <pre className="overflow-x-auto text-sm leading-relaxed text-zinc-100 whitespace-pre">
               <code>{s.code}</code>
             </pre>
           </div>

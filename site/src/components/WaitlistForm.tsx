@@ -94,19 +94,19 @@ export function WaitlistForm() {
 
   if (status) {
     return (
-      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-6">
-        <div className="flex items-center gap-2.5 text-base font-medium text-foreground">
-          <Check size={18} className="text-emerald-400" />
+      <div className="rounded-2xl border border-[#58cc7d]/35 bg-[#58cc7d]/10 p-6">
+        <div className="flex items-center gap-2.5 text-base font-medium text-white">
+          <Check size={18} className="text-[#58cc7d]" />
           <span>
             {status === "already_joined"
               ? "Preferences updated — you're already on the waitlist."
               : "You're on the waitlist."}
           </span>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-zinc-300">
           {email.trim().toLowerCase()} · {plans.find((p) => p.id === plan)?.label}
         </p>
-        <div className="mt-4">
+        <div className="mt-5">
           <Button
             type="button"
             variant="outline"
@@ -121,7 +121,7 @@ export function WaitlistForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="sr-only" aria-hidden="true">
         <label htmlFor="waitlist-website">Website</label>
         <Input
@@ -136,7 +136,7 @@ export function WaitlistForm() {
       </div>
 
       <div>
-        <label htmlFor="waitlist-email" className="block text-sm font-medium text-foreground">
+        <label htmlFor="waitlist-email" className="block text-sm font-medium text-white">
           Work email
         </label>
         <Input
@@ -152,10 +152,10 @@ export function WaitlistForm() {
         />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <div>
-          <span className="block text-sm font-medium text-foreground">Plan</span>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <span className="block text-sm font-medium text-white">Plan</span>
+          <div className="mt-2.5 flex flex-wrap gap-2">
             {plans.map((p) => {
               const selected = plan === p.id;
               return (
@@ -163,9 +163,9 @@ export function WaitlistForm() {
                   key={p.id}
                   type="button"
                   size="sm"
-                  variant={selected ? "secondary" : "outline"}
+                  variant={selected ? "default" : "outline"}
                   onClick={() => setPlan(p.id)}
-                  className={cn(selected && "border border-zinc-500 text-foreground")}
+                  className={cn(selected && "font-medium")}
                 >
                   {p.label}
                 </Button>
@@ -175,8 +175,8 @@ export function WaitlistForm() {
         </div>
 
         <div>
-          <span className="block text-sm font-medium text-foreground">Team size</span>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <span className="block text-sm font-medium text-white">Team size</span>
+          <div className="mt-2.5 flex flex-wrap gap-2">
             {sizes.map((s) => {
               const selected = teamSize === s.id;
               return (
@@ -184,9 +184,9 @@ export function WaitlistForm() {
                   key={s.id}
                   type="button"
                   size="sm"
-                  variant={selected ? "secondary" : "outline"}
+                  variant={selected ? "default" : "outline"}
                   onClick={() => setTeamSize(s.id)}
-                  className={cn(selected && "border border-zinc-500 text-foreground")}
+                  className={cn(selected && "font-medium")}
                 >
                   {s.label}
                 </Button>
@@ -197,7 +197,7 @@ export function WaitlistForm() {
       </div>
 
       <div>
-        <label htmlFor="waitlist-agent" className="block text-sm font-medium text-foreground">
+        <label htmlFor="waitlist-agent" className="block text-sm font-medium text-white">
           Primary agents or bots <span className="font-normal text-muted-foreground">(optional)</span>
         </label>
         <Input

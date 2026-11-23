@@ -49,68 +49,68 @@ const faqs = [
   faqs={faqs}
 >
   <header class="max-w-3xl">
-    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.06]">
+    <h1 class="text-balance text-5xl font-medium leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl">
       memtwig vs Mem0
     </h1>
-    <p class="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+    <p class="mt-4 text-base leading-relaxed text-zinc-400 sm:text-xl">
       Local Git Markdown vaults with diff approval vs cloud vector extraction APIs.
     </p>
   </header>
 
-  <section class="mt-10">
+  <section class="mt-12">
     <VsDiagram variant="mem0" />
   </section>
 
-  <section class="mt-10 overflow-x-auto rounded-lg border border-border bg-card">
+  <section class="mt-14 overflow-x-auto">
     <table class="w-full min-w-[540px] border-collapse text-left text-sm sm:text-base">
       <thead>
-        <tr class="border-b border-border bg-muted">
-          <th class="px-5 py-3.5 font-medium text-muted-foreground">Dimension</th>
-          <th class="px-5 py-3.5 font-medium text-foreground">
+        <tr class="border-b border-white/[0.08]">
+          <th class="py-4 pr-6 font-medium text-zinc-400">Dimension</th>
+          <th class="px-6 py-4 font-medium text-white">
             <span class="inline-flex items-center gap-2">
-              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+              <span class="size-2 rounded-full bg-[#58cc7d]" aria-hidden="true"></span>
               memtwig
             </span>
           </th>
-          <th class="px-5 py-3.5 font-medium text-muted-foreground">Mem0</th>
+          <th class="py-4 pl-6 font-medium text-zinc-400">Mem0</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-border">
+      <tbody class="divide-y divide-white/[0.08]">
         {rows.map((r) => (
           <tr>
-            <td class="px-5 py-3.5 font-medium text-foreground">{r.dim}</td>
-            <td class="px-5 py-3.5 text-foreground">{r.memtwig}</td>
-            <td class="px-5 py-3.5 text-muted-foreground">{r.mem0}</td>
+            <td class="py-4 pr-6 font-medium text-white">{r.dim}</td>
+            <td class="px-6 py-4 text-zinc-200">{r.memtwig}</td>
+            <td class="py-4 pl-6 text-zinc-400">{r.mem0}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </section>
 
-  <section class="mt-10 grid gap-4 sm:grid-cols-2">
-    <div class="rounded-lg border border-border bg-card p-6">
-      <h2 class="flex items-center gap-2 text-lg font-medium text-foreground">
-        <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-        Choose memtwig when
+  <section class="mt-12 grid gap-4 sm:grid-cols-2">
+    <div class="rounded-[24px] border border-white/[0.08] bg-[#1c1c1f] p-7">
+      <h2 class="flex items-center gap-2.5 text-lg font-medium text-white">
+        <span class="size-2 rounded-full bg-[#58cc7d]" aria-hidden="true"></span>
+        <span>Choose memtwig when</span>
       </h2>
-      <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+      <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-zinc-400 sm:text-base">
         {memtwigWins.map((item) => (
           <li class="flex items-start gap-2.5">
-            <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+            <span class="mt-2 size-1.5 shrink-0 rounded-full bg-[#58cc7d]" aria-hidden="true"></span>
             <span>{item}</span>
           </li>
         ))}
       </ul>
     </div>
-    <div class="rounded-lg border border-border bg-card p-6">
-      <h2 class="flex items-center gap-2 text-lg font-medium text-foreground">
-        <span class="h-2 w-2 rounded-full bg-zinc-600"></span>
-        Choose Mem0 when
+    <div class="rounded-[24px] border border-white/[0.08] bg-[#1c1c1f] p-7">
+      <h2 class="flex items-center gap-2.5 text-lg font-medium text-white">
+        <span class="size-2 rounded-full bg-zinc-500" aria-hidden="true"></span>
+        <span>Choose Mem0 when</span>
       </h2>
-      <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+      <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-zinc-400 sm:text-base">
         {mem0Wins.map((item) => (
           <li class="flex items-start gap-2.5">
-            <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-600"></span>
+            <span class="mt-2 size-1.5 shrink-0 rounded-full bg-zinc-500" aria-hidden="true"></span>
             <span>{item}</span>
           </li>
         ))}
@@ -118,7 +118,7 @@ const faqs = [
     </div>
   </section>
 
-  <div class="mt-10 flex flex-wrap gap-3">
+  <div class="mt-12 flex flex-wrap gap-3">
     <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
     <a href="/vs/claude-md" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
       Compare vs CLAUDE.md

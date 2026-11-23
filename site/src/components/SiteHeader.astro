@@ -1,0 +1,78 @@
+---
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { MobileNav } from "@/components/MobileNav";
+
+interface Props {
+  currentPath?: string;
+}
+
+const { currentPath = "/" } = Astro.props;
+const repoUrl = "https://github.com/memtwig/memtwig";
+const docsUrl = "https://github.com/memtwig/memtwig/tree/main/docs";
+
+const navLinks = [
+  { href: currentPath === "/" ? "#studio" : "/#studio", label: "Studio", match: "/#studio" },
+  { href: currentPath === "/" ? "#features" : "/#features", label: "How it works", match: "/#features" },
+  { href: "/integrations", label: "Integrations", match: "/integrations" },
+  { href: "/cloud", label: "Cloud", match: "/cloud" },
+  { href: "/vs/mem0", label: "Compare", match: "/vs" },
+  { href: docsUrl, label: "Docs", external: true, match: "docs" },
+];
+
+const isActive = (match: string) => {
+  if (match === "/integrations") return currentPath.startsWith("/integrations");
+  if (match === "/cloud") return currentPath === "/cloud";
+  if (match === "/vs") return currentPath.startsWith("/vs") || currentPath === "/mcp-memory";
+  return false;
+};
+---
+
+<header class="sticky top-0 z-40 pt-4 pb-2 pointer-events-none">
+  <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 sm:px-8 pointer-events-auto">
+    <a
+      href="/"
+      class="flex items-center gap-2.5 rounded-full border border-white/10 bg-[#18181b]/85 px-3 py-1.5 text-base font-semibold tracking-tight text-white backdrop-blur-xl md:border-transparent md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none"
+    >
+      <img src="/favicon.svg" alt="" width="28" height="28" class="rounded-lg shadow-[0_4px_16px_rgba(88,204,125,0.28)]" />
+      <span>memtwig</span>
+    </a>
+
+    <nav
+      aria-label="Primary"
+      class="hidden items-center gap-1 rounded-full border border-white/10 bg-[#1d1d20]/85 px-2 py-1.5 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.45)] md:flex"
+    >
+      {navLinks.map((item) => (
+        <a
+          href={item.href}
+          target={item.external ? "_blank" : undefined}
+          rel={item.external ? "noreferrer" : undefined}
+          class={cn(
+            "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+            isActive(item.match)
+              ? "bg-white/10 text-white"
+              : "text-zinc-400 hover:bg-white/[0.06] hover:text-white",
+          )}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="hidden items-center gap-2.5 md:flex">
+      <a href={repoUrl} target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+        GitHub
+      </a>
+      <a
+        href={currentPath === "/" ? "#install" : "/#install"}
+        class={cn(buttonVariants({ variant: "default", size: "sm" }), "shadow-[0_0_28px_rgba(88,204,125,0.3)]")}
+      >
+        Install
+      </a>
+    </div>
+
+    <div class="md:hidden">
+      <MobileNav client:media="(max-width: 767px)" />
+    </div>
+  </div>
+</header>

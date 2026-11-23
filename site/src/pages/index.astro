@@ -2,10 +2,12 @@
 import "@/styles/global.css";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { MobileNav } from "@/components/MobileNav";
+import { Terminal, Code, GitFork, PlugsConnected, Desktop } from "@phosphor-icons/react";
+import SiteHeader from "@/components/SiteHeader.astro";
+import SiteFooter from "@/components/SiteFooter.astro";
 import { StudioShowcase } from "@/components/StudioShowcase";
-import FeatureGrid from "@/components/FeatureGrid.astro";
-import { ScopeDemo } from "@/components/ScopeDemo";
+import { ProductBento } from "@/components/ProductBento";
+import { CloudDeck } from "@/components/CloudDeck";
 import { QuickstartTabs } from "@/components/QuickstartTabs";
 
 const siteUrl = "https://memtwig.com";
@@ -40,7 +42,7 @@ const faqs = [
   },
   {
     q: "Which coding agents are supported?",
-    a: "Claude Code, Cursor, Codex, Antigravity, Hermes, and any client supporting standard MCP.",
+    a: "Claude Code, Cursor, Codex, Antigravity, Hermes, Grok Bot, OpenBot, T3 Code, and any client supporting standard MCP.",
   },
 ];
 
@@ -129,114 +131,296 @@ const jsonLd = {
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
-  <body class="min-h-screen bg-background text-foreground">
-    <header class="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
-      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
-        <a href="#" class="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-foreground">
-          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-sm" />
-          <span>memtwig</span>
-        </a>
+  <body class="relative min-h-screen bg-background text-foreground">
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-[560px] overflow-hidden" aria-hidden="true">
+      <div class="absolute -top-36 right-[-8%] h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(88,204,125,0.18)_0%,rgba(107,181,255,0.1)_40%,transparent_72%)] blur-3xl" />
+    </div>
 
-        <nav class="hidden items-center gap-1 md:flex">
-          <a href="#studio" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Studio</a>
-          <a href="#features" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">How it works</a>
-          <a href="/integrations" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Integrations</a>
-          <a href="/cloud" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Cloud</a>
-          <a href="#install" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Install</a>
-          <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Docs</a>
-        </nav>
-
-        <div class="hidden items-center gap-2 md:flex">
-          <a href={repoUrl} target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-            GitHub
-          </a>
-          <a href="#install" class={cn(buttonVariants({ variant: "default", size: "sm" }))}>
-            Install
-          </a>
-        </div>
-
-        <div class="md:hidden">
-          <MobileNav client:media="(max-width: 767px)" />
-        </div>
-      </div>
-    </header>
+    <SiteHeader currentPath="/" />
 
     <main>
-      <section class="mx-auto max-w-6xl px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-20">
-        <div class="mx-auto max-w-3xl text-center">
-          <h1 class="text-balance text-5xl font-normal tracking-tight text-foreground sm:text-6xl xl:text-7xl leading-[1.05]">
-            Git-native memory for AI agents.
+      <!-- Hero & Framed Studio Stage -->
+      <section class="mx-auto max-w-6xl px-5 pt-16 pb-20 sm:px-8 sm:pt-24 sm:pb-24">
+        <div class="mx-auto max-w-4xl text-center">
+          <h1 class="text-balance text-5xl font-medium leading-[1.02] tracking-[-0.04em] text-white sm:text-7xl xl:text-[5.25rem]">
+            Git-native
+            <img
+              src="/favicon.svg"
+              alt=""
+              width="68"
+              height="68"
+              class="mx-1.5 inline-block size-11 align-[-0.14em] rounded-2xl shadow-[0_12px_36px_rgba(88,204,125,0.35)] sm:mx-2.5 sm:size-16 xl:size-[4.25rem]"
+            />
+            memory<br />for every AI agent.
           </h1>
-          <p class="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
-            Plain Markdown vaults, isolated per client, in one local binary.
+          <p class="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-xl">
+            Plain Markdown vaults shared across Claude Code, Codex, Cursor, Hermes, Grok Bot, and OpenBot — isolated per client, in one local binary.
           </p>
-          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <a href="#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
-            <a
-              href={repoUrl}
-              target="_blank"
-              rel="noreferrer"
-              class={cn(buttonVariants({ variant: "outline", size: "lg" }))}
-            >
-              View on GitHub
+          <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <a href="#install" class={cn(buttonVariants({ variant: "default", size: "lg" }))}>
+              Install v1.4.2
+            </a>
+            <a href="/cloud" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+              Memtwig Cloud
             </a>
           </div>
         </div>
 
-        <div id="studio" class="mt-14 scroll-mt-20">
+        <div id="studio" class="mt-14 scroll-mt-24 sm:mt-16">
           <StudioShowcase client:load />
         </div>
       </section>
 
-      <section id="features" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
-        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
-          How it works
-        </h2>
-        <div class="mt-8">
-          <FeatureGrid />
+      <!-- What memtwig does (Interactive Bento) -->
+      <section id="features" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 sm:py-28">
+        <div class="max-w-2xl">
+          <h2 class="text-4xl font-medium tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+            What memtwig does
+          </h2>
+          <p class="mt-3 text-base leading-relaxed text-zinc-400 sm:text-lg">
+            One local layer for scoped memory, diff governance, and clean Git history.
+          </p>
+        </div>
+        <div class="mt-10 sm:mt-12">
+          <ProductBento client:load />
         </div>
       </section>
 
-      <section id="isolation" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
-        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
-          Try vault switching
-        </h2>
-        <div class="mt-8">
-          <ScopeDemo client:load />
+      <!-- Sculptural $0 Centerpiece -->
+      <section class="relative mx-auto max-w-6xl px-5 py-24 text-center sm:px-8 sm:py-36">
+        <div
+          class="pointer-events-none absolute inset-0 mx-auto my-auto h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(88,204,125,0.14)_0%,transparent_70%)] blur-3xl"
+          aria-hidden="true"
+        />
+        <div class="relative z-10">
+          <p class="text-base text-zinc-400 sm:text-lg">Free and open source</p>
+          <svg
+            viewBox="0 0 420 200"
+            class="mx-auto mt-2 h-auto w-64 select-none sm:w-96"
+            role="img"
+            aria-label="Zero dollars"
+          >
+            <defs>
+              <linearGradient id="sculpt-chrome" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#2a2b30" />
+                <stop offset="28%" stop-color="#9ca3af" />
+                <stop offset="46%" stop-color="#e8f3ff" />
+                <stop offset="56%" stop-color="#9be7b5" />
+                <stop offset="72%" stop-color="#ebb89a" />
+                <stop offset="100%" stop-color="#1c1c20" />
+              </linearGradient>
+              <linearGradient id="sculpt-rim" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="rgba(255,255,255,0.22)" />
+                <stop offset="50%" stop-color="rgba(255,255,255,0.45)" />
+                <stop offset="100%" stop-color="rgba(255,255,255,0.06)" />
+              </linearGradient>
+            </defs>
+            <text
+              x="210"
+              y="156"
+              text-anchor="middle"
+              font-size="168"
+              font-weight="600"
+              letter-spacing="-8"
+              fill="url(#sculpt-chrome)"
+              stroke="url(#sculpt-rim)"
+              stroke-width="1.5"
+            >
+              $0
+            </text>
+          </svg>
+
+          <div class="mt-6 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-sm text-zinc-300 sm:text-base">
+            <span class="inline-flex items-center gap-2">
+              <span class="text-[#58cc7d]" aria-hidden="true">✓</span>
+              <span>Apache 2.0</span>
+            </span>
+            <span class="inline-flex items-center gap-2">
+              <span class="text-[#58cc7d]" aria-hidden="true">✓</span>
+              <span>Single 14 MB Go binary</span>
+            </span>
+            <span class="inline-flex items-center gap-2">
+              <span class="text-[#58cc7d]" aria-hidden="true">✓</span>
+              <span>Works 100% offline</span>
+            </span>
+          </div>
+
+          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a href="#install" class={cn(buttonVariants({ variant: "default", size: "lg" }))}>
+              Install locally
+            </a>
+            <a href="/cloud" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+              Memtwig Cloud →
+            </a>
+          </div>
         </div>
       </section>
 
-      <section id="comparison" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
-        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
-          How it compares
-        </h2>
-        <div class="mt-8 overflow-x-auto rounded-lg border border-border bg-card">
+      <!-- Memtwig Cloud Interactive Deck -->
+      <section id="cloud" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 sm:py-28">
+        <CloudDeck client:load showHeader={true} />
+      </section>
+
+      <!-- Install anywhere + Vivid Matte Pastel Integration Grid -->
+      <section id="install" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 sm:py-28">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div class="max-w-2xl">
+            <h2 class="text-4xl font-medium tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+              Install anywhere
+            </h2>
+            <p class="mt-3 text-base leading-relaxed text-zinc-400 sm:text-lg">
+              One binary for your machine, native MCP and hooks for every agent.
+            </p>
+          </div>
+          <a
+            href={releasesUrl}
+            target="_blank"
+            rel="noreferrer"
+            class="text-sm font-medium text-zinc-300 transition-colors hover:text-white"
+          >
+            Prebuilt binaries ↗
+          </a>
+        </div>
+
+        <div class="mt-10">
+          <QuickstartTabs client:load />
+        </div>
+
+        <div class="mt-8 grid gap-4 md:grid-cols-6">
+          <div class="flex min-h-[240px] flex-col justify-between rounded-[26px] bg-[#d5a8f8] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-2">
+            <div class="flex items-start justify-between gap-2">
+              <Terminal size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
+              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80">
+                HOOKS + MCP
+              </span>
+            </div>
+            <div class="mt-8">
+              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">Claude Code</h3>
+              <p class="mt-2 text-sm leading-relaxed text-[#111312]/80">
+                Native UserPromptSubmit &amp; SessionStart hooks wired with one command.
+              </p>
+              <div class="mt-5 flex flex-wrap gap-4 text-sm font-medium">
+                <a href="/integrations/claude-code" class="hover:underline">Setup guide →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex min-h-[240px] flex-col justify-between rounded-[26px] bg-[#58cc7d] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-2">
+            <div class="flex items-start justify-between gap-2">
+              <Code size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
+              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80">
+                STDIO MCP
+              </span>
+            </div>
+            <div class="mt-8">
+              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">Cursor &amp; Codex</h3>
+              <p class="mt-2 text-sm leading-relaxed text-[#111312]/80">
+                Shared multi-org vaults without bloated rules files copied per repo.
+              </p>
+              <div class="mt-5 flex flex-wrap gap-4 text-sm font-medium">
+                <a href="/integrations/cursor" class="hover:underline">Cursor →</a>
+                <a href="/integrations/codex" class="hover:underline">Codex →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex min-h-[240px] flex-col justify-between rounded-[26px] bg-[#ebb85e] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-2">
+            <div class="flex items-start justify-between gap-2">
+              <GitFork size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
+              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80">
+                WORKTREE SAFE
+              </span>
+            </div>
+            <div class="mt-8">
+              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">Hermes &amp; T3 Code</h3>
+              <p class="mt-2 text-sm leading-relaxed text-[#111312]/80">
+                One SOUL.md identity and Git-remote vault routing across providers.
+              </p>
+              <div class="mt-5 flex flex-wrap gap-4 text-sm font-medium">
+                <a href="/integrations/hermes" class="hover:underline">Hermes →</a>
+                <a href="/integrations/t3-code" class="hover:underline">T3 Code →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex min-h-[230px] flex-col justify-between rounded-[26px] bg-[#6bb5ff] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-3">
+            <div class="flex items-start justify-between gap-2">
+              <PlugsConnected size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
+              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80">
+                HTTP RBAC
+              </span>
+            </div>
+            <div class="mt-8">
+              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">Grok Bot &amp; OpenBot</h3>
+              <p class="mt-2 max-w-md text-sm leading-relaxed text-[#111312]/80">
+                Scoped Bearer tokens, path globs, and append-only audit logs for always-on bots.
+              </p>
+              <div class="mt-5 flex flex-wrap gap-5 text-sm font-medium">
+                <a href="/integrations/grok-bot" class="hover:underline">Grok Bot →</a>
+                <a href="/integrations/openbot" class="hover:underline">OpenBot →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex min-h-[230px] flex-col justify-between rounded-[26px] bg-[#f09a7a] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-3">
+            <div class="flex items-start justify-between gap-2">
+              <Desktop size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
+              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80 tabular-nums">
+                v1.4.2
+              </span>
+            </div>
+            <div class="mt-8">
+              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">macOS, Linux &amp; Windows</h3>
+              <p class="mt-2 max-w-md text-sm leading-relaxed text-[#111312]/80">
+                Zero runtime dependencies, Antigravity PreInvocation hooks, embedded Studio UI &amp; TUI.
+              </p>
+              <div class="mt-5 flex flex-wrap gap-5 text-sm font-medium">
+                <a href={releasesUrl} target="_blank" rel="noreferrer" class="hover:underline">Prebuilt releases ↗</a>
+                <a href="/integrations" class="hover:underline">All 8 integrations →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Borderless Comparison Strip -->
+      <section id="comparison" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 sm:py-28">
+        <div class="max-w-2xl">
+          <h2 class="text-4xl font-medium tracking-[-0.035em] text-white sm:text-5xl">
+            How it compares
+          </h2>
+          <p class="mt-3 text-base text-zinc-400">
+            Keep plain Git ownership without SaaS lock-in or bloated context files.
+          </p>
+        </div>
+
+        <div class="mt-10 overflow-x-auto">
           <table class="w-full min-w-[520px] border-collapse text-left text-sm sm:text-base">
             <thead>
-              <tr class="border-b border-border bg-muted">
-                <th class="px-5 py-3.5 font-medium text-muted-foreground"></th>
-                <th class="px-5 py-3.5 text-center font-medium text-foreground">memtwig</th>
-                <th class="px-5 py-3.5 text-center font-medium text-muted-foreground">Cloud Memory APIs</th>
-                <th class="px-5 py-3.5 text-center font-medium text-muted-foreground">Static .md files</th>
+              <tr class="border-b border-white/[0.08]">
+                <th class="py-4 pr-6 font-medium text-zinc-400"></th>
+                <th class="px-6 py-4 text-center font-medium text-white">memtwig</th>
+                <th class="px-6 py-4 text-center font-medium text-zinc-400">Cloud Memory APIs</th>
+                <th class="px-6 py-4 pl-6 text-center font-medium text-zinc-400">Static .md files</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-white/[0.08]">
               {matrix.map((row) => (
                 <tr>
-                  <td class="px-5 py-3.5 font-medium text-foreground">{row.capability}</td>
-                  <td class="px-5 py-3.5 text-center">
-                    <span class="font-medium text-emerald-400" aria-label="Yes">✓</span>
+                  <td class="py-4 pr-6 font-medium text-white">{row.capability}</td>
+                  <td class="px-6 py-4 text-center">
+                    <span class="font-medium text-[#58cc7d]" aria-label="Yes">✓</span>
                   </td>
-                  <td class="px-5 py-3.5 text-center text-muted-foreground">
+                  <td class="px-6 py-4 text-center text-zinc-400">
                     {row.cloud === "dash" ? (
                       <span aria-label="No">—</span>
                     ) : (
-                      <span class="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{row.cloud}</span>
+                      <span class="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-xs text-zinc-300">{row.cloud}</span>
                     )}
                   </td>
-                  <td class="px-5 py-3.5 text-center text-muted-foreground">
+                  <td class="px-6 py-4 pl-6 text-center text-zinc-400">
                     {row.staticMd === "check" ? (
-                      <span class="font-medium text-zinc-300" aria-label="Yes">✓</span>
+                      <span class="font-medium text-zinc-200" aria-label="Yes">✓</span>
                     ) : (
                       <span aria-label="No">—</span>
                     )}
@@ -246,69 +430,47 @@ const jsonLd = {
             </tbody>
           </table>
         </div>
-        <div class="mt-4 flex flex-wrap gap-6 text-sm text-muted-foreground">
-          <a href="/vs/mem0" class="transition-colors hover:text-foreground">Compare vs Mem0 →</a>
-          <a href="/vs/claude-md" class="transition-colors hover:text-foreground">Compare vs CLAUDE.md →</a>
+
+        <div class="mt-6 flex flex-wrap gap-6 text-sm font-medium text-zinc-400">
+          <a href="/vs/mem0" class="transition-colors hover:text-white">Compare vs Mem0 →</a>
+          <a href="/vs/claude-md" class="transition-colors hover:text-white">Compare vs CLAUDE.md →</a>
+          <a href="/mcp-memory" class="transition-colors hover:text-white">Explore MCP Memory →</a>
         </div>
       </section>
 
-      <section id="install" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
-            Quickstart
-          </h2>
-          <a
-            href={releasesUrl}
-            target="_blank"
-            rel="noreferrer"
-            class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Download prebuilt binaries
-          </a>
-        </div>
-        <div class="mt-8">
-          <QuickstartTabs client:load />
-        </div>
-      </section>
+      <!-- Split 2-Column Questions FAQ -->
+      <section id="faq" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 pb-28 sm:px-8 sm:py-24 sm:pb-36">
+        <div class="grid gap-10 border-t border-white/[0.08] pt-16 lg:grid-cols-12">
+          <div class="lg:col-span-4">
+            <h2 class="text-4xl font-medium tracking-[-0.035em] text-white sm:text-5xl">Questions</h2>
+            <p class="mt-3 text-base leading-relaxed text-zinc-400">
+              Short answers about vaults, privacy, and supported agents.
+            </p>
+            <a
+              href={docsUrl}
+              target="_blank"
+              rel="noreferrer"
+              class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-white transition-colors hover:text-[#58cc7d]"
+            >
+              Read the docs →
+            </a>
+          </div>
 
-      <section id="faq" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-12 pb-20 sm:px-8 sm:py-16 sm:pb-24">
-        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
-          FAQ
-        </h2>
-        <div class="mt-8 divide-y divide-border rounded-lg border border-border bg-card px-6 sm:px-8">
-          {faqs.map((item) => (
-            <details class="group py-5">
-              <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-medium text-foreground sm:text-lg [&::-webkit-details-marker]:hidden">
-                <span>{item.q}</span>
-                <span class="shrink-0 text-muted-foreground transition-transform duration-150 group-open:rotate-45">+</span>
-              </summary>
-              <p class="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">{item.a}</p>
-            </details>
-          ))}
+          <div class="divide-y divide-white/[0.08] lg:col-span-8">
+            {faqs.map((item) => (
+              <details class="group py-5 first:pt-0">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-medium text-white sm:text-lg [&::-webkit-details-marker]:hidden">
+                  <span>{item.q}</span>
+                  <span class="shrink-0 text-xl font-normal text-zinc-400 transition-transform duration-150 group-open:rotate-45">+</span>
+                </summary>
+                <p class="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">{item.a}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
     </main>
 
-    <footer class="border-t border-border bg-background">
-      <div class="mx-auto flex max-w-6xl flex-col items-center gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
-        <div class="flex items-center gap-2.5 text-foreground font-medium">
-          <img src="/favicon.svg" alt="" width="20" height="20" class="rounded-sm" />
-          <span>memtwig</span>
-          <span class="text-muted-foreground font-normal">· Apache 2.0</span>
-        </div>
-        <div class="flex flex-wrap items-center justify-center gap-6">
-          <a href="/cloud" class="transition-colors hover:text-foreground">Cloud</a>
-          <a href="/integrations" class="transition-colors hover:text-foreground">Integrations</a>
-          <a href="/vs/mem0" class="transition-colors hover:text-foreground">vs Mem0</a>
-          <a href="/vs/claude-md" class="transition-colors hover:text-foreground">vs CLAUDE.md</a>
-          <a href="/mcp-memory" class="transition-colors hover:text-foreground">MCP Memory</a>
-          <a href={repoUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">GitHub</a>
-          <a href={releasesUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">Releases</a>
-          <a href={docsUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">Docs</a>
-          <a href="/llms.txt" class="transition-colors hover:text-foreground">llms.txt</a>
-          <span>© 2026 Vittorio Compagno</span>
-        </div>
-      </div>
-    </footer>
+    <SiteFooter />
   </body>
 </html>

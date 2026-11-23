@@ -1,8 +1,7 @@
 ---
 import "@/styles/global.css";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { MobileNav } from "@/components/MobileNav";
+import SiteHeader from "@/components/SiteHeader.astro";
+import SiteFooter from "@/components/SiteFooter.astro";
 
 interface Props {
   title: string;
@@ -14,8 +13,6 @@ interface Props {
 const { title, description, path, faqs = [] } = Astro.props;
 const siteUrl = "https://memtwig.com";
 const canonicalUrl = `${siteUrl}${path}`;
-const repoUrl = "https://github.com/memtwig/memtwig";
-const releasesUrl = "https://github.com/memtwig/memtwig/releases";
 const docsUrl = "https://github.com/memtwig/memtwig/tree/main/docs";
 
 const graph: Record<string, unknown>[] = [
@@ -91,101 +88,36 @@ const jsonLd = {
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
   <body class="min-h-screen bg-background text-foreground">
-    <header class="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
-      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
-        <a href="/" class="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-foreground">
-          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-sm" />
-          <span>memtwig</span>
-        </a>
+    <SiteHeader currentPath={path} />
 
-        <nav class="hidden items-center gap-1 md:flex">
-          <a
-            href="/cloud"
-            class={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              path === "/cloud"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
-            )}
-          >
-            Cloud
-          </a>
-          <a
-            href="/integrations"
-            class={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              path.startsWith("/integrations")
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
-            )}
-          >
-            Integrations
-          </a>
-          <a
-            href="/vs/mem0"
-            class={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              path === "/vs/mem0"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
-            )}
-          >
-            vs Mem0
-          </a>
-          <a
-            href="/vs/claude-md"
-            class={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              path === "/vs/claude-md"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
-            )}
-          >
-            vs CLAUDE.md
-          </a>
-          <a
-            href="/mcp-memory"
-            class={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              path === "/mcp-memory"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
-            )}
-          >
-            MCP Memory
-          </a>
-          <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Docs</a>
-        </nav>
-
-        <div class="hidden items-center gap-2 md:flex">
-          <a href={repoUrl} target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-            GitHub
-          </a>
-          <a href="/#install" class={cn(buttonVariants({ variant: "default", size: "sm" }))}>
-            Install
-          </a>
-        </div>
-
-        <div class="md:hidden">
-          <MobileNav client:media="(max-width: 767px)" />
-        </div>
-      </div>
-    </header>
-
-    <main class="mx-auto max-w-5xl px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-24">
+    <main class="mx-auto max-w-6xl px-5 pt-16 pb-24 sm:px-8 sm:pt-24 sm:pb-32">
       <slot />
 
       {faqs.length > 0 && (
-        <section class="mt-16">
-          <h2 class="text-2xl font-medium tracking-tight text-foreground sm:text-3xl">FAQ</h2>
-          <div class="mt-6 divide-y divide-border rounded-lg border border-border bg-card px-6 sm:px-8">
+        <section class="mt-24 grid gap-10 border-t border-white/[0.08] pt-16 lg:grid-cols-12">
+          <div class="lg:col-span-4">
+            <h2 class="text-4xl font-medium tracking-[-0.035em] text-white sm:text-5xl">Questions</h2>
+            <p class="mt-3 text-base leading-relaxed text-zinc-400">
+              Short answers about setup, privacy, and workflow fit.
+            </p>
+            <a
+              href={docsUrl}
+              target="_blank"
+              rel="noreferrer"
+              class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-white transition-colors hover:text-[#58cc7d]"
+            >
+              Read the docs →
+            </a>
+          </div>
+
+          <div class="divide-y divide-white/[0.08] lg:col-span-8">
             {faqs.map((item) => (
-              <details class="group py-5">
-                <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-medium text-foreground sm:text-lg [&::-webkit-details-marker]:hidden">
+              <details class="group py-5 first:pt-0">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-medium text-white sm:text-lg [&::-webkit-details-marker]:hidden">
                   <span>{item.q}</span>
-                  <span class="shrink-0 text-muted-foreground transition-transform duration-150 group-open:rotate-45">+</span>
+                  <span class="shrink-0 text-xl font-normal text-zinc-400 transition-transform duration-150 group-open:rotate-45">+</span>
                 </summary>
-                <p class="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">{item.a}</p>
+                <p class="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">{item.a}</p>
               </details>
             ))}
           </div>
@@ -193,24 +125,6 @@ const jsonLd = {
       )}
     </main>
 
-    <footer class="border-t border-border bg-background">
-      <div class="mx-auto flex max-w-6xl flex-col items-center gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
-        <a href="/" class="flex items-center gap-2.5 text-foreground font-medium">
-          <img src="/favicon.svg" alt="" width="20" height="20" class="rounded-sm" />
-          <span>memtwig</span>
-          <span class="text-muted-foreground font-normal">· Apache 2.0</span>
-        </a>
-        <div class="flex flex-wrap items-center justify-center gap-5">
-          <a href="/cloud" class="transition-colors hover:text-foreground">Cloud</a>
-          <a href="/integrations" class="transition-colors hover:text-foreground">Integrations</a>
-          <a href="/vs/mem0" class="transition-colors hover:text-foreground">vs Mem0</a>
-          <a href="/vs/claude-md" class="transition-colors hover:text-foreground">vs CLAUDE.md</a>
-          <a href="/mcp-memory" class="transition-colors hover:text-foreground">MCP Memory</a>
-          <a href={repoUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">GitHub</a>
-          <a href={releasesUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">Releases</a>
-          <a href="/llms.txt" class="transition-colors hover:text-foreground">llms.txt</a>
-        </div>
-      </div>
-    </footer>
+    <SiteFooter />
   </body>
 </html>

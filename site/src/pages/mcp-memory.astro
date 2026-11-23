@@ -32,46 +32,46 @@ const faqs = [
   faqs={faqs}
 >
   <header class="max-w-3xl">
-    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.06]">
+    <h1 class="text-balance text-5xl font-medium leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl">
       Open-source MCP memory server.
     </h1>
-    <p class="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+    <p class="mt-4 text-base leading-relaxed text-zinc-400 sm:text-xl">
       One Go binary speaking stdio MCP locally and Streamable HTTP with RBAC for teams.
     </p>
   </header>
 
-  <section class="mt-10">
+  <section class="mt-12">
     <VsDiagram variant="mcp" />
   </section>
 
-  <section class="mt-10 overflow-x-auto rounded-lg border border-border bg-card">
+  <section class="mt-14 overflow-x-auto">
     <table class="w-full min-w-[520px] border-collapse text-left text-sm sm:text-base">
       <thead>
-        <tr class="border-b border-border bg-muted">
-          <th class="px-5 py-3.5 font-medium text-foreground">MCP Tool</th>
-          <th class="px-5 py-3.5 font-medium text-muted-foreground">Behavior</th>
+        <tr class="border-b border-white/[0.08]">
+          <th class="py-4 pr-6 font-medium text-white">MCP Tool</th>
+          <th class="py-4 pl-6 font-medium text-zinc-400">Behavior</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-border">
+      <tbody class="divide-y divide-white/[0.08]">
         {tools.map((t) => (
           <tr>
-            <td class="px-5 py-3.5">
-              <span class="rounded bg-muted px-2 py-0.5 text-xs font-medium text-emerald-400">
+            <td class="py-4 pr-6">
+              <span class="rounded-full bg-[#58cc7d]/15 px-3 py-1 text-xs font-medium text-[#7ee09e]">
                 {t.name}
               </span>
             </td>
-            <td class="px-5 py-3.5 text-muted-foreground">{t.desc}</td>
+            <td class="py-4 pl-6 text-zinc-400">{t.desc}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </section>
 
-  <section class="mt-10 grid gap-4 sm:grid-cols-2">
-    <div class="overflow-hidden rounded-lg border border-border bg-[#0b0b0e]">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3">
-        <span class="text-sm font-medium text-foreground">Local stdio</span>
-        <span class="text-xs text-muted-foreground">mcp.json</span>
+  <section class="mt-12 grid gap-4 sm:grid-cols-2">
+    <div class="overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#18181b]">
+      <div class="flex items-center justify-between border-b border-white/[0.08] bg-[#1c1c1f] px-5 py-3.5">
+        <span class="text-sm font-medium text-white">Local stdio</span>
+        <span class="text-xs text-zinc-400">mcp.json</span>
       </div>
       <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{`{
   "mcpServers": {
@@ -83,10 +83,10 @@ const faqs = [
 }`}</code></pre>
     </div>
 
-    <div class="overflow-hidden rounded-lg border border-border bg-[#0b0b0e]">
-      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3">
-        <span class="text-sm font-medium text-foreground">Team HTTP + RBAC</span>
-        <span class="text-xs text-muted-foreground">shell</span>
+    <div class="overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#18181b]">
+      <div class="flex items-center justify-between border-b border-white/[0.08] bg-[#1c1c1f] px-5 py-3.5">
+        <span class="text-sm font-medium text-white">Team HTTP + RBAC</span>
+        <span class="text-xs text-zinc-400">shell</span>
       </div>
       <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{`memtwig serve --addr 127.0.0.1:8787
 
@@ -97,7 +97,7 @@ const faqs = [
     </div>
   </section>
 
-  <div class="mt-10 flex flex-wrap gap-3">
+  <div class="mt-12 flex flex-wrap gap-3">
     <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
     <a href="/vs/mem0" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
       Compare vs Mem0
