@@ -28,7 +28,7 @@ const isActive = (match: string) => {
 };
 ---
 
-<header class="sticky top-0 z-40 pt-4 pb-2 pointer-events-none">
+<header class="sticky top-0 z-50 pt-4 pb-2 pointer-events-none">
   <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 sm:px-8 pointer-events-auto">
     <a
       href="/"
@@ -72,7 +72,7 @@ const isActive = (match: string) => {
     </div>
 
     <div class="md:hidden">
-      <MobileNav client:media="(max-width: 767px)" />
+      <MobileNav client:media="(max-width: 767px)" currentPath={currentPath} />
     </div>
   </div>
 </header>
