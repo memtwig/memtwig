@@ -26,7 +26,7 @@ function renderInline(text: string): React.ReactNode[] {
       return (
         <span
           key={i}
-          className="rounded-[4px] border border-border bg-[#151e21] px-1.5 py-0.5 text-[13px] font-medium text-teal-300"
+          className="rounded-[4px] border border-border bg-[#16161a] px-1.5 py-0.5 text-[13px] font-medium text-zinc-200"
         >
           {tok.slice(1, -1)}
         </span>
@@ -70,7 +70,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       blocks.push(
         <div
           key={`code-${i}`}
-          className="my-3 overflow-x-auto rounded-md border border-border bg-[#0e1416] px-3.5 py-3 text-[13px] leading-relaxed text-[#cfe3e1] whitespace-pre"
+          className="my-3 overflow-x-auto rounded-md border border-border bg-[#0f0f12] px-3.5 py-3 text-[13px] leading-relaxed text-zinc-300 whitespace-pre"
         >
           {codeLines.join("\n")}
         </div>,
@@ -94,7 +94,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
     }
     if (trimmed.startsWith("## ")) {
       blocks.push(
-        <h2 key={`h2-${i}`} className="mt-6 mb-2.5 text-[15px] font-semibold tracking-tight text-foreground">
+        <h2 key={`h2-${i}`} className="mt-6 mb-2.5 text-[15px] font-medium tracking-tight text-foreground">
           {renderInline(trimmed.slice(3))}
         </h2>,
       );
@@ -103,7 +103,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
     }
     if (trimmed.startsWith("### ")) {
       blocks.push(
-        <h3 key={`h3-${i}`} className="mt-4 mb-1.5 text-sm font-semibold text-foreground">
+        <h3 key={`h3-${i}`} className="mt-4 mb-1.5 text-sm font-medium text-foreground">
           {renderInline(trimmed.slice(4))}
         </h3>,
       );
@@ -126,12 +126,12 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
                 key={idx}
                 className={
                   isArchive
-                    ? "border-l-2 border-primary bg-[#11191b] px-3 py-2 text-[13px] leading-relaxed text-muted-foreground"
-                    : "relative pl-4 text-[14.5px] leading-relaxed text-[#c6d6d5]"
+                    ? "border-l-2 border-zinc-600 bg-[#111114] px-3 py-2 text-[13px] leading-relaxed text-muted-foreground"
+                    : "relative pl-4 text-[14.5px] leading-relaxed text-zinc-300"
                 }
               >
                 {!isArchive && (
-                  <span className="absolute left-0 top-[10px] h-1 w-1 rounded-[1px] bg-primary/80" />
+                  <span className="absolute left-0 top-[10px] h-1 w-1 rounded-[1px] bg-zinc-500" />
                 )}
                 {renderInline(item)}
               </li>
@@ -149,7 +149,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
         i++;
       }
       blocks.push(
-        <ol key={`ol-${i}`} className="my-2.5 list-decimal space-y-1.5 pl-5 text-[14.5px] leading-relaxed text-[#c6d6d5]">
+        <ol key={`ol-${i}`} className="my-2.5 list-decimal space-y-1.5 pl-5 text-[14.5px] leading-relaxed text-zinc-300">
           {items.map((item, idx) => (
             <li key={idx}>{renderInline(item)}</li>
           ))}
@@ -167,7 +167,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       blocks.push(
         <blockquote
           key={`q-${i}`}
-          className="my-3 border-l-2 border-primary bg-[#11191b] px-3.5 py-2 text-[13.5px] leading-relaxed text-muted-foreground"
+          className="my-3 border-l-2 border-zinc-600 bg-[#111114] px-3.5 py-2 text-[13.5px] leading-relaxed text-muted-foreground"
         >
           {renderInline(qLines.join(" "))}
         </blockquote>,
@@ -185,7 +185,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       i++;
     }
     blocks.push(
-      <p key={`p-${i}`} className="my-2.5 text-[14.5px] leading-relaxed text-[#c6d6d5]">
+      <p key={`p-${i}`} className="my-2.5 text-[14.5px] leading-relaxed text-zinc-300">
         {renderInline(pLines.join(" "))}
       </p>,
     );

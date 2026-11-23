@@ -1,9 +1,11 @@
 import * as React from "react";
 import { Check, PlugsConnected, Plus, Trash } from "@phosphor-icons/react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
+type SettingsTab = "providers" | "vaults" | "harnesses";
 
 type EmbeddingsCfg = {
   provider: string;
@@ -72,7 +74,7 @@ export function SettingsView({
   onChanged: () => Promise<void>;
   flash: (msg: string) => void;
 }) {
-  const [configPath, setConfigPath] = React.useState("");
+  const [subTab, setSubTab] = React.useState<SettingsTab>("providers");
   const [emb, setEmb] = React.useState<EmbeddingsCfg>({
     provider: "none",
     model: "bge-m3",
@@ -110,7 +112,6 @@ export function SettingsView({
     const [cfgRes, hRes] = await Promise.all([fetch("/api/v1/config"), fetch("/api/v1/harnesses")]);
     if (cfgRes.ok) {
       const d = await cfgRes.json();
-      setConfigPath(d.config_path ?? "");
       if (d.embeddings) setEmb(d.embeddings);
       if (d.llm) setLLM(d.llm);
       if (d.env_status) setEnvStatus(d.env_status);
@@ -138,10 +139,8 @@ export function SettingsView({
       if (res.ok) {
         const d = await res.json();
         if (d.env_status) setEnvStatus(d.env_status);
-        flash("Providers saved & index refreshed");
+        flash("Saved");
         await onChanged();
-      } else {
-        flash("Failed to save providers");
       }
     } finally {
       setBusy(false);
@@ -168,7 +167,7 @@ export function SettingsView({
         }),
       });
       if (res.ok) {
-        flash(`Vault "${vName.trim()}" saved`);
+        flash(`Saved ${vName.trim()}`);
         setVName("");
         setVPath("");
         setVMatchPaths("");
@@ -187,7 +186,7 @@ export function SettingsView({
     try {
       const res = await fetch(`/api/v1/vaults/${encodeURIComponent(name)}`, { method: "DELETE" });
       if (res.ok) {
-        flash(`Removed vault "${name}" from config`);
+        flash(`Removed ${name}`);
         await loadSettings();
         await onChanged();
       }
@@ -211,290 +210,284 @@ export function SettingsView({
   };
 
   return (
-    <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#0a0d0e]">
-      <div className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-border bg-[#0d1214] px-5 md:px-7">
-        <span className="shrink-0 text-[13px] font-medium text-foreground">Settings</span>
-        <span className="truncate text-xs text-muted-foreground">{configPath || "config.toml"}</span>
+    <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+      <div className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-border bg-[#0c0c0e] px-5 md:px-7">
+        <div className="flex items-center gap-1">
+          {(
+            [
+              ["providers", "Providers"],
+              ["vaults", "Vaults"],
+              ["harnesses", "Harnesses"],
+            ] as Array<[SettingsTab, string]>
+          ).map(([id, label]) => (
+            <Button
+              key={id}
+              variant="ghost"
+              size="sm"
+              onClick={() => setSubTab(id)}
+              className={cn(
+                "h-7 px-2.5 text-xs",
+                subTab === id && "bg-[#1b1b20] text-foreground hover:bg-[#1b1b20]",
+              )}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 md:p-8">
-        <div className="mx-auto max-w-[900px] space-y-8">
-          <form onSubmit={saveProviders} className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">Providers (Embeddings &amp; LLM Curator)</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Keys are read from environment variables and never written into config.toml.
-                </p>
+        <div className="mx-auto max-w-[760px]">
+          {subTab === "providers" && (
+            <form onSubmit={saveProviders} className="space-y-6">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <h2 className="text-sm font-medium text-foreground">Embeddings &amp; Curator</h2>
+                <Button type="submit" size="sm" disabled={busy}>
+                  <Check size={14} />
+                  Save
+                </Button>
               </div>
-              <Button type="submit" size="sm" disabled={busy}>
-                <Check size={14} />
-                Save &amp; Reindex
-              </Button>
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3 rounded-md border border-border bg-[#0f1416] p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Embeddings (Hybrid RRF)
-                  </span>
-                  {emb.api_key_env ? (
-                    <Badge variant={envStatus.embeddings ? "default" : "warn"}>
-                      {envStatus.embeddings ? `${emb.api_key_env} set` : `${emb.api_key_env} missing`}
-                    </Badge>
-                  ) : (
-                    <Badge variant="neutral">{emb.provider === "none" ? "BM25 only" : "local"}</Badge>
-                  )}
-                </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="space-y-3 rounded-md border border-border bg-[#0e0e11] p-4">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground">Embeddings</span>
+                    {emb.api_key_env ? (
+                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            envStatus.embeddings ? "bg-emerald-500" : "bg-amber-500",
+                          )}
+                        />
+                        {envStatus.embeddings ? "env set" : "env missing"}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {emb.provider === "none" ? "BM25 only" : "local"}
+                      </span>
+                    )}
+                  </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
-                  <label className="space-y-1 text-xs text-muted-foreground">
-                    <span>Provider</span>
-                    <Select
-                      value={emb.provider}
-                      onChange={(e) => {
-                        const p = e.target.value;
-                        const pre = EMB_PRESETS[p] ?? EMB_PRESETS.none;
-                        setEmb((curr) => ({
-                          ...curr,
-                          provider: p,
-                          model: pre.model,
-                          api_key_env: pre.env,
-                          endpoint: pre.endpoint,
-                        }));
-                      }}
-                    >
-                      <option value="none">none (FTS5 BM25 only)</option>
-                      <option value="ollama">ollama (local)</option>
-                      <option value="openrouter">openrouter (bge-m3)</option>
-                      <option value="deepinfra">deepinfra (bge-m3)</option>
-                      <option value="openai">openai</option>
-                      <option value="cloudflare">cloudflare</option>
-                    </Select>
-                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <label className="space-y-1 text-xs text-muted-foreground">
+                      <span>Provider</span>
+                      <Select
+                        value={emb.provider}
+                        onChange={(e) => {
+                          const p = e.target.value;
+                          const pre = EMB_PRESETS[p] ?? EMB_PRESETS.none;
+                          setEmb((c) => ({
+                            ...c,
+                            provider: p,
+                            model: pre.model,
+                            api_key_env: pre.env,
+                            endpoint: pre.endpoint,
+                          }));
+                        }}
+                      >
+                        <option value="none">none</option>
+                        <option value="ollama">ollama</option>
+                        <option value="openrouter">openrouter</option>
+                        <option value="deepinfra">deepinfra</option>
+                        <option value="openai">openai</option>
+                        <option value="cloudflare">cloudflare</option>
+                      </Select>
+                    </label>
+                    <label className="space-y-1 text-xs text-muted-foreground">
+                      <span>Dimensions</span>
+                      <Input
+                        type="number"
+                        value={emb.dimensions}
+                        onChange={(e) => setEmb((c) => ({ ...c, dimensions: Number(e.target.value) || 1024 }))}
+                      />
+                    </label>
+                  </div>
 
-                  <label className="space-y-1 text-xs text-muted-foreground">
-                    <span>Dimensions</span>
+                  <label className="block space-y-1 text-xs text-muted-foreground">
+                    <span>Model</span>
                     <Input
-                      type="number"
-                      value={emb.dimensions}
-                      onChange={(e) => setEmb((c) => ({ ...c, dimensions: Number(e.target.value) || 1024 }))}
+                      value={emb.model}
+                      onChange={(e) => setEmb((c) => ({ ...c, model: e.target.value }))}
+                      placeholder="baai/bge-m3"
                     />
                   </label>
-                </div>
 
-                <label className="block space-y-1 text-xs text-muted-foreground">
-                  <span>Model</span>
-                  <Input
-                    value={emb.model}
-                    onChange={(e) => setEmb((c) => ({ ...c, model: e.target.value }))}
-                    placeholder="baai/bge-m3"
-                  />
-                </label>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <label className="space-y-1 text-xs text-muted-foreground">
-                    <span>API key env var</span>
+                  <label className="block space-y-1 text-xs text-muted-foreground">
+                    <span>API key env</span>
                     <Input
                       value={emb.api_key_env}
                       onChange={(e) => setEmb((c) => ({ ...c, api_key_env: e.target.value }))}
                       placeholder="OPENROUTER_API_KEY"
                     />
                   </label>
-                  <label className="space-y-1 text-xs text-muted-foreground">
-                    <span>Endpoint (optional)</span>
+                </div>
+
+                <div className="space-y-3 rounded-md border border-border bg-[#0e0e11] p-4">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground">LLM Curator</span>
+                    {llm.api_key_env ? (
+                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            envStatus.llm ? "bg-emerald-500" : "bg-amber-500",
+                          )}
+                        />
+                        {envStatus.llm ? "env set" : "env missing"}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {llm.provider === "none" ? "disabled" : "local"}
+                      </span>
+                    )}
+                  </div>
+
+                  <label className="block space-y-1 text-xs text-muted-foreground">
+                    <span>Provider</span>
+                    <Select
+                      value={llm.provider}
+                      onChange={(e) => {
+                        const p = e.target.value;
+                        const pre = LLM_PRESETS[p] ?? LLM_PRESETS.none;
+                        setLLM((c) => ({ ...c, provider: p, model: pre.model, api_key_env: pre.env }));
+                      }}
+                    >
+                      <option value="none">none</option>
+                      <option value="groq">groq</option>
+                      <option value="openrouter">openrouter</option>
+                      <option value="openai">openai</option>
+                      <option value="ollama">ollama</option>
+                    </Select>
+                  </label>
+
+                  <label className="block space-y-1 text-xs text-muted-foreground">
+                    <span>Model</span>
                     <Input
-                      value={emb.endpoint}
-                      onChange={(e) => setEmb((c) => ({ ...c, endpoint: e.target.value }))}
-                      placeholder="auto"
+                      value={llm.model}
+                      onChange={(e) => setLLM((c) => ({ ...c, model: e.target.value }))}
+                      placeholder="llama-3.3-70b-versatile"
+                    />
+                  </label>
+
+                  <label className="block space-y-1 text-xs text-muted-foreground">
+                    <span>API key env</span>
+                    <Input
+                      value={llm.api_key_env}
+                      onChange={(e) => setLLM((c) => ({ ...c, api_key_env: e.target.value }))}
+                      placeholder="GROQ_API_KEY"
                     />
                   </label>
                 </div>
               </div>
+            </form>
+          )}
 
-              <div className="space-y-3 rounded-md border border-border bg-[#0f1416] p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    LLM Curator (curate --llm)
-                  </span>
-                  {llm.api_key_env ? (
-                    <Badge variant={envStatus.llm ? "default" : "warn"}>
-                      {envStatus.llm ? `${llm.api_key_env} set` : `${llm.api_key_env} missing`}
-                    </Badge>
-                  ) : (
-                    <Badge variant="neutral">{llm.provider === "none" ? "disabled" : "local"}</Badge>
-                  )}
-                </div>
+          {subTab === "vaults" && (
+            <div className="space-y-6">
+              <div className="overflow-x-auto rounded-md border border-border bg-[#0e0e11]">
+                <table className="w-full min-w-[540px] border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="px-4 py-2.5 font-medium">Vault</th>
+                      <th className="px-4 py-2.5 font-medium">Write</th>
+                      <th className="px-4 py-2.5 font-medium">Path &amp; Routing</th>
+                      <th className="px-4 py-2.5 text-right font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/70">
+                    {vaults.map((v) => (
+                      <tr key={v.name}>
+                        <td className="px-4 py-2.5 font-medium text-foreground">
+                          {v.name} <span className="ml-1 font-normal text-muted-foreground">{v.kind}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{v.default_write}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground">
+                          <div className="text-foreground">{v.path}</div>
+                          <div className="mt-0.5 text-[11px]">
+                            {[
+                              v.match_paths?.length ? v.match_paths.join(", ") : "",
+                              v.match_git_remotes?.length ? v.match_git_remotes.join(", ") : "",
+                              v.always_include?.length ? v.always_include.join(", ") : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Remove ${v.name}`}
+                            disabled={busy}
+                            onClick={() => void removeVault(v.name)}
+                          >
+                            <Trash size={14} />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                <label className="block space-y-1 text-xs text-muted-foreground">
-                  <span>Provider</span>
+              <form onSubmit={saveVault} className="space-y-3 rounded-md border border-border bg-[#0e0e11] p-4">
+                <div className="text-xs font-medium text-foreground">Add vault</div>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <Input value={vName} onChange={(e) => setVName(e.target.value)} placeholder="Name" />
+                  <Input value={vPath} onChange={(e) => setVPath(e.target.value)} placeholder="Path (~/notes/acme)" />
                   <Select
-                    value={llm.provider}
+                    value={vKind}
                     onChange={(e) => {
-                      const p = e.target.value;
-                      const pre = LLM_PRESETS[p] ?? LLM_PRESETS.none;
-                      setLLM((curr) => ({ ...curr, provider: p, model: pre.model, api_key_env: pre.env }));
+                      setVKind(e.target.value);
+                      setVWrite(e.target.value === "org" ? "propose" : "direct");
                     }}
                   >
-                    <option value="none">none (deterministic only)</option>
-                    <option value="groq">groq (fast inference)</option>
-                    <option value="openrouter">openrouter</option>
-                    <option value="openai">openai</option>
-                    <option value="ollama">ollama (local)</option>
+                    <option value="org">org</option>
+                    <option value="personal">personal</option>
                   </Select>
-                </label>
-
-                <label className="block space-y-1 text-xs text-muted-foreground">
-                  <span>Model</span>
+                  <Select value={vWrite} onChange={(e) => setVWrite(e.target.value)}>
+                    <option value="propose">propose</option>
+                    <option value="direct">direct</option>
+                    <option value="readonly">readonly</option>
+                  </Select>
                   <Input
-                    value={llm.model}
-                    onChange={(e) => setLLM((c) => ({ ...c, model: e.target.value }))}
-                    placeholder="llama-3.3-70b-versatile"
+                    value={vMatchPaths}
+                    onChange={(e) => setVMatchPaths(e.target.value)}
+                    placeholder="Match paths (~/work/acme/**)"
                   />
-                </label>
-
-                <label className="block space-y-1 text-xs text-muted-foreground">
-                  <span>API key env var</span>
                   <Input
-                    value={llm.api_key_env}
-                    onChange={(e) => setLLM((c) => ({ ...c, api_key_env: e.target.value }))}
-                    placeholder="GROQ_API_KEY"
+                    value={vMatchRemotes}
+                    onChange={(e) => setVMatchRemotes(e.target.value)}
+                    placeholder="Match remotes (github.com/acme/*)"
                   />
-                </label>
-              </div>
+                </div>
+                <div className="flex items-center justify-between gap-2.5">
+                  <Input
+                    value={vAlways}
+                    onChange={(e) => setVAlways(e.target.value)}
+                    placeholder="Always include (persona/**)"
+                    className="max-w-xs"
+                  />
+                  <Button type="submit" size="sm" disabled={busy || !vName.trim() || !vPath.trim()}>
+                    <Plus size={14} />
+                    Add
+                  </Button>
+                </div>
+              </form>
             </div>
-          </form>
+          )}
 
-          <section className="space-y-3">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">Vaults &amp; Multi-Org Routing</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Add or update vaults directly from Studio; new directories are initialized with Git automatically.
-              </p>
-            </div>
-
-            <div className="overflow-x-auto rounded-md border border-border bg-[#0f1416]">
-              <table className="w-full min-w-[600px] border-collapse text-left text-xs">
-                <thead>
-                  <tr className="border-b border-border bg-[#12191c] text-muted-foreground">
-                    <th className="px-3.5 py-2.5 font-medium">Vault</th>
-                    <th className="px-3.5 py-2.5 font-medium">Policy</th>
-                    <th className="px-3.5 py-2.5 font-medium">Path &amp; Routing</th>
-                    <th className="px-3.5 py-2.5 text-right font-medium">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {vaults.map((v) => (
-                    <tr key={v.name}>
-                      <td className="px-3.5 py-2.5 font-medium text-foreground">
-                        {v.name}{" "}
-                        <Badge variant={v.kind === "org" ? "default" : "warn"} className="ml-1.5">
-                          {v.kind}
-                        </Badge>
-                      </td>
-                      <td className="px-3.5 py-2.5 text-muted-foreground">{v.default_write}</td>
-                      <td className="px-3.5 py-2.5 text-muted-foreground">
-                        <div className="text-foreground">{v.path}</div>
-                        <div className="mt-0.5 text-[11px]">
-                          {[
-                            v.match_paths?.length ? `paths: ${v.match_paths.join(", ")}` : "",
-                            v.match_git_remotes?.length ? `remotes: ${v.match_git_remotes.join(", ")}` : "",
-                            v.always_include?.length ? `always: ${v.always_include.join(", ")}` : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" · ") || "default scope"}
-                        </div>
-                      </td>
-                      <td className="px-3.5 py-2.5 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Remove ${v.name}`}
-                          disabled={busy}
-                          onClick={() => void removeVault(v.name)}
-                        >
-                          <Trash size={14} />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <form
-              onSubmit={saveVault}
-              className="grid gap-2.5 rounded-md border border-border bg-[#0f1416] p-4 sm:grid-cols-6"
-            >
-              <Input
-                value={vName}
-                onChange={(e) => setVName(e.target.value)}
-                placeholder="Vault name (e.g. acme)"
-                className="sm:col-span-2"
-              />
-              <Input
-                value={vPath}
-                onChange={(e) => setVPath(e.target.value)}
-                placeholder="Directory (e.g. ~/notes/acme)"
-                className="sm:col-span-2"
-              />
-              <Select
-                value={vKind}
-                onChange={(e) => {
-                  setVKind(e.target.value);
-                  setVWrite(e.target.value === "org" ? "propose" : "direct");
-                }}
-              >
-                <option value="org">org</option>
-                <option value="personal">personal</option>
-              </Select>
-              <Select value={vWrite} onChange={(e) => setVWrite(e.target.value)}>
-                <option value="propose">propose</option>
-                <option value="direct">direct</option>
-                <option value="readonly">readonly</option>
-              </Select>
-              <Input
-                value={vMatchPaths}
-                onChange={(e) => setVMatchPaths(e.target.value)}
-                placeholder="match_paths (e.g. ~/work/acme/**)"
-                className="sm:col-span-2"
-              />
-              <Input
-                value={vMatchRemotes}
-                onChange={(e) => setVMatchRemotes(e.target.value)}
-                placeholder="match_git_remotes (e.g. github.com/acme/*)"
-                className="sm:col-span-2"
-              />
-              <Input
-                value={vAlways}
-                onChange={(e) => setVAlways(e.target.value)}
-                placeholder="always_include (persona/**)"
-              />
-              <Button type="submit" size="sm" disabled={busy || !vName.trim() || !vPath.trim()} className="h-8">
-                <Plus size={14} />
-                Add vault
-              </Button>
-            </form>
-          </section>
-
-          <section className="space-y-3">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">AI Harnesses (Hooks &amp; MCP)</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                One-click setup for local coding agents detected on this machine.
-              </p>
-            </div>
-
-            <div className="divide-y divide-border/70 rounded-md border border-border bg-[#0f1416]">
+          {subTab === "harnesses" && (
+            <div className="divide-y divide-border/70 rounded-md border border-border bg-[#0e0e11]">
               {harnesses.map((h) => (
                 <div key={h.id} className="flex items-center justify-between gap-3 px-4 py-3 text-xs">
                   <div className="flex items-center gap-2.5">
+                    <span
+                      className={cn("h-1.5 w-1.5 rounded-full", h.detected ? "bg-emerald-500" : "bg-zinc-600")}
+                    />
                     <span className="font-medium text-foreground">{h.label}</span>
                     <span className="text-muted-foreground">{h.marker}</span>
-                    <Badge variant={h.detected ? "default" : "neutral"}>
-                      {h.detected ? "detected" : "not found"}
-                    </Badge>
                   </div>
                   <Button
                     variant="outline"
@@ -508,7 +501,7 @@ export function SettingsView({
                 </div>
               ))}
             </div>
-          </section>
+          )}
         </div>
       </div>
     </main>
