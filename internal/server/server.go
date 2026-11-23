@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,6 +69,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/v1/status", s.withAuth("reader", s.handleStatus))
 	mux.HandleFunc("/api/v1/notes", s.withAuth("reader", s.handleNotes))
 	mux.HandleFunc("/api/v1/note", s.withAuth("reader", s.handleNote))
+	mux.HandleFunc("/api/v1/graph", s.withAuth("reader", s.handleGraph))
 	mux.HandleFunc("/api/v1/search", s.withAuth("reader", s.handleSearch))
 	mux.HandleFunc("/api/v1/proposals", s.withAuth("reader", s.handleProposals))
 	mux.HandleFunc("/api/v1/proposals/", s.withAuth("writer", s.handleProposalAction))
@@ -431,6 +433,162 @@ func (s *Server) handleNotes(w http.ResponseWriter, r *http.Request, p principal
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"notes": out})
+}
+
+var (
+	reMDLink   = regexp.MustCompile(`\]\(([^)#\s]+\.md)\)`)
+	reWikiLink = regexp.MustCompile(`\[\[([^\]]+)\]\]`)
+	reDecArrow = regexp.MustCompile(`->\s+([A-Za-z0-9_./-]+\.md)`)
+	rePathRef  = regexp.MustCompile(`\b([A-Za-z0-9_-]+/[A-Za-z0-9_./-]+\.md)\b`)
+)
+
+func (s *Server) handleGraph(w http.ResponseWriter, r *http.Request, p principal) {
+	active := s.activeVaultsFor(p, r.URL.Query().Get("vault"))
+
+	type graphNode struct {
+		ID            string `json:"id"`
+		Kind          string `json:"kind"` // vault | note
+		Vault         string `json:"vault"`
+		VaultKind     string `json:"vault_kind"`
+		Label         string `json:"label"`
+		Path          string `json:"path,omitempty"`
+		Folder        string `json:"folder,omitempty"`
+		Status        string `json:"status,omitempty"`
+		Owner         string `json:"owner,omitempty"`
+		DefaultWrite  string `json:"default_write,omitempty"`
+		SizeBytes     int64  `json:"size_bytes,omitempty"`
+		OpenProposals int    `json:"open_proposals,omitempty"`
+	}
+	type graphEdge struct {
+		Source string `json:"source"`
+		Target string `json:"target"`
+		Kind   string `json:"kind"` // contains | link | decision
+	}
+
+	var nodes []graphNode
+	var edges []graphEdge
+	edgeSeen := map[string]bool{}
+	addEdge := func(src, dst, kind string) {
+		if src == dst || src == "" || dst == "" {
+			return
+		}
+		k := src + "->" + dst
+		if kind == "contains" {
+			k += ":contains"
+		}
+		if edgeSeen[k] {
+			return
+		}
+		edgeSeen[k] = true
+		edges = append(edges, graphEdge{Source: src, Target: dst, Kind: kind})
+	}
+
+	for _, av := range active {
+		root := config.ExpandHome(av.Config.Path)
+		props, _ := proposal.List(root, false)
+		propByPath := map[string]int{}
+		for _, pr := range props {
+			propByPath[pr.Path]++
+		}
+
+		vaultNodeID := "vault:" + av.Name
+		nodes = append(nodes, graphNode{
+			ID:            vaultNodeID,
+			Kind:          "vault",
+			Vault:         av.Name,
+			VaultKind:     av.Config.Kind,
+			Label:         av.Name,
+			DefaultWrite:  av.Config.DefaultWrite,
+			OpenProposals: len(props),
+		})
+
+		notes, err := vault.WalkNotes(av.Name, root)
+		if err != nil {
+			continue
+		}
+
+		byPath := map[string]string{}
+		byBase := map[string]string{}
+		var visible []vault.Note
+		for _, n := range notes {
+			if !av.AllowsPath(n.RelPath) {
+				continue
+			}
+			visible = append(visible, n)
+			nid := "note:" + av.Name + ":" + n.RelPath
+			byPath[n.RelPath] = nid
+			base := strings.TrimSuffix(filepath.Base(n.RelPath), ".md")
+			byBase[strings.ToLower(base)] = nid
+
+			folder := "root"
+			if idx := strings.Index(n.RelPath, "/"); idx != -1 {
+				folder = n.RelPath[:idx]
+			}
+			label := n.Title
+			if label == "" {
+				label = n.RelPath
+			}
+			nodes = append(nodes, graphNode{
+				ID:            nid,
+				Kind:          "note",
+				Vault:         av.Name,
+				VaultKind:     av.Config.Kind,
+				Label:         label,
+				Path:          n.RelPath,
+				Folder:        folder,
+				Status:        n.Status,
+				Owner:         n.Owner,
+				SizeBytes:     n.SizeBytes,
+				OpenProposals: propByPath[n.RelPath],
+			})
+			addEdge(vaultNodeID, nid, "contains")
+		}
+
+		// Extract intra-vault note links (markdown links, wikilinks, decision arrows, path references)
+		for _, n := range visible {
+			srcID := byPath[n.RelPath]
+			noteDir := filepath.Dir(n.RelPath)
+
+			resolveRef := func(ref string) string {
+				ref = strings.TrimSpace(strings.TrimPrefix(filepath.ToSlash(ref), "/"))
+				if id, ok := byPath[ref]; ok {
+					return id
+				}
+				joined := filepath.ToSlash(filepath.Clean(filepath.Join(noteDir, ref)))
+				if id, ok := byPath[joined]; ok {
+					return id
+				}
+				base := strings.ToLower(strings.TrimSuffix(filepath.Base(ref), ".md"))
+				if id, ok := byBase[base]; ok {
+					return id
+				}
+				return ""
+			}
+
+			for _, m := range reDecArrow.FindAllStringSubmatch(n.Raw, -1) {
+				if dst := resolveRef(m[1]); dst != "" {
+					addEdge(srcID, dst, "decision")
+				}
+			}
+			for _, m := range reMDLink.FindAllStringSubmatch(n.Raw, -1) {
+				if dst := resolveRef(m[1]); dst != "" {
+					addEdge(srcID, dst, "link")
+				}
+			}
+			for _, m := range reWikiLink.FindAllStringSubmatch(n.Raw, -1) {
+				if dst := resolveRef(m[1]); dst != "" {
+					addEdge(srcID, dst, "link")
+				}
+			}
+			for _, m := range rePathRef.FindAllStringSubmatch(n.Raw, -1) {
+				if dst := resolveRef(m[1]); dst != "" {
+					addEdge(srcID, dst, "link")
+				}
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"nodes": nodes, "edges": edges})
 }
 
 func (s *Server) handleNote(w http.ResponseWriter, r *http.Request, p principal) {

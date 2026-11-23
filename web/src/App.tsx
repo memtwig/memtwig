@@ -6,6 +6,7 @@ import {
   Files,
   FolderSimple,
   GitDiff,
+  Graph,
   LockSimple,
   MagnifyingGlass,
   X,
@@ -15,9 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownView } from "@/components/MarkdownView";
+import { GraphView, type GraphEdge, type GraphNode } from "@/components/GraphView";
 import { cn } from "@/lib/utils";
 
-type Section = "notes" | "proposals" | "audit";
+type Section = "notes" | "graph" | "proposals" | "audit";
 type NoteMode = "read" | "raw" | "edit";
 
 type VaultInfo = {
@@ -82,8 +84,9 @@ type AuditEvent = {
   detail?: string;
 };
 
-function vaultVariant(kind?: string): "default" | "blue" | "neutral" {
+function vaultVariant(kind?: string): "default" | "warn" | "neutral" {
   if (kind === "org") return "default";
+  if (kind === "personal") return "warn";
   return "neutral";
 }
 
@@ -98,13 +101,16 @@ function folderOf(path: string): string {
 }
 
 function countDiffAdditions(diff: string): number {
-  return diff.split("\n").filter((l) => l.startsWith("+ ") || (l.startsWith("+") && !l.startsWith("+++"))).length;
+  return diff
+    .trimEnd()
+    .split("\n")
+    .filter((l) => l.startsWith("+ ") || (l.startsWith("+") && !l.startsWith("+++"))).length;
 }
 
 export function App() {
   const initialSection = (): Section => {
     const p = new URLSearchParams(window.location.search).get("tab");
-    if (p === "proposals" || p === "audit") return p;
+    if (p === "graph" || p === "proposals" || p === "audit") return p;
     return "notes";
   };
 
@@ -114,6 +120,9 @@ export function App() {
   const [folderFilter, setFolderFilter] = React.useState<string>("all");
 
   const [notes, setNotes] = React.useState<NoteSummary[]>([]);
+  const [graphNodes, setGraphNodes] = React.useState<GraphNode[]>([]);
+  const [graphEdges, setGraphEdges] = React.useState<GraphEdge[]>([]);
+
   const [searchHits, setSearchHits] = React.useState<SearchHit[] | null>(null);
   const [query, setQuery] = React.useState("");
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -140,9 +149,10 @@ export function App() {
 
   const loadAll = React.useCallback(async () => {
     try {
-      const [stRes, notesRes, propRes, audRes] = await Promise.all([
+      const [stRes, notesRes, graphRes, propRes, audRes] = await Promise.all([
         fetch("/api/v1/status"),
         fetch("/api/v1/notes"),
+        fetch("/api/v1/graph"),
         fetch("/api/v1/proposals"),
         fetch("/api/v1/audit?n=60"),
       ]);
@@ -153,6 +163,11 @@ export function App() {
       if (notesRes.ok) {
         const d = await notesRes.json();
         setNotes(d.notes ?? []);
+      }
+      if (graphRes.ok) {
+        const d = await graphRes.json();
+        setGraphNodes(d.nodes ?? []);
+        setGraphEdges(d.edges ?? []);
       }
       if (propRes.ok) {
         const d = await propRes.json();
@@ -185,7 +200,6 @@ export function App() {
     }
   }, []);
 
-  // Derived folders and filtered lists
   const folders = React.useMemo(() => {
     const counts = new Map<string, number>();
     for (const n of notes) {
@@ -240,11 +254,33 @@ export function App() {
     return proposals.filter((p) => p.vault === selectedNote.vault && p.path === selectedNote.path);
   }, [proposals, selectedNote]);
 
+  const noteConnections = React.useMemo(() => {
+    if (!selectedNote) return [];
+    const curId = `note:${selectedNote.vault}:${selectedNote.path}`;
+    const nodeMap = new Map(graphNodes.map((n) => [n.id, n]));
+    return graphEdges
+      .filter((e) => e.kind !== "contains" && (e.source === curId || e.target === curId))
+      .map((e) => {
+        const other = nodeMap.get(e.source === curId ? e.target : e.source);
+        return {
+          dir: e.source === curId ? "out" : "in",
+          kind: e.kind,
+          node: other,
+        };
+      })
+      .filter((x) => Boolean(x.node && x.node.path));
+  }, [selectedNote, graphNodes, graphEdges]);
+
   const vaultKindMap = React.useMemo(() => {
     const m = new Map<string, VaultInfo>();
     for (const v of vaults) m.set(v.name, v);
     return m;
   }, [vaults]);
+
+  const semanticLinkCount = React.useMemo(
+    () => graphEdges.filter((e) => e.kind !== "contains").length,
+    [graphEdges],
+  );
 
   const runSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -344,7 +380,6 @@ export function App() {
     }
   };
 
-  // Keyboard shortcuts: Cmd/Ctrl+K search, A/R on proposals, J/K navigate proposals
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -382,69 +417,72 @@ export function App() {
   const renderDiffLines = (diff: string) => {
     let oldLine = 1;
     let newLine = 1;
-    return diff.trimEnd().split("\n").map((line, i) => {
-      if (line.startsWith("--- ") || line.startsWith("+++ ")) {
-        return null;
-      }
-      if (line.startsWith("@@")) {
-        const m = line.match(/line\s+(\d+)/);
-        if (m) {
-          oldLine = Math.max(1, Number(m[1]) - 3);
-          newLine = oldLine;
+    return diff
+      .trimEnd()
+      .split("\n")
+      .map((line, i) => {
+        if (line.startsWith("--- ") || line.startsWith("+++ ")) {
+          return null;
         }
-        return (
-          <div key={i} className="border-y border-border bg-[#f0f7f6] px-3 py-1.5 text-xs font-medium text-primary">
-            {line}
-          </div>
-        );
-      }
-      const isAdd = line.startsWith("+ ") || line.startsWith("+");
-      const isDel = line.startsWith("- ") || line.startsWith("-");
-      const leftNum = isAdd ? "" : String(oldLine++);
-      const rightNum = isDel ? "" : String(newLine++);
-      const sign = isAdd ? "+" : isDel ? "−" : " ";
-      const text = isAdd || isDel ? line.replace(/^[+-]\s?/, "") : line.replace(/^ {1,2}/, "");
+        if (line.startsWith("@@")) {
+          const m = line.match(/line\s+(\d+)/);
+          if (m) {
+            oldLine = Math.max(1, Number(m[1]) - 3);
+            newLine = oldLine;
+          }
+          return (
+            <div key={i} className="border-y border-border bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-300">
+              {line}
+            </div>
+          );
+        }
+        const isAdd = line.startsWith("+ ") || line.startsWith("+");
+        const isDel = line.startsWith("- ") || line.startsWith("-");
+        const leftNum = isAdd ? "" : String(oldLine++);
+        const rightNum = isDel ? "" : String(newLine++);
+        const sign = isAdd ? "+" : isDel ? "−" : " ";
+        const text = isAdd || isDel ? line.replace(/^[+-]\s?/, "") : line.replace(/^ {1,2}/, "");
 
-      return (
-        <div
-          key={i}
-          className={cn(
-            "grid grid-cols-[36px_36px_22px_1fr] text-[13px] leading-6",
-            isAdd && "bg-emerald-50/90 text-emerald-950",
-            isDel && "bg-red-50/90 text-red-950",
-            !isAdd && !isDel && "text-[#334241]",
-          )}
-        >
-          <span className="select-none border-r border-border/60 pr-2 text-right text-[11px] tabular-nums text-muted-foreground/70">
-            {leftNum}
-          </span>
-          <span className="select-none border-r border-border/60 pr-2 text-right text-[11px] tabular-nums text-muted-foreground/70">
-            {rightNum}
-          </span>
-          <span
+        return (
+          <div
+            key={i}
             className={cn(
-              "select-none text-center font-semibold",
-              isAdd && "text-emerald-700",
-              isDel && "text-red-700",
-              !isAdd && !isDel && "text-muted-foreground/50",
+              "grid grid-cols-[36px_36px_22px_1fr] text-[13px] leading-6",
+              isAdd && "bg-emerald-500/12 text-emerald-200",
+              isDel && "bg-red-500/12 text-red-200",
+              !isAdd && !isDel && "text-[#a4b8b6]",
             )}
           >
-            {sign}
-          </span>
-          <span className="whitespace-pre-wrap break-words px-2.5">{text || " "}</span>
-        </div>
-      );
-    });
+            <span className="select-none border-r border-border/60 pr-2 text-right text-[11px] tabular-nums text-muted-foreground/60">
+              {leftNum}
+            </span>
+            <span className="select-none border-r border-border/60 pr-2 text-right text-[11px] tabular-nums text-muted-foreground/60">
+              {rightNum}
+            </span>
+            <span
+              className={cn(
+                "select-none text-center font-semibold",
+                isAdd && "text-emerald-400",
+                isDel && "text-red-400",
+                !isAdd && !isDel && "text-muted-foreground/40",
+              )}
+            >
+              {sign}
+            </span>
+            <span className="whitespace-pre-wrap break-words px-2.5">{text || " "}</span>
+          </div>
+        );
+      });
   };
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-background md:flex-row">
       {/* Desktop Left Rail */}
-      <aside className="hidden md:flex md:w-[228px] md:shrink-0 md:flex-col md:justify-between border-r border-border bg-[#f8f9f9]">
+      <aside className="hidden md:flex md:w-[228px] md:shrink-0 md:flex-col md:justify-between border-r border-border bg-[#0e1214]">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3.5">
           <div className="mb-3 flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-[5px] bg-[#111818] text-[11px] font-semibold text-[#5fd3c7]">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] border border-teal-500/35 bg-teal-500/10 text-[11px] font-semibold text-teal-300">
                 mt
               </span>
               <span className="text-[14px] font-semibold tracking-tight text-foreground">memtwig</span>
@@ -458,7 +496,7 @@ export function App() {
               onClick={() => setSection("notes")}
               className={cn(
                 "h-8 w-full justify-between px-2 text-[13px] font-normal",
-                section === "notes" && "bg-[#e9efef] font-medium text-foreground hover:bg-[#e9efef]",
+                section === "notes" && "bg-[#182124] font-medium text-foreground hover:bg-[#182124]",
               )}
             >
               <span className="flex items-center gap-2">
@@ -470,10 +508,25 @@ export function App() {
 
             <Button
               variant="ghost"
+              onClick={() => setSection("graph")}
+              className={cn(
+                "h-8 w-full justify-between px-2 text-[13px] font-normal",
+                section === "graph" && "bg-[#182124] font-medium text-foreground hover:bg-[#182124]",
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <Graph size={15} weight={section === "graph" ? "fill" : "regular"} />
+                <span>Graph</span>
+              </span>
+              <span className="text-[11px] tabular-nums text-muted-foreground">{semanticLinkCount}</span>
+            </Button>
+
+            <Button
+              variant="ghost"
               onClick={() => setSection("proposals")}
               className={cn(
                 "h-8 w-full justify-between px-2 text-[13px] font-normal",
-                section === "proposals" && "bg-[#e9efef] font-medium text-foreground hover:bg-[#e9efef]",
+                section === "proposals" && "bg-[#182124] font-medium text-foreground hover:bg-[#182124]",
               )}
             >
               <span className="flex items-center gap-2">
@@ -492,7 +545,7 @@ export function App() {
               onClick={() => setSection("audit")}
               className={cn(
                 "h-8 w-full justify-between px-2 text-[13px] font-normal",
-                section === "audit" && "bg-[#e9efef] font-medium text-foreground hover:bg-[#e9efef]",
+                section === "audit" && "bg-[#182124] font-medium text-foreground hover:bg-[#182124]",
               )}
             >
               <span className="flex items-center gap-2">
@@ -515,7 +568,7 @@ export function App() {
               }}
               className={cn(
                 "h-7 w-full justify-between px-2 text-[12.5px] font-normal",
-                vaultFilter === "all" && "bg-[#e9efef] font-medium text-foreground hover:bg-[#e9efef]",
+                vaultFilter === "all" && "bg-[#182124] font-medium text-foreground hover:bg-[#182124]",
               )}
             >
               <span>All vaults</span>
@@ -535,14 +588,14 @@ export function App() {
                   }}
                   className={cn(
                     "h-7 w-full justify-between px-2 text-[12.5px] font-normal",
-                    active && "bg-[#e9efef] font-medium text-foreground hover:bg-[#e9efef]",
+                    active && "bg-[#182124] font-medium text-foreground hover:bg-[#182124]",
                   )}
                 >
                   <span className="flex items-center gap-2 truncate">
                     <span
                       className={cn(
                         "h-1.5 w-1.5 shrink-0 rounded-[2px]",
-                        v.kind === "org" ? "bg-primary" : "bg-amber-500",
+                        v.kind === "org" ? "bg-primary" : "bg-amber-400",
                       )}
                     />
                     <span className="truncate">{v.name}</span>
@@ -568,7 +621,7 @@ export function App() {
                       onClick={() => setFolderFilter(active ? "all" : folder)}
                       className={cn(
                         "h-7 w-full justify-between px-2 text-[12.5px] font-normal",
-                        active && "bg-[#e9efef] font-medium text-foreground hover:bg-[#e9efef]",
+                        active && "bg-[#182124] font-medium text-foreground hover:bg-[#182124]",
                       )}
                     >
                       <span className="flex items-center gap-1.5 truncate">
@@ -586,7 +639,7 @@ export function App() {
 
         <div className="border-t border-border p-3">
           {notice && (
-            <div className="mb-2 rounded-md border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-[11.5px] font-medium text-teal-900">
+            <div className="mb-2 rounded-md border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-[11.5px] font-medium text-teal-300">
               {notice}
             </div>
           )}
@@ -611,10 +664,10 @@ export function App() {
         </div>
       </aside>
 
-      {/* Mobile Top Navigation Bar (flat, crisp, zero pill bloat) */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-[#f8f9f9] px-3 md:hidden">
+      {/* Mobile Top Navigation Bar */}
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-[#0e1214] px-3 md:hidden">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] bg-[#111818] text-[11px] font-semibold text-[#5fd3c7]">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] border border-teal-500/35 bg-teal-500/10 text-[11px] font-semibold text-teal-300">
             mt
           </span>
           <span className="text-sm font-semibold text-foreground">memtwig</span>
@@ -631,6 +684,16 @@ export function App() {
             Notes
           </Button>
           <Button
+            variant={section === "graph" ? "outline" : "ghost"}
+            size="sm"
+            onClick={() => {
+              setSection("graph");
+              setMobileShowDetail(false);
+            }}
+          >
+            Graph
+          </Button>
+          <Button
             variant={section === "proposals" ? "outline" : "ghost"}
             size="sm"
             onClick={() => {
@@ -638,28 +701,17 @@ export function App() {
               setMobileShowDetail(false);
             }}
           >
-            Proposals{proposals.length > 0 ? ` (${proposals.length})` : ""}
-          </Button>
-          <Button
-            variant={section === "audit" ? "outline" : "ghost"}
-            size="sm"
-            onClick={() => {
-              setSection("audit");
-              setMobileShowDetail(false);
-            }}
-          >
-            Audit
+            Diff{proposals.length > 0 ? ` (${proposals.length})` : ""}
           </Button>
         </div>
       </header>
 
-      {/* Main Workspace Area */}
+      {/* NOTES VIEW */}
       {section === "notes" && (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          {/* Middle Note List Pane */}
           <section
             className={cn(
-              "flex w-full shrink-0 flex-col border-r border-border bg-[#fbfcfc] md:w-[304px]",
+              "flex w-full shrink-0 flex-col border-r border-border bg-[#101517] md:w-[304px]",
               mobileShowDetail && "hidden md:flex",
             )}
           >
@@ -696,7 +748,7 @@ export function App() {
               </Button>
             </form>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-border/70">
+            <div className="flex-1 overflow-y-auto divide-y divide-border/60">
               {visibleNotes.length === 0 ? (
                 <div className="p-5 text-xs text-muted-foreground">No notes in scope</div>
               ) : (
@@ -709,8 +761,8 @@ export function App() {
                       variant="ghost"
                       onClick={() => void openNote(n.vault, n.path, true)}
                       className={cn(
-                        "h-auto w-full flex-col items-start rounded-none border-l-2 border-l-transparent px-3.5 py-2.5 text-left whitespace-normal hover:bg-muted/60",
-                        isSel && "border-l-primary bg-[#f0f5f5] hover:bg-[#f0f5f5]",
+                        "h-auto w-full flex-col items-start rounded-none border-l-2 border-l-transparent px-3.5 py-2.5 text-left whitespace-normal hover:bg-[#151d20]",
+                        isSel && "border-l-primary bg-[#162023] hover:bg-[#162023]",
                       )}
                     >
                       <div className="flex w-full items-center justify-between gap-2">
@@ -728,16 +780,15 @@ export function App() {
             </div>
           </section>
 
-          {/* Right Editorial Note Canvas */}
           <main
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 flex-col bg-white",
+              "flex min-h-0 min-w-0 flex-1 flex-col bg-[#0a0d0e]",
               !mobileShowDetail && "hidden md:flex",
             )}
           >
             {selectedNote ? (
               <>
-                <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-4 md:px-7">
+                <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border bg-[#0d1214] px-4 md:px-7">
                   <div className="flex min-w-0 items-center gap-2 text-[12.5px] text-muted-foreground">
                     <Button
                       variant="ghost"
@@ -754,7 +805,7 @@ export function App() {
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <div className="inline-flex rounded-md border border-border bg-muted p-0.5">
+                    <div className="inline-flex rounded-md border border-border bg-[#0a0d0e] p-0.5">
                       {(["read", "raw", "edit"] as NoteMode[]).map((m) => (
                         <Button
                           key={m}
@@ -766,7 +817,7 @@ export function App() {
                           }}
                           className={cn(
                             "h-6 rounded-[4px] px-2 text-xs capitalize",
-                            noteMode === m && "bg-white text-foreground shadow-none",
+                            noteMode === m && "bg-[#1a2428] text-foreground hover:bg-[#1a2428]",
                           )}
                         >
                           {m}
@@ -785,14 +836,14 @@ export function App() {
                 <div className="flex-1 overflow-y-auto px-5 py-6 md:px-12 md:py-8">
                   <div className="mx-auto max-w-[700px]">
                     {openProposalsForNote.length > 0 && (
-                      <div className="mb-5 flex items-center justify-between gap-3 rounded-md border border-teal-200 bg-teal-50/70 px-3.5 py-2 text-[12.5px] text-teal-950">
+                      <div className="mb-5 flex items-center justify-between gap-3 rounded-md border border-teal-500/30 bg-teal-500/10 px-3.5 py-2 text-[12.5px] text-teal-200">
                         <span>
                           <strong>{openProposalsForNote.length} open proposal</strong> awaiting review on this note
                         </span>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 px-2 text-xs font-semibold text-primary"
+                          className="h-6 px-2 text-xs font-semibold text-teal-300 hover:bg-teal-500/15"
                           onClick={() => {
                             setSelectedPropId(openProposalsForNote[0].id);
                             setSection("proposals");
@@ -828,7 +879,7 @@ export function App() {
                             </strong>
                           </span>
                           {selectedNote.owner && (
-                            <span className="inline-flex items-center gap-1 text-amber-800">
+                            <span className="inline-flex items-center gap-1 text-amber-300">
                               <LockSimple size={12} />
                               owner: {selectedNote.owner}
                             </span>
@@ -837,11 +888,46 @@ export function App() {
                         <div className="mt-5">
                           <MarkdownView raw={selectedNote.raw} skipTitle />
                         </div>
+
+                        {noteConnections.length > 0 && (
+                          <div className="mt-8 border-t border-border pt-5">
+                            <div className="mb-2.5 flex items-center justify-between text-xs">
+                              <span className="font-semibold uppercase tracking-wider text-muted-foreground">
+                                Linked notes ({noteConnections.length})
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-xs text-primary"
+                                onClick={() => setSection("graph")}
+                              >
+                                View in graph
+                              </Button>
+                            </div>
+                            <div className="grid gap-1.5 sm:grid-cols-2">
+                              {noteConnections.map((c, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => c.node?.path && void openNote(c.node.vault, c.node.path)}
+                                  className="h-auto justify-between px-3 py-2 text-left"
+                                >
+                                  <span className="truncate text-foreground">
+                                    {c.dir === "out" ? "→ " : "← "}
+                                    {c.node?.label}
+                                  </span>
+                                  <Badge variant={c.kind === "decision" ? "warn" : "default"}>{c.kind}</Badge>
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </>
                     )}
 
                     {noteMode === "raw" && (
-                      <div className="rounded-md border border-border bg-[#f8f9f9] p-4 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground">
+                      <div className="rounded-md border border-border bg-[#0e1416] p-4 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#cfe3e1]">
                         {selectedNote.raw}
                       </div>
                     )}
@@ -849,9 +935,9 @@ export function App() {
                     {noteMode === "edit" && (
                       <div className="space-y-3">
                         {mustProposeSelected && (
-                          <div className="space-y-2 rounded-md border border-border bg-muted/50 p-3">
+                          <div className="space-y-2 rounded-md border border-border bg-[#0f1517] p-3">
                             <div className="text-xs text-muted-foreground">
-                              This note is protected ({selectedNote.owner ? `owner: ${selectedNote.owner}` : `vault write: ${selectedNote.default_write}`}). Saving queues a reviewable proposal.
+                              Protected note ({selectedNote.owner ? `owner: ${selectedNote.owner}` : `vault write: ${selectedNote.default_write}`}). Saving queues a reviewable proposal.
                             </div>
                             <Input
                               value={draftReason}
@@ -880,11 +966,29 @@ export function App() {
         </div>
       )}
 
+      {/* GRAPH VIEW */}
+      {section === "graph" && (
+        <GraphView
+          nodes={graphNodes}
+          edges={graphEdges}
+          vaultFilter={vaultFilter}
+          onOpenNote={(v, p) => {
+            setSection("notes");
+            void openNote(v, p, true);
+          }}
+          onOpenProposals={(v) => {
+            setVaultFilter(v);
+            setSection("proposals");
+          }}
+        />
+      )}
+
+      {/* PROPOSALS VIEW */}
       {section === "proposals" && (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
           <section
             className={cn(
-              "flex w-full shrink-0 flex-col border-r border-border bg-[#fbfcfc] md:w-[320px]",
+              "flex w-full shrink-0 flex-col border-r border-border bg-[#101517] md:w-[320px]",
               mobileShowDetail && "hidden md:flex",
             )}
           >
@@ -892,7 +996,7 @@ export function App() {
               <span>Open proposals ({filteredProposals.length})</span>
               <span className="text-[11px] text-muted-foreground">J/K · A · R</span>
             </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-border/70">
+            <div className="flex-1 overflow-y-auto divide-y divide-border/60">
               {filteredProposals.length === 0 ? (
                 <div className="p-5 text-xs text-muted-foreground">
                   All clear. No open proposals waiting for review.
@@ -910,8 +1014,8 @@ export function App() {
                         setMobileShowDetail(true);
                       }}
                       className={cn(
-                        "h-auto w-full flex-col items-start rounded-none border-l-2 border-l-transparent px-3.5 py-3 text-left whitespace-normal hover:bg-muted/60",
-                        isSel && "border-l-primary bg-[#f0f5f5] hover:bg-[#f0f5f5]",
+                        "h-auto w-full flex-col items-start rounded-none border-l-2 border-l-transparent px-3.5 py-3 text-left whitespace-normal hover:bg-[#151d20]",
+                        isSel && "border-l-primary bg-[#162023] hover:bg-[#162023]",
                       )}
                     >
                       <div className="flex w-full items-center justify-between gap-2">
@@ -925,7 +1029,7 @@ export function App() {
                         <span>
                           {p.author} · {p.created_at}
                         </span>
-                        <span className="font-medium text-emerald-700 tabular-nums">+{adds}</span>
+                        <span className="font-medium text-emerald-400 tabular-nums">+{adds}</span>
                       </div>
                     </Button>
                   );
@@ -936,13 +1040,13 @@ export function App() {
 
           <main
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 flex-col bg-white",
+              "flex min-h-0 min-w-0 flex-1 flex-col bg-[#0a0d0e]",
               !mobileShowDetail && "hidden md:flex",
             )}
           >
             {activeProposal ? (
               <>
-                <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-4 md:px-7">
+                <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border bg-[#0d1214] px-4 md:px-7">
                   <div className="flex min-w-0 items-center gap-2 text-[13px]">
                     <Button
                       variant="ghost"
@@ -982,7 +1086,7 @@ export function App() {
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-7">
                   <div className="mx-auto max-w-[820px] space-y-4">
-                    <div className="grid grid-cols-2 gap-3 rounded-md border border-border bg-[#f8f9f9] px-4 py-3 text-xs sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 rounded-md border border-border bg-[#0f1416] px-4 py-3 text-xs sm:grid-cols-4">
                       <div>
                         <div className="text-muted-foreground">Author</div>
                         <div className="mt-0.5 font-medium text-foreground">{activeProposal.author}</div>
@@ -1001,8 +1105,8 @@ export function App() {
                       </div>
                     </div>
 
-                    <div className="overflow-hidden rounded-md border border-border bg-white">
-                      <div className="flex items-center justify-between border-b border-border bg-[#f8f9f9] px-3.5 py-2 text-xs text-muted-foreground">
+                    <div className="overflow-hidden rounded-md border border-border bg-[#0d1214]">
+                      <div className="flex items-center justify-between border-b border-border bg-[#12191c] px-3.5 py-2 text-xs text-muted-foreground">
                         <span className="font-medium text-foreground">{activeProposal.path}</span>
                         <span>Unified diff</span>
                       </div>
@@ -1020,16 +1124,17 @@ export function App() {
         </div>
       )}
 
+      {/* AUDIT VIEW */}
       {section === "audit" && (
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
-          <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-5 md:px-7">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#0a0d0e]">
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-[#0d1214] px-5 md:px-7">
             <span className="text-[13px] font-medium text-foreground">Audit log ({auditEvents.length})</span>
             <span className="text-xs text-muted-foreground">Append-only local history</span>
           </div>
           <div className="flex-1 overflow-auto">
             <table className="w-full min-w-[600px] border-collapse text-left text-[13px]">
               <thead>
-                <tr className="border-b border-border bg-[#f8f9f9] text-xs text-muted-foreground">
+                <tr className="border-b border-border bg-[#0f1416] text-xs text-muted-foreground">
                   <th className="px-5 py-2.5 font-medium">Timestamp</th>
                   <th className="px-5 py-2.5 font-medium">Actor</th>
                   <th className="px-5 py-2.5 font-medium">Action</th>
@@ -1037,7 +1142,7 @@ export function App() {
                   <th className="px-5 py-2.5 font-medium">Outcome</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/70">
+              <tbody className="divide-y divide-border/60">
                 {auditEvents.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-5 py-8 text-center text-xs text-muted-foreground">
@@ -1046,7 +1151,7 @@ export function App() {
                   </tr>
                 ) : (
                   auditEvents.map((ev, idx) => (
-                    <tr key={idx} className="hover:bg-muted/40">
+                    <tr key={idx} className="hover:bg-[#111719]">
                       <td className="px-5 py-2.5 tabular-nums text-muted-foreground">
                         {ev.timestamp.replace("T", " ").slice(0, 19)}
                       </td>

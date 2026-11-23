@@ -9,7 +9,6 @@ function stripFrontmatter(raw: string): string {
       }
     }
   }
-  // Also strip lightweight Italian/English top headers if present in first 6 lines
   let start = 0;
   while (
     start < Math.min(lines.length, 6) &&
@@ -27,7 +26,7 @@ function renderInline(text: string): React.ReactNode[] {
       return (
         <span
           key={i}
-          className="rounded-[4px] border border-border bg-muted px-1.5 py-0.5 text-[13px] font-medium text-[#0f4c47]"
+          className="rounded-[4px] border border-border bg-[#151e21] px-1.5 py-0.5 text-[13px] font-medium text-teal-300"
         >
           {tok.slice(1, -1)}
         </span>
@@ -60,7 +59,6 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       continue;
     }
 
-    // Fenced code block
     if (trimmed.startsWith("```")) {
       const codeLines: string[] = [];
       i++;
@@ -72,7 +70,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       blocks.push(
         <div
           key={`code-${i}`}
-          className="my-3 overflow-x-auto rounded-md border border-border bg-[#f6f8f8] px-3.5 py-3 text-[13px] leading-relaxed text-foreground whitespace-pre"
+          className="my-3 overflow-x-auto rounded-md border border-border bg-[#0e1416] px-3.5 py-3 text-[13px] leading-relaxed text-[#cfe3e1] whitespace-pre"
         >
           {codeLines.join("\n")}
         </div>,
@@ -80,7 +78,6 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       continue;
     }
 
-    // Headings
     if (trimmed.startsWith("# ")) {
       if (skipTitle && !skippedFirstH1) {
         skippedFirstH1 = true;
@@ -114,7 +111,6 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       continue;
     }
 
-    // Unordered list
     if (/^[-*]\s+/.test(trimmed)) {
       const items: string[] = [];
       while (i < lines.length && /^[-*]\s+/.test(lines[i].trim())) {
@@ -130,12 +126,12 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
                 key={idx}
                 className={
                   isArchive
-                    ? "border-l-2 border-primary bg-muted/60 px-3 py-2 text-[13px] leading-relaxed text-muted-foreground"
-                    : "relative pl-4 text-[14.5px] leading-relaxed text-[#223030]"
+                    ? "border-l-2 border-primary bg-[#11191b] px-3 py-2 text-[13px] leading-relaxed text-muted-foreground"
+                    : "relative pl-4 text-[14.5px] leading-relaxed text-[#c6d6d5]"
                 }
               >
                 {!isArchive && (
-                  <span className="absolute left-0 top-[10px] h-1 w-1 rounded-[1px] bg-primary/70" />
+                  <span className="absolute left-0 top-[10px] h-1 w-1 rounded-[1px] bg-primary/80" />
                 )}
                 {renderInline(item)}
               </li>
@@ -146,7 +142,6 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       continue;
     }
 
-    // Ordered list
     if (/^\d+\.\s+/.test(trimmed)) {
       const items: string[] = [];
       while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
@@ -154,7 +149,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
         i++;
       }
       blocks.push(
-        <ol key={`ol-${i}`} className="my-2.5 list-decimal space-y-1.5 pl-5 text-[14.5px] leading-relaxed text-[#223030]">
+        <ol key={`ol-${i}`} className="my-2.5 list-decimal space-y-1.5 pl-5 text-[14.5px] leading-relaxed text-[#c6d6d5]">
           {items.map((item, idx) => (
             <li key={idx}>{renderInline(item)}</li>
           ))}
@@ -163,7 +158,6 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       continue;
     }
 
-    // Blockquote
     if (trimmed.startsWith("> ")) {
       const qLines: string[] = [];
       while (i < lines.length && lines[i].trim().startsWith("> ")) {
@@ -173,7 +167,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       blocks.push(
         <blockquote
           key={`q-${i}`}
-          className="my-3 border-l-2 border-primary bg-muted/50 px-3.5 py-2 text-[13.5px] leading-relaxed text-muted-foreground"
+          className="my-3 border-l-2 border-primary bg-[#11191b] px-3.5 py-2 text-[13.5px] leading-relaxed text-muted-foreground"
         >
           {renderInline(qLines.join(" "))}
         </blockquote>,
@@ -181,7 +175,6 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       continue;
     }
 
-    // Paragraph
     const pLines: string[] = [];
     while (
       i < lines.length &&
@@ -192,7 +185,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
       i++;
     }
     blocks.push(
-      <p key={`p-${i}`} className="my-2.5 text-[14.5px] leading-relaxed text-[#223030]">
+      <p key={`p-${i}`} className="my-2.5 text-[14.5px] leading-relaxed text-[#c6d6d5]">
         {renderInline(pLines.join(" "))}
       </p>,
     );

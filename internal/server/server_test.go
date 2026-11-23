@@ -295,7 +295,35 @@ func TestServerUIAndNoteEndpoints(t *testing.T) {
 		t.Fatalf("expected 409 on PUT to propose vault, got %d", resp.StatusCode)
 	}
 
-	// 7. POST /api/v1/reindex & /api/v1/curate enforce writer role
+	// 7. GET /api/v1/graph returns scoped nodes and edges (never leaks beta to acme-reader)
+	req, _ = http.NewRequest(http.MethodGet, ts.URL+"/api/v1/graph", nil)
+	req.Header.Set("Authorization", "Bearer tok-read")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var graphResp struct {
+		Nodes []struct {
+			ID    string `json:"id"`
+			Vault string `json:"vault"`
+		} `json:"nodes"`
+		Edges []struct {
+			Source string `json:"source"`
+			Target string `json:"target"`
+		} `json:"edges"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&graphResp)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || len(graphResp.Nodes) != 2 || len(graphResp.Edges) != 1 {
+		t.Fatalf("expected 2 nodes and 1 contains edge for acme-reader, got %d nodes=%+v edges=%+v", resp.StatusCode, graphResp.Nodes, graphResp.Edges)
+	}
+	for _, n := range graphResp.Nodes {
+		if n.Vault == "beta" {
+			t.Fatalf("graph isolation breach: saw beta node %+v", n)
+		}
+	}
+
+	// 8. POST /api/v1/reindex & /api/v1/curate enforce writer role
 	for _, ep := range []string{"/api/v1/reindex", "/api/v1/curate"} {
 		req, _ = http.NewRequest(http.MethodPost, ts.URL+ep, nil)
 		req.Header.Set("Authorization", "Bearer tok-read")
