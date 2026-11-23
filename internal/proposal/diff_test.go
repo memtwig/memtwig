@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/proposal"
+	"github.com/memtwig/memtwig/internal/proposal"
 )
 
 func TestFormatDiffAppendAndNewFile(t *testing.T) {

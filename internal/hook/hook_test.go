@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/index"
 )
 
 func setupHookEnv(t *testing.T) (*config.Config, *index.Store, string) {

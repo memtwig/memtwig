@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vittoriocompagno/memtwig/internal/lint"
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/lint"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 type Options struct {

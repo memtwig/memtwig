@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/config"
 )
 
 type Provider interface {

@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/lint"
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/lint"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 type Report struct {

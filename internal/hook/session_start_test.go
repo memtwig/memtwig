@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/hook"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/hook"
 )
 
 func TestRunSessionStartInjectsSoulFile(t *testing.T) {

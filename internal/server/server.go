@@ -16,16 +16,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vittoriocompagno/memtwig/internal/audit"
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/curator"
-	"github.com/vittoriocompagno/memtwig/internal/index"
-	"github.com/vittoriocompagno/memtwig/internal/install"
-	"github.com/vittoriocompagno/memtwig/internal/mcp"
-	"github.com/vittoriocompagno/memtwig/internal/proposal"
-	"github.com/vittoriocompagno/memtwig/internal/scope"
-	"github.com/vittoriocompagno/memtwig/internal/search"
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/audit"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/curator"
+	"github.com/memtwig/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/install"
+	"github.com/memtwig/memtwig/internal/mcp"
+	"github.com/memtwig/memtwig/internal/proposal"
+	"github.com/memtwig/memtwig/internal/scope"
+	"github.com/memtwig/memtwig/internal/search"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 type Server struct {

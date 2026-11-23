@@ -4,8 +4,8 @@
 
 ## Key Facts
 - Website: https://memtwig.com
-- Repository: https://github.com/vittoriocompagno/memtwig
-- Latest Release: v1.4.0 (Apache 2.0) — https://github.com/vittoriocompagno/memtwig/releases/tag/v1.4.0
+- Repository: https://github.com/memtwig/memtwig
+- Latest Release: v1.4.1 (Apache 2.0) — https://github.com/memtwig/memtwig/releases/tag/v1.4.1
 - Author: Vittorio Compagno (https://vittoriocompagno.com, https://github.com/vittoriocompagno)
 - Language / Distribution: Pure Go static binary (Linux, macOS, Windows), zero CGO, zero external vector DB.
 - Performance: 109 Markdown notes / 1,078 chunks indexed in ~105 ms.
@@ -17,8 +17,8 @@
 
 ## Documentation
 - [Full Reference (Markdown)](https://memtwig.com/llms-full.txt): Consolidated single-file technical reference for LLMs.
-- [Architecture](https://github.com/vittoriocompagno/memtwig/blob/main/docs/architecture.md): Storage, scope routing, SQLite FTS5 + RRF engine, hook gating, MCP stdio/HTTP, RBAC, audit.
-- [Multi-Org & Freelance Setup](https://github.com/vittoriocompagno/memtwig/blob/main/docs/multi-org.md): Strict isolation across personal and client vaults via `cwd` and `git remote`.
-- [Harness Integration](https://github.com/vittoriocompagno/memtwig/blob/main/docs/harnesses.md): Setup for Claude Code, Cursor, Codex, Antigravity, and Hermes.
-- [Governance & Curation](https://github.com/vittoriocompagno/memtwig/blob/main/docs/governance.md): Owner-locked notes, deterministic proposal IDs, secret scanning, `decide`, `invalidate`, `curate --llm`.
-- [Example Config](https://github.com/vittoriocompagno/memtwig/blob/main/examples/config.toml): Ready-to-use `config.toml` with multi-org rules, embeddings, LLM curator, and RBAC tokens.
+- [Architecture](https://github.com/memtwig/memtwig/blob/main/docs/architecture.md): Storage, scope routing, SQLite FTS5 + RRF engine, hook gating, MCP stdio/HTTP, RBAC, audit.
+- [Multi-Org & Freelance Setup](https://github.com/memtwig/memtwig/blob/main/docs/multi-org.md): Strict isolation across personal and client vaults via `cwd` and `git remote`.
+- [Harness Integration](https://github.com/memtwig/memtwig/blob/main/docs/harnesses.md): Setup for Claude Code, Cursor, Codex, Antigravity, and Hermes.
+- [Governance & Curation](https://github.com/memtwig/memtwig/blob/main/docs/governance.md): Owner-locked notes, deterministic proposal IDs, secret scanning, `decide`, `invalidate`, `curate --llm`.
+- [Example Config](https://github.com/memtwig/memtwig/blob/main/examples/config.toml): Ready-to-use `config.toml` with multi-org rules, embeddings, LLM curator, and RBAC tokens.

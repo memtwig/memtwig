@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/audit"
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/index"
-	"github.com/vittoriocompagno/memtwig/internal/server"
-	"github.com/vittoriocompagno/memtwig/internal/ui"
+	"github.com/memtwig/memtwig/internal/audit"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/server"
+	"github.com/memtwig/memtwig/internal/ui"
 )
 
 func TestServerRBACMCPAndAudit(t *testing.T) {

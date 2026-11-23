@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/index"
-	"github.com/vittoriocompagno/memtwig/internal/scope"
-	"github.com/vittoriocompagno/memtwig/internal/search"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/scope"
+	"github.com/memtwig/memtwig/internal/search"
 )
 
 func TestMultiOrgIsolationAndSearch(t *testing.T) {

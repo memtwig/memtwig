@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/install"
+	"github.com/memtwig/memtwig/internal/install"
 )
 
 func TestInstallClaudeCursorCodex(t *testing.T) {

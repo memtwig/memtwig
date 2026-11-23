@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vittoriocompagno/memtwig/internal/proposal"
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/proposal"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 type CurateReport struct {

@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/doctor"
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/doctor"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 func TestDoctorCleanVault(t *testing.T) {

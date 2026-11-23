@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/lint"
+	"github.com/memtwig/memtwig/internal/lint"
 )
 
 func TestLintDetectsSecretsAndFutureDates(t *testing.T) {

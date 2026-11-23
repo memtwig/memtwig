@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/config"
 )
 
 func TestNormalizeAndCosine(t *testing.T) {

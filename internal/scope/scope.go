@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/config"
 )
 
 // ActiveVault represents a vault visible in the current session scope.

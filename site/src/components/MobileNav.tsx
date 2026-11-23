@@ -8,7 +8,7 @@ const links = [
   { href: "#architecture", label: "Architecture" },
   { href: "#comparison", label: "Comparison" },
   { href: "#install", label: "Install" },
-  { href: "https://github.com/vittoriocompagno/memtwig", label: "GitHub", external: true },
+  { href: "https://github.com/memtwig/memtwig", label: "GitHub", external: true },
 ];
 
 export function MobileNav() {

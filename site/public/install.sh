@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-REPO="vittoriocompagno/memtwig"
+REPO="memtwig/memtwig"
 BIN_NAME="memtwig"
 INSTALL_DIR="${MEMTWIG_INSTALL_DIR:-$HOME/.local/bin}"
 

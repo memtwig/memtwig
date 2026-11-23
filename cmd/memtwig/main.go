@@ -15,28 +15,28 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/vittoriocompagno/memtwig/internal/audit"
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/curator"
-	"github.com/vittoriocompagno/memtwig/internal/doctor"
-	"github.com/vittoriocompagno/memtwig/internal/hook"
-	"github.com/vittoriocompagno/memtwig/internal/index"
-	"github.com/vittoriocompagno/memtwig/internal/install"
-	"github.com/vittoriocompagno/memtwig/internal/lint"
-	"github.com/vittoriocompagno/memtwig/internal/mcp"
-	"github.com/vittoriocompagno/memtwig/internal/migrate"
-	"github.com/vittoriocompagno/memtwig/internal/proposal"
-	"github.com/vittoriocompagno/memtwig/internal/scope"
-	"github.com/vittoriocompagno/memtwig/internal/search"
-	"github.com/vittoriocompagno/memtwig/internal/server"
-	msync "github.com/vittoriocompagno/memtwig/internal/sync"
-	"github.com/vittoriocompagno/memtwig/internal/tui"
-	"github.com/vittoriocompagno/memtwig/internal/ui"
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/audit"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/curator"
+	"github.com/memtwig/memtwig/internal/doctor"
+	"github.com/memtwig/memtwig/internal/hook"
+	"github.com/memtwig/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/install"
+	"github.com/memtwig/memtwig/internal/lint"
+	"github.com/memtwig/memtwig/internal/mcp"
+	"github.com/memtwig/memtwig/internal/migrate"
+	"github.com/memtwig/memtwig/internal/proposal"
+	"github.com/memtwig/memtwig/internal/scope"
+	"github.com/memtwig/memtwig/internal/search"
+	"github.com/memtwig/memtwig/internal/server"
+	msync "github.com/memtwig/memtwig/internal/sync"
+	"github.com/memtwig/memtwig/internal/tui"
+	"github.com/memtwig/memtwig/internal/ui"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 var (
-	version    = "1.4.0"
+	version    = "1.4.1"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string

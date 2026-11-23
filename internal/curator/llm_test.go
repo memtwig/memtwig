@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/curator"
-	"github.com/vittoriocompagno/memtwig/internal/proposal"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/curator"
+	"github.com/memtwig/memtwig/internal/proposal"
 )
 
 func TestCurateSemanticMockLLM(t *testing.T) {

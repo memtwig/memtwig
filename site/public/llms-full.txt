@@ -1,4 +1,4 @@
-# memtwig — Complete Technical Reference (v1.4.0)
+# memtwig — Complete Technical Reference (v1.4.1)
 
 memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory layer for AI coding agents and assistants, distributed as a single static Go binary (`CGO_ENABLED=0`, ~14 MB, Linux/macOS/Windows) with an embedded dark local Studio Web UI (`memtwig ui`, featuring Notes reader/editor, Knowledge Graph, Proposals diff reviewer, Audit log, and self-service Settings for providers, vaults, and harnesses) and interactive TUI (`memtwig tui`).
 
@@ -7,11 +7,11 @@ memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory la
 curl -fsSL https://memtwig.com/install.sh | sh
 # Ensure ~/.local/bin is in PATH:
 export PATH="$HOME/.local/bin:$PATH"
-memtwig version   # memtwig 1.4.0
+memtwig version   # memtwig 1.4.1
 ```
 Or with Go:
 ```bash
-go install github.com/vittoriocompagno/memtwig/cmd/memtwig@latest
+go install github.com/memtwig/memtwig/cmd/memtwig@latest
 ```
 
 ## Quickstart (One-Command Setup)
@@ -155,6 +155,6 @@ owner: vittorio
 
 ## Links
 - Website: https://memtwig.com
-- GitHub: https://github.com/vittoriocompagno/memtwig
-- Releases: https://github.com/vittoriocompagno/memtwig/releases
+- GitHub: https://github.com/memtwig/memtwig
+- Releases: https://github.com/memtwig/memtwig/releases
 - Comparisons: https://memtwig.com/vs/mem0 · https://memtwig.com/vs/claude-md · https://memtwig.com/mcp-memory

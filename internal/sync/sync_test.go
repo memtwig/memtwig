@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 func runGit(t *testing.T, dir string, args ...string) string {

@@ -7,10 +7,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/embed"
-	"github.com/vittoriocompagno/memtwig/internal/index"
-	"github.com/vittoriocompagno/memtwig/internal/lint"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/embed"
+	"github.com/memtwig/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/lint"
 )
 
 type Check struct {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/config"
 )
 
 func TestOpenAndClose(t *testing.T) {

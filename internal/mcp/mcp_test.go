@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/index"
-	"github.com/vittoriocompagno/memtwig/internal/mcp"
-	"github.com/vittoriocompagno/memtwig/internal/proposal"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/mcp"
+	"github.com/memtwig/memtwig/internal/proposal"
 )
 
 func TestMCPGovernanceAndProposals(t *testing.T) {

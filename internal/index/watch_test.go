@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/index"
 )
 
 func TestWatchAndEnsureFresh(t *testing.T) {

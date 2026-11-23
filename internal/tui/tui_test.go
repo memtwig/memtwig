@@ -8,12 +8,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/vittoriocompagno/memtwig/internal/audit"
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/index"
-	"github.com/vittoriocompagno/memtwig/internal/proposal"
-	"github.com/vittoriocompagno/memtwig/internal/tui"
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/audit"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/index"
+	"github.com/memtwig/memtwig/internal/proposal"
+	"github.com/memtwig/memtwig/internal/tui"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 func TestTUISearchAndProposalApprove(t *testing.T) {

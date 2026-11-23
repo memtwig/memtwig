@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/config"
 )
 
 func initGitRepoWithOrigin(t *testing.T, dir, originURL string) {

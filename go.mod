@@ -1,4 +1,4 @@
-module github.com/vittoriocompagno/memtwig
+module github.com/memtwig/memtwig
 
 go 1.26.0
 

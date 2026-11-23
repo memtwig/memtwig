@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vittoriocompagno/memtwig/internal/config"
-	"github.com/vittoriocompagno/memtwig/internal/proposal"
-	"github.com/vittoriocompagno/memtwig/internal/vault"
+	"github.com/memtwig/memtwig/internal/config"
+	"github.com/memtwig/memtwig/internal/proposal"
+	"github.com/memtwig/memtwig/internal/vault"
 )
 
 type SemanticFinding struct {
