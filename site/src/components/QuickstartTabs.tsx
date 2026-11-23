@@ -77,7 +77,7 @@ export function QuickstartTabs() {
 
       {snippets.map((s) => (
         <TabsContent key={s.id} value={s.id}>
-          <div className="relative rounded-2xl border border-border bg-card p-5 pr-14 sm:p-6 sm:pr-16">
+          <div className="relative rounded-3xl border border-white/80 bg-white/65 p-5 pr-14 shadow-[0_12px_36px_rgba(15,58,55,0.06)] ring-1 ring-border backdrop-blur-xl sm:p-6 sm:pr-16">
             <Button
               variant="ghost"
               size="icon"

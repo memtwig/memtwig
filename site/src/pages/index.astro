@@ -73,43 +73,50 @@ const comparison = [
     <title>memtwig — Git-native, multi-org memory layer for AI agents</title>
     <meta
       name="description"
-      content="Single static Go binary for curated Markdown memory across Claude Code, Codex, Cursor, and MCP clients with strict multi-org isolation."
+      content="Curated Markdown vaults routed by Git remote. One static Go binary for Claude Code, Codex, and Cursor."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
-  <body class="min-h-screen bg-background text-foreground">
-    <header class="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-sm">
-      <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
-        <a href="#" class="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground">
-          <img src="/favicon.svg" alt="" width="26" height="26" class="rounded-md" />
+  <body class="min-h-screen text-foreground">
+    <div class="sticky top-4 z-40 px-4 sm:px-6">
+      <header class="mx-auto flex h-14 max-w-4xl items-center justify-between rounded-full border border-white/85 bg-white/70 px-3 pl-4 shadow-[0_10px_34px_rgba(15,58,55,0.08)] ring-1 ring-border backdrop-blur-xl">
+        <a href="#" class="flex items-center gap-2.5 text-base font-semibold tracking-tight text-foreground">
+          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-md" />
           <span>memtwig</span>
         </a>
 
-        <nav class="hidden items-center gap-7 md:flex">
-          <a href="#isolation" class="text-sm font-medium text-muted-foreground hover:text-foreground">Isolation</a>
-          <a href="#architecture" class="text-sm font-medium text-muted-foreground hover:text-foreground">Architecture</a>
-          <a href="#comparison" class="text-sm font-medium text-muted-foreground hover:text-foreground">Comparison</a>
-          <a href={docsUrl} target="_blank" rel="noreferrer" class="text-sm font-medium text-muted-foreground hover:text-foreground">Docs</a>
-          <a href={repoUrl} target="_blank" rel="noreferrer" class="text-sm font-medium text-muted-foreground hover:text-foreground">GitHub</a>
-          <a href="#install" class={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Install</a>
+        <nav class="hidden items-center gap-1 md:flex">
+          <a href="#isolation" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Isolation</a>
+          <a href="#architecture" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Architecture</a>
+          <a href="#comparison" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Comparison</a>
+          <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Docs</a>
         </nav>
+
+        <div class="hidden items-center gap-2 md:flex">
+          <a href={repoUrl} target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+            GitHub
+          </a>
+          <a href="#install" class={cn(buttonVariants({ variant: "default", size: "sm" }))}>
+            Install
+          </a>
+        </div>
 
         <div class="md:hidden">
           <MobileNav client:media="(max-width: 767px)" />
         </div>
-      </div>
-    </header>
+      </header>
+    </div>
 
-    <main>
-      <section class="mx-auto max-w-6xl px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-24">
-        <div class="max-w-4xl">
-          <h1 class="text-4xl font-normal tracking-tight text-foreground sm:text-6xl xl:text-7xl leading-[1.06]">
+    <main class="relative z-10">
+      <section class="mx-auto max-w-5xl px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-24">
+        <div class="mx-auto max-w-4xl text-center">
+          <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-6xl xl:text-7xl leading-[1.06]">
             Git-native memory for AI agents across every org.
           </h1>
-          <p class="mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed">
-            Curated Markdown vaults routed by directory and Git remote. One static Go binary with SQLite FTS5, proposal governance, MCP, and hooks for Claude Code, Codex, and Cursor.
+          <p class="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
+            Curated Markdown vaults routed by Git remote. One Go binary for every harness.
           </p>
-          <div class="mt-9 flex flex-wrap items-center gap-3">
+          <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
             <a href="#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.0.0</a>
             <a
               href={repoUrl}
@@ -127,10 +134,10 @@ const comparison = [
         </div>
       </section>
 
-      <section class="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+      <section class="mx-auto max-w-5xl px-5 py-10 sm:px-8">
         <div class="grid gap-4 sm:grid-cols-3">
           {metrics.map((m) => (
-            <div class="rounded-2xl border border-border bg-card p-6">
+            <div class="rounded-3xl border border-white/80 bg-white/60 p-6 text-center shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl">
               <div class="text-4xl font-light tracking-tight text-foreground tabular-nums sm:text-5xl">
                 {m.value}
               </div>
@@ -140,13 +147,13 @@ const comparison = [
         </div>
       </section>
 
-      <section id="architecture" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
-        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+      <section id="architecture" class="mx-auto max-w-5xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
+        <h2 class="text-center text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
           Architecture
         </h2>
-        <div class="mt-10 grid gap-8 md:grid-cols-3">
+        <div class="mt-10 grid gap-5 md:grid-cols-3">
           {pillars.map((item) => (
-            <div class="space-y-2.5 border-t border-border pt-6">
+            <div class="space-y-2.5 rounded-3xl border border-white/80 bg-white/60 p-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl">
               <h3 class="text-xl font-medium text-foreground">{item.title}</h3>
               <p class="text-base leading-relaxed text-muted-foreground">{item.body}</p>
             </div>
@@ -154,21 +161,21 @@ const comparison = [
         </div>
       </section>
 
-      <section id="comparison" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-12 sm:px-8 sm:py-20">
-        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+      <section id="comparison" class="mx-auto max-w-5xl scroll-mt-24 px-5 py-12 sm:px-8 sm:py-20">
+        <h2 class="text-center text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
           How it compares
         </h2>
-        <div class="mt-8 overflow-x-auto rounded-2xl border border-border">
+        <div class="mt-8 overflow-x-auto rounded-3xl border border-white/80 bg-white/65 shadow-[0_12px_36px_rgba(15,58,55,0.06)] ring-1 ring-border backdrop-blur-xl">
           <table class="w-full min-w-[600px] border-collapse text-left text-sm sm:text-base">
             <thead>
-              <tr class="border-b border-border bg-card">
+              <tr class="border-b border-border bg-muted/50">
                 <th class="px-5 py-4 font-semibold text-foreground">Capability</th>
                 <th class="px-5 py-4 font-semibold text-primary">memtwig</th>
                 <th class="px-5 py-4 font-semibold text-foreground">Vector Memory APIs</th>
                 <th class="px-5 py-4 font-semibold text-foreground">Static Rules Files</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border bg-background">
+            <tbody class="divide-y divide-border/70">
               {comparison.map((row) => (
                 <tr>
                   <td class="px-5 py-4 font-medium text-foreground">{row.dimension}</td>
@@ -182,8 +189,8 @@ const comparison = [
         </div>
       </section>
 
-      <section id="install" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <section id="install" class="mx-auto max-w-5xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
+        <div class="text-center">
           <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
             Quickstart
           </h2>
@@ -191,7 +198,7 @@ const comparison = [
             href={releasesUrl}
             target="_blank"
             rel="noreferrer"
-            class="text-sm font-medium text-primary hover:underline"
+            class="mt-3 inline-block text-sm font-medium text-primary hover:underline"
           >
             Download prebuilt binaries (Linux, macOS, Windows)
           </a>
@@ -202,14 +209,14 @@ const comparison = [
       </section>
     </main>
 
-    <footer class="border-t border-border bg-background">
-      <div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-8">
+    <footer class="border-t border-border/80 bg-white/50 backdrop-blur-md">
+      <div class="mx-auto flex max-w-5xl flex-col items-center gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
         <div class="flex items-center gap-2.5 text-foreground font-medium">
           <img src="/favicon.svg" alt="" width="20" height="20" class="rounded-sm" />
           <span>memtwig</span>
           <span class="text-muted-foreground font-normal">· Apache 2.0</span>
         </div>
-        <div class="flex flex-wrap items-center gap-6">
+        <div class="flex flex-wrap items-center justify-center gap-6">
           <a href={repoUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">GitHub</a>
           <a href={releasesUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Releases</a>
           <a href={docsUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Docs</a>

@@ -93,7 +93,7 @@ const workspaces: WorkspaceCase[] = [
 
 export function ScopeDemo() {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+    <div className="rounded-3xl border border-white/80 bg-white/60 p-5 shadow-[0_14px_45px_rgba(15,58,55,0.07)] ring-1 ring-border backdrop-blur-xl sm:p-7">
       <Tabs defaultValue="acme">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm font-medium text-muted-foreground">Active workspace</span>
@@ -113,11 +113,11 @@ export function ScopeDemo() {
               <span className="truncate">remote: {ws.remote}</span>
             </div>
 
-            <div className="grid gap-2.5 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               {ws.vaults.map((v) => (
                 <div
                   key={v.name}
-                  className="rounded-xl border border-border bg-background px-4 py-3"
+                  className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3.5 shadow-[0_2px_12px_rgba(15,58,55,0.04)] ring-1 ring-border/70 backdrop-blur-md"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-foreground">{v.name}</span>
@@ -137,11 +137,11 @@ export function ScopeDemo() {
               ))}
             </div>
 
-            <div className="rounded-xl border border-border bg-background p-4">
+            <div className="rounded-2xl border border-white/80 bg-white/75 p-4 shadow-[0_2px_12px_rgba(15,58,55,0.04)] ring-1 ring-border/70 backdrop-blur-md sm:p-5">
               <div className="text-sm font-medium text-muted-foreground">
                 $ memtwig search "deploy"
               </div>
-              <div className="mt-3 divide-y divide-border">
+              <div className="mt-3 divide-y divide-border/80">
                 {ws.results.map((r) => (
                   <div key={`${r.vault}:${r.path}`} className="py-2.5 first:pt-0 last:pb-0">
                     <div className="flex flex-wrap items-baseline gap-2 text-sm">
