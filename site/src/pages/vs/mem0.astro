@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const rows = [
   { dim: "Primary storage", memtwig: "Plain Markdown files in Git repos", mem0: "Vector DB + optional Graph DB" },
-  { dim: "Runtime dependencies", memtwig: "Single 12 MB static Go binary (SQLite FTS5 embedded)", mem0: "Python/Node SDK + vector store + LLM API key" },
+  { dim: "Runtime dependencies", memtwig: "Single 14 MB static Go binary (SQLite FTS5 + Studio UI embedded)", mem0: "Python/Node SDK + vector store + LLM API key" },
   { dim: "Offline operation", memtwig: "Full BM25 search & curation offline", mem0: "Requires LLM extraction & embedding APIs" },
   { dim: "Multi-org isolation", memtwig: "Automatic cwd & git remote routing in SQL", mem0: "Manual user_id / org_id scoping in app code" },
   { dim: "Write governance", memtwig: "owner-lock + deterministic proposal queue (.curator/proposals.json)", mem0: "Autonomous background fact extraction & overwrites" },
@@ -21,7 +21,7 @@ const faqs = [
   },
   {
     q: "Can memtwig use vector embeddings like Mem0?",
-    a: "Yes. memtwig fuses local SQLite FTS5 BM25 with optional Ollama, OpenAI, or Cloudflare embeddings via Reciprocal Rank Fusion (k=60), and degrades automatically to BM25 when offline.",
+    a: "Yes. memtwig fuses local SQLite FTS5 BM25 with optional Ollama, OpenRouter, DeepInfra, OpenAI, or Cloudflare embeddings via Reciprocal Rank Fusion (k=60), and degrades automatically to BM25 when offline.",
   },
   {
     q: "Why store memory in Git instead of a vector database?",
@@ -36,38 +36,38 @@ const faqs = [
   path="/vs/mem0"
   faqs={faqs}
 >
-  <header class="text-center">
+  <header>
     <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.08]">
       memtwig vs Mem0
     </h1>
-    <p class="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-      Choose memtwig when you want human-readable Markdown in Git, automatic multi-org isolation by Git remote, and proposal-gated agent writes in one 12 MB Go binary. Choose Mem0 when you need an embedded SDK API for per-user chat memory inside a SaaS product.
+    <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+      Choose memtwig when you want human-readable Markdown in Git, automatic multi-org isolation by Git remote, and proposal-gated agent writes in one 14 MB Go binary. Choose Mem0 when you need an embedded SDK API for per-user chat memory inside a SaaS product.
     </p>
   </header>
 
-  <section class="mt-12 overflow-x-auto rounded-3xl border border-white/80 bg-white/65 shadow-[0_12px_36px_rgba(15,58,55,0.06)] ring-1 ring-border backdrop-blur-xl">
+  <section class="mt-10 overflow-x-auto rounded-lg border border-border bg-card">
     <table class="w-full min-w-[580px] border-collapse text-left text-sm sm:text-base">
       <thead>
-        <tr class="border-b border-border bg-muted/50">
-          <th class="px-5 py-4 font-semibold text-foreground">Dimension</th>
-          <th class="px-5 py-4 font-semibold text-primary">memtwig (v1.0.0)</th>
-          <th class="px-5 py-4 font-semibold text-foreground">Mem0</th>
+        <tr class="border-b border-border bg-muted">
+          <th class="px-5 py-3.5 font-medium text-muted-foreground">Dimension</th>
+          <th class="px-5 py-3.5 font-medium text-foreground">memtwig (v1.4.1)</th>
+          <th class="px-5 py-3.5 font-medium text-muted-foreground">Mem0</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-border/70">
+      <tbody class="divide-y divide-border">
         {rows.map((r) => (
           <tr>
-            <td class="px-5 py-4 font-medium text-foreground">{r.dim}</td>
-            <td class="px-5 py-4 text-foreground">{r.memtwig}</td>
-            <td class="px-5 py-4 text-muted-foreground">{r.mem0}</td>
+            <td class="px-5 py-3.5 font-medium text-foreground">{r.dim}</td>
+            <td class="px-5 py-3.5 text-foreground">{r.memtwig}</td>
+            <td class="px-5 py-3.5 text-muted-foreground">{r.mem0}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </section>
 
-  <section class="mt-12 grid gap-5 sm:grid-cols-2">
-    <div class="rounded-3xl border border-white/80 bg-white/60 p-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl">
+  <section class="mt-10 grid gap-4 sm:grid-cols-2">
+    <div class="rounded-lg border border-border bg-card p-6">
       <h2 class="text-xl font-medium text-foreground">When memtwig wins</h2>
       <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
         <li>You switch between multiple client repos and need hard isolation across vaults.</li>
@@ -75,7 +75,7 @@ const faqs = [
         <li>You refuse autonomous memory overwrites and want reviewable proposals with secret scanning.</li>
       </ul>
     </div>
-    <div class="rounded-3xl border border-white/80 bg-white/60 p-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl">
+    <div class="rounded-lg border border-border bg-card p-6">
       <h2 class="text-xl font-medium text-foreground">When Mem0 wins</h2>
       <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
         <li>You are building a multi-user consumer or B2B chat app that needs a drop-in cloud API.</li>
@@ -85,8 +85,8 @@ const faqs = [
     </div>
   </section>
 
-  <div class="mt-12 flex flex-wrap justify-center gap-3">
-    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.0.0</a>
+  <div class="mt-10 flex flex-wrap gap-3">
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.4.1</a>
     <a href="https://github.com/memtwig/memtwig" target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
       View on GitHub
     </a>

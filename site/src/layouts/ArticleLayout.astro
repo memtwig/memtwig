@@ -63,7 +63,7 @@ const jsonLd = {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -90,19 +90,19 @@ const jsonLd = {
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
-  <body class="min-h-screen text-foreground">
-    <div class="sticky top-4 z-40 px-4 sm:px-6">
-      <header class="mx-auto flex h-14 max-w-4xl items-center justify-between rounded-full border border-white/85 bg-white/70 px-3 pl-4 shadow-[0_10px_34px_rgba(15,58,55,0.08)] ring-1 ring-border backdrop-blur-xl">
-        <a href="/" class="flex items-center gap-2.5 text-base font-semibold tracking-tight text-foreground">
-          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-md" />
+  <body class="min-h-screen bg-background text-foreground">
+    <header class="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
+        <a href="/" class="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-foreground">
+          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-sm" />
           <span>memtwig</span>
         </a>
 
         <nav class="hidden items-center gap-1 md:flex">
-          <a href="/vs/mem0" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">vs Mem0</a>
-          <a href="/vs/claude-md" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">vs CLAUDE.md</a>
-          <a href="/mcp-memory" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">MCP Memory</a>
-          <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Docs</a>
+          <a href="/vs/mem0" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">vs Mem0</a>
+          <a href="/vs/claude-md" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">vs CLAUDE.md</a>
+          <a href="/mcp-memory" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">MCP Memory</a>
+          <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Docs</a>
         </nav>
 
         <div class="hidden items-center gap-2 md:flex">
@@ -117,20 +117,20 @@ const jsonLd = {
         <div class="md:hidden">
           <MobileNav client:media="(max-width: 767px)" />
         </div>
-      </header>
-    </div>
+      </div>
+    </header>
 
-    <main class="relative z-10 mx-auto max-w-4xl px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-24">
+    <main class="mx-auto max-w-4xl px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-24">
       <slot />
 
       {faqs.length > 0 && (
         <section class="mt-16">
           <h2 class="text-2xl font-medium tracking-tight text-foreground sm:text-3xl">FAQ</h2>
-          <div class="mt-6 divide-y divide-border/80 rounded-3xl border border-white/80 bg-white/60 px-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl sm:px-8">
+          <div class="mt-6 divide-y divide-border rounded-lg border border-border bg-card px-6 sm:px-8">
             {faqs.map((item) => (
               <div class="py-5">
                 <h3 class="text-lg font-medium text-foreground">{item.q}</h3>
-                <p class="mt-2 text-base leading-relaxed text-muted-foreground">{item.a}</p>
+                <p class="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">{item.a}</p>
               </div>
             ))}
           </div>
@@ -138,20 +138,20 @@ const jsonLd = {
       )}
     </main>
 
-    <footer class="border-t border-border/80 bg-white/50 backdrop-blur-md">
-      <div class="mx-auto flex max-w-5xl flex-col items-center gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
+    <footer class="border-t border-border bg-background">
+      <div class="mx-auto flex max-w-6xl flex-col items-center gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
         <a href="/" class="flex items-center gap-2.5 text-foreground font-medium">
           <img src="/favicon.svg" alt="" width="20" height="20" class="rounded-sm" />
           <span>memtwig</span>
           <span class="text-muted-foreground font-normal">· Apache 2.0</span>
         </a>
         <div class="flex flex-wrap items-center justify-center gap-5">
-          <a href="/vs/mem0" class="hover:text-foreground">vs Mem0</a>
-          <a href="/vs/claude-md" class="hover:text-foreground">vs CLAUDE.md</a>
-          <a href="/mcp-memory" class="hover:text-foreground">MCP Memory</a>
-          <a href={repoUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">GitHub</a>
-          <a href={releasesUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Releases</a>
-          <a href="/llms.txt" class="hover:text-foreground">llms.txt</a>
+          <a href="/vs/mem0" class="transition-colors hover:text-foreground">vs Mem0</a>
+          <a href="/vs/claude-md" class="transition-colors hover:text-foreground">vs CLAUDE.md</a>
+          <a href="/mcp-memory" class="transition-colors hover:text-foreground">MCP Memory</a>
+          <a href={repoUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">GitHub</a>
+          <a href={releasesUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">Releases</a>
+          <a href="/llms.txt" class="transition-colors hover:text-foreground">llms.txt</a>
         </div>
       </div>
     </footer>

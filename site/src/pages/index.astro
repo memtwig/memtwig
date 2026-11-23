@@ -3,6 +3,7 @@ import "@/styles/global.css";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MobileNav } from "@/components/MobileNav";
+import { StudioShowcase } from "@/components/StudioShowcase";
 import { ScopeDemo } from "@/components/ScopeDemo";
 import { QuickstartTabs } from "@/components/QuickstartTabs";
 
@@ -13,11 +14,11 @@ const docsUrl = "https://github.com/memtwig/memtwig/tree/main/docs";
 
 const title = "memtwig — Git-native, multi-org memory layer for AI agents";
 const description =
-  "Curated Markdown vaults routed by Git remote. Single static Go binary with SQLite FTS5, proposal governance, MCP, and hooks for Claude Code, Codex, and Cursor.";
+  "Curated Markdown vaults routed by Git remote. Single static Go binary with SQLite FTS5, embedded dark Studio Web UI, proposal governance, MCP, and hooks for Claude Code, Codex, and Cursor.";
 
 const metrics = [
   { value: "105 ms", label: "109 Markdown notes indexed into SQLite FTS5" },
-  { value: "12 MB", label: "Single static Go binary, zero CGO" },
+  { value: "14 MB", label: "Single static Go binary with embedded Studio UI" },
   { value: "0", label: "External vector databases required" },
 ];
 
@@ -32,7 +33,7 @@ const pillars = [
   },
   {
     title: "Studio UI + RBAC",
-    body: "Includes an embedded local Web UI (memtwig ui) and TUI for reviewing diffs, vaults, and audit logs. Org vaults and owner-locked notes queue deterministic proposals.",
+    body: "Ships with an embedded local Studio Web UI (memtwig ui) and TUI for Overview, Knowledge Graph, Markdown editing, proposal diffs, audit logs, and self-service Settings.",
   },
 ];
 
@@ -63,7 +64,7 @@ const comparison = [
   },
   {
     dimension: "Cross-harness",
-    memtwig: "CLI, stdio/HTTP MCP, native hooks",
+    memtwig: "CLI, Studio UI, TUI, stdio/HTTP MCP, hooks",
     vectorApi: "SDK integration required",
     staticFiles: "Tool-specific filenames",
   },
@@ -72,7 +73,7 @@ const comparison = [
 const faqs = [
   {
     q: "What is memtwig?",
-    a: "memtwig is an open-source, single-binary Go memory layer for AI agents that stores curated facts in Git-backed Markdown vaults with multi-org isolation, hybrid SQLite FTS5 search, MCP, and proposal governance.",
+    a: "memtwig is an open-source, single-binary Go memory layer for AI agents that stores curated facts in Git-backed Markdown vaults with multi-org isolation, hybrid SQLite FTS5 search, an embedded local Studio Web UI, MCP, and proposal governance.",
   },
   {
     q: "How does memtwig isolate memory across multiple client orgs?",
@@ -150,7 +151,7 @@ const jsonLd = {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -177,20 +178,21 @@ const jsonLd = {
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
-  <body class="min-h-screen text-foreground">
-    <div class="sticky top-4 z-40 px-4 sm:px-6">
-      <header class="mx-auto flex h-14 max-w-4xl items-center justify-between rounded-full border border-white/85 bg-white/70 px-3 pl-4 shadow-[0_10px_34px_rgba(15,58,55,0.08)] ring-1 ring-border backdrop-blur-xl">
-        <a href="#" class="flex items-center gap-2.5 text-base font-semibold tracking-tight text-foreground">
-          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-md" />
+  <body class="min-h-screen bg-background text-foreground">
+    <header class="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
+        <a href="#" class="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-foreground">
+          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-sm" />
           <span>memtwig</span>
         </a>
 
         <nav class="hidden items-center gap-1 md:flex">
-          <a href="#isolation" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Isolation</a>
-          <a href="#architecture" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Architecture</a>
-          <a href="#comparison" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Comparison</a>
-          <a href="#faq" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">FAQ</a>
-          <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Docs</a>
+          <a href="#studio" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Studio</a>
+          <a href="#isolation" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Isolation</a>
+          <a href="#architecture" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Architecture</a>
+          <a href="#comparison" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Comparison</a>
+          <a href="#faq" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">FAQ</a>
+          <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">Docs</a>
         </nav>
 
         <div class="hidden items-center gap-2 md:flex">
@@ -205,19 +207,19 @@ const jsonLd = {
         <div class="md:hidden">
           <MobileNav client:media="(max-width: 767px)" />
         </div>
-      </header>
-    </div>
+      </div>
+    </header>
 
-    <main class="relative z-10">
-      <section class="mx-auto max-w-5xl px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-24">
+    <main>
+      <section class="mx-auto max-w-6xl px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-24">
         <div class="mx-auto max-w-4xl text-center">
           <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-6xl xl:text-7xl leading-[1.06]">
             Git-native memory for AI agents across every org.
           </h1>
           <p class="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-lg leading-relaxed">
-            Curated Markdown vaults routed by Git remote. One Go binary for every harness.
+            Curated Markdown vaults routed by Git remote. One Go binary with embedded Studio UI for every harness.
           </p>
-          <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
             <a href="#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.1</a>
             <a
               href={repoUrl}
@@ -230,15 +232,15 @@ const jsonLd = {
           </div>
         </div>
 
-        <div id="isolation" class="mt-14 scroll-mt-24">
-          <ScopeDemo client:load />
+        <div id="studio" class="mt-14 scroll-mt-20">
+          <StudioShowcase client:load />
         </div>
       </section>
 
-      <section class="mx-auto max-w-5xl px-5 py-10 sm:px-8">
+      <section class="mx-auto max-w-6xl px-5 py-8 sm:px-8">
         <div class="grid gap-4 sm:grid-cols-3">
           {metrics.map((m) => (
-            <div class="rounded-3xl border border-white/80 bg-white/60 p-6 text-center shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl">
+            <div class="rounded-lg border border-border bg-card p-6">
               <div class="text-4xl font-light tracking-tight text-foreground tabular-nums sm:text-5xl">
                 {m.value}
               </div>
@@ -248,41 +250,50 @@ const jsonLd = {
         </div>
       </section>
 
-      <section id="architecture" class="mx-auto max-w-5xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
-        <h2 class="text-center text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+      <section id="isolation" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-20">
+        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+          Multi-org isolation
+        </h2>
+        <div class="mt-8">
+          <ScopeDemo client:load />
+        </div>
+      </section>
+
+      <section id="architecture" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-20">
+        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
           Architecture
         </h2>
-        <div class="mt-10 grid gap-5 md:grid-cols-3">
+        <div class="mt-8 grid gap-4 md:grid-cols-3">
           {pillars.map((item) => (
-            <div class="space-y-2.5 rounded-3xl border border-white/80 bg-white/60 p-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl">
+            <div class="space-y-2.5 rounded-lg border border-border bg-card p-6">
               <h3 class="text-xl font-medium text-foreground">{item.title}</h3>
-              <p class="text-base leading-relaxed text-muted-foreground">{item.body}</p>
+              <p class="text-sm leading-relaxed text-muted-foreground sm:text-base">{item.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section id="comparison" class="mx-auto max-w-5xl scroll-mt-24 px-5 py-12 sm:px-8 sm:py-20">
-        <h2 class="text-center text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+      <section id="comparison" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-20">
+        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
           How it compares
         </h2>
-        <div class="mt-8 overflow-x-auto rounded-3xl border border-white/80 bg-white/65 shadow-[0_12px_36px_rgba(15,58,55,0.06)] ring-1 ring-border backdrop-blur-xl">
+        <div class="mt-8 overflow-x-auto rounded-lg border border-border bg-card">
           <table class="w-full min-w-[600px] border-collapse text-left text-sm sm:text-base">
             <thead>
-              <tr class="border-b border-border bg-muted/50">
-                <th class="px-5 py-4 font-semibold text-foreground">Capability</th>
-                <th class="px-5 py-4 font-semibold text-primary">memtwig</th>
-                <th class="px-5 py-4 font-semibold text-foreground">Vector Memory APIs</th>
-                <th class="px-5 py-4 font-semibold text-foreground">Static Rules Files</th>
+              <tr class="border-b border-border bg-muted">
+                <th class="px-5 py-3.5 font-medium text-muted-foreground">Capability</th>
+                <th class="px-5 py-3.5 font-medium text-foreground">memtwig</th>
+                <th class="px-5 py-3.5 font-medium text-muted-foreground">Vector Memory APIs</th>
+                <th class="px-5 py-3.5 font-medium text-muted-foreground">Static Rules Files</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border/70">
+            <tbody class="divide-y divide-border">
               {comparison.map((row) => (
                 <tr>
-                  <td class="px-5 py-4 font-medium text-foreground">{row.dimension}</td>
-                  <td class="px-5 py-4 text-foreground">{row.memtwig}</td>
-                  <td class="px-5 py-4 text-muted-foreground">{row.vectorApi}</td>
-                  <td class="px-5 py-4 text-muted-foreground">{row.staticFiles}</td>
+                  <td class="px-5 py-3.5 font-medium text-foreground">{row.dimension}</td>
+                  <td class="px-5 py-3.5 text-foreground">{row.memtwig}</td>
+                  <td class="px-5 py-3.5 text-muted-foreground">{row.vectorApi}</td>
+                  <td class="px-5 py-3.5 text-muted-foreground">{row.staticFiles}</td>
                 </tr>
               ))}
             </tbody>
@@ -290,8 +301,8 @@ const jsonLd = {
         </div>
       </section>
 
-      <section id="install" class="mx-auto max-w-5xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
-        <div class="text-center">
+      <section id="install" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-20">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
             Quickstart
           </h2>
@@ -299,7 +310,7 @@ const jsonLd = {
             href={releasesUrl}
             target="_blank"
             rel="noreferrer"
-            class="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+            class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Download prebuilt binaries (Linux, macOS, Windows)
           </a>
@@ -309,36 +320,36 @@ const jsonLd = {
         </div>
       </section>
 
-      <section id="faq" class="mx-auto max-w-4xl scroll-mt-24 px-5 py-12 pb-20 sm:px-8 sm:py-16 sm:pb-24">
-        <h2 class="text-center text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+      <section id="faq" class="mx-auto max-w-6xl scroll-mt-20 px-5 py-12 pb-20 sm:px-8 sm:py-16 sm:pb-24">
+        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
           FAQ
         </h2>
-        <div class="mt-10 divide-y divide-border/80 rounded-3xl border border-white/80 bg-white/60 px-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl sm:px-8">
+        <div class="mt-8 divide-y divide-border rounded-lg border border-border bg-card px-6 sm:px-8">
           {faqs.map((item) => (
             <div class="py-6">
               <h3 class="text-lg font-medium text-foreground">{item.q}</h3>
-              <p class="mt-2 text-base leading-relaxed text-muted-foreground">{item.a}</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">{item.a}</p>
             </div>
           ))}
         </div>
       </section>
     </main>
 
-    <footer class="border-t border-border/80 bg-white/50 backdrop-blur-md">
-      <div class="mx-auto flex max-w-5xl flex-col items-center gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
+    <footer class="border-t border-border bg-background">
+      <div class="mx-auto flex max-w-6xl flex-col items-center gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
         <div class="flex items-center gap-2.5 text-foreground font-medium">
           <img src="/favicon.svg" alt="" width="20" height="20" class="rounded-sm" />
           <span>memtwig</span>
           <span class="text-muted-foreground font-normal">· Apache 2.0</span>
         </div>
         <div class="flex flex-wrap items-center justify-center gap-6">
-          <a href="/vs/mem0" class="hover:text-foreground">vs Mem0</a>
-          <a href="/vs/claude-md" class="hover:text-foreground">vs CLAUDE.md</a>
-          <a href="/mcp-memory" class="hover:text-foreground">MCP Memory</a>
-          <a href={repoUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">GitHub</a>
-          <a href={releasesUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Releases</a>
-          <a href={docsUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Docs</a>
-          <a href="/llms.txt" class="hover:text-foreground">llms.txt</a>
+          <a href="/vs/mem0" class="transition-colors hover:text-foreground">vs Mem0</a>
+          <a href="/vs/claude-md" class="transition-colors hover:text-foreground">vs CLAUDE.md</a>
+          <a href="/mcp-memory" class="transition-colors hover:text-foreground">MCP Memory</a>
+          <a href={repoUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">GitHub</a>
+          <a href={releasesUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">Releases</a>
+          <a href={docsUrl} target="_blank" rel="noreferrer" class="transition-colors hover:text-foreground">Docs</a>
+          <a href="/llms.txt" class="transition-colors hover:text-foreground">llms.txt</a>
           <span>© 2026 Vittorio Compagno</span>
         </div>
       </div>

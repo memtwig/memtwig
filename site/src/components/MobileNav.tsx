@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const links = [
-  { href: "#isolation", label: "Isolation" },
-  { href: "#architecture", label: "Architecture" },
-  { href: "#comparison", label: "Comparison" },
-  { href: "#install", label: "Install" },
+  { href: "/#studio", label: "Studio" },
+  { href: "/#isolation", label: "Isolation" },
+  { href: "/#architecture", label: "Architecture" },
+  { href: "/#comparison", label: "Comparison" },
+  { href: "/#install", label: "Install" },
   { href: "https://github.com/memtwig/memtwig", label: "GitHub", external: true },
 ];
 
@@ -21,14 +22,14 @@ export function MobileNav() {
       </SheetTrigger>
       <SheetContent>
         <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <nav className="flex flex-col gap-3">
+        <nav className="flex flex-col gap-1.5">
           {links.map((item) => (
             <SheetClose asChild key={item.href}>
               <a
                 href={item.href}
                 target={item.external ? "_blank" : undefined}
                 rel={item.external ? "noreferrer" : undefined}
-                className="rounded-lg px-3 py-2.5 text-base font-medium text-foreground hover:bg-muted"
+                className="rounded-md px-3 py-2.5 text-base font-medium text-foreground hover:bg-accent"
               >
                 {item.label}
               </a>

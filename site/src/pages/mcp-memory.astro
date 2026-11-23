@@ -30,36 +30,36 @@ const faqs = [
   path="/mcp-memory"
   faqs={faqs}
 >
-  <header class="text-center">
+  <header>
     <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.08]">
       Open-source MCP memory server for multi-org teams.
     </h1>
-    <p class="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+    <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
       memtwig ships a zero-dependency Model Context Protocol server over stdio and Streamable HTTP. Every tool call enforces workspace vault isolation, owner-lock rules, and role-based access control.
     </p>
   </header>
 
-  <section class="mt-12 overflow-x-auto rounded-3xl border border-white/80 bg-white/65 shadow-[0_12px_36px_rgba(15,58,55,0.06)] ring-1 ring-border backdrop-blur-xl">
+  <section class="mt-10 overflow-x-auto rounded-lg border border-border bg-card">
     <table class="w-full min-w-[540px] border-collapse text-left text-sm sm:text-base">
       <thead>
-        <tr class="border-b border-border bg-muted/50">
-          <th class="px-5 py-4 font-semibold text-primary">MCP Tool</th>
-          <th class="px-5 py-4 font-semibold text-foreground">Behavior</th>
+        <tr class="border-b border-border bg-muted">
+          <th class="px-5 py-3.5 font-medium text-foreground">MCP Tool</th>
+          <th class="px-5 py-3.5 font-medium text-muted-foreground">Behavior</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-border/70">
+      <tbody class="divide-y divide-border">
         {tools.map((t) => (
           <tr>
-            <td class="px-5 py-4 font-medium text-foreground">{t.name}</td>
-            <td class="px-5 py-4 text-muted-foreground">{t.desc}</td>
+            <td class="px-5 py-3.5 font-medium text-foreground">{t.name}</td>
+            <td class="px-5 py-3.5 text-muted-foreground">{t.desc}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </section>
 
-  <section class="mt-12 grid gap-5 sm:grid-cols-2">
-    <div class="rounded-3xl border border-white/80 bg-white/60 p-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl">
+  <section class="mt-10 grid gap-4 sm:grid-cols-2">
+    <div class="rounded-lg border border-border bg-card p-6">
       <h2 class="text-xl font-medium text-foreground">Local stdio (Cursor / Claude / Codex)</h2>
       <pre class="mt-4 overflow-x-auto text-sm leading-relaxed text-foreground"><code>{`{
   "mcpServers": {
@@ -71,7 +71,7 @@ const faqs = [
 }`}</code></pre>
     </div>
 
-    <div class="rounded-3xl border border-white/80 bg-white/60 p-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl">
+    <div class="rounded-lg border border-border bg-card p-6">
       <h2 class="text-xl font-medium text-foreground">Team HTTP MCP + RBAC</h2>
       <pre class="mt-4 overflow-x-auto text-sm leading-relaxed text-foreground"><code>{`memtwig serve --addr 127.0.0.1:8787
 
@@ -83,8 +83,8 @@ const faqs = [
     </div>
   </section>
 
-  <div class="mt-12 flex flex-wrap justify-center gap-3">
-    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.0.0</a>
+  <div class="mt-10 flex flex-wrap gap-3">
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.4.1</a>
     <a href="/vs/mem0" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
       Compare with Mem0
     </a>

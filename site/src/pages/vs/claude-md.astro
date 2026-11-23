@@ -30,37 +30,37 @@ const faqs = [
   path="/vs/claude-md"
   faqs={faqs}
 >
-  <header class="text-center">
+  <header>
     <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.08]">
       memtwig vs CLAUDE.md
     </h1>
-    <p class="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+    <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
       Static files like CLAUDE.md and .cursorrules work for a single repository and a single tool. memtwig turns curated Markdown folders into an indexed, scoped, cross-harness memory layer without bloating every prompt.
     </p>
   </header>
 
-  <section class="mt-12 overflow-x-auto rounded-3xl border border-white/80 bg-white/65 shadow-[0_12px_36px_rgba(15,58,55,0.06)] ring-1 ring-border backdrop-blur-xl">
+  <section class="mt-10 overflow-x-auto rounded-lg border border-border bg-card">
     <table class="w-full min-w-[580px] border-collapse text-left text-sm sm:text-base">
       <thead>
-        <tr class="border-b border-border bg-muted/50">
-          <th class="px-5 py-4 font-semibold text-foreground">Dimension</th>
-          <th class="px-5 py-4 font-semibold text-primary">memtwig</th>
-          <th class="px-5 py-4 font-semibold text-foreground">CLAUDE.md / .cursorrules</th>
+        <tr class="border-b border-border bg-muted">
+          <th class="px-5 py-3.5 font-medium text-muted-foreground">Dimension</th>
+          <th class="px-5 py-3.5 font-medium text-foreground">memtwig</th>
+          <th class="px-5 py-3.5 font-medium text-muted-foreground">CLAUDE.md / .cursorrules</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-border/70">
+      <tbody class="divide-y divide-border">
         {rows.map((r) => (
           <tr>
-            <td class="px-5 py-4 font-medium text-foreground">{r.dim}</td>
-            <td class="px-5 py-4 text-foreground">{r.memtwig}</td>
-            <td class="px-5 py-4 text-muted-foreground">{r.staticMd}</td>
+            <td class="px-5 py-3.5 font-medium text-foreground">{r.dim}</td>
+            <td class="px-5 py-3.5 text-foreground">{r.memtwig}</td>
+            <td class="px-5 py-3.5 text-muted-foreground">{r.staticMd}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </section>
 
-  <section class="mt-12 rounded-3xl border border-white/80 bg-white/60 p-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl sm:p-8">
+  <section class="mt-10 rounded-lg border border-border bg-card p-6 sm:p-8">
     <h2 class="text-2xl font-medium text-foreground">Migrate existing notes in 30 seconds</h2>
     <pre class="mt-4 overflow-x-auto text-sm leading-relaxed text-foreground"><code>{`memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
 memtwig index
@@ -69,8 +69,8 @@ memtwig install cursor
 memtwig install codex`}</code></pre>
   </section>
 
-  <div class="mt-12 flex flex-wrap justify-center gap-3">
-    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.0.0</a>
+  <div class="mt-10 flex flex-wrap gap-3">
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.4.1</a>
     <a href="/mcp-memory" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
       Explore MCP Memory Server
     </a>

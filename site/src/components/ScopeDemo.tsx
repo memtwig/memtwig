@@ -80,7 +80,7 @@ const workspaces: WorkspaceCase[] = [
       {
         vault: "personal",
         path: "projects/memtwig.md",
-        snippet: "Single Go binary, SQLite FTS5 + RRF, v1.0.0 released.",
+        snippet: "Single Go binary, SQLite FTS5 + RRF, embedded dark Studio UI.",
       },
       {
         vault: "personal",
@@ -93,7 +93,7 @@ const workspaces: WorkspaceCase[] = [
 
 export function ScopeDemo() {
   return (
-    <div className="rounded-3xl border border-white/80 bg-white/60 p-5 shadow-[0_14px_45px_rgba(15,58,55,0.07)] ring-1 ring-border backdrop-blur-xl sm:p-7">
+    <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
       <Tabs defaultValue="acme">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm font-medium text-muted-foreground">Active workspace</span>
@@ -107,7 +107,7 @@ export function ScopeDemo() {
         </div>
 
         {workspaces.map((ws) => (
-          <TabsContent key={ws.id} value={ws.id} className="mt-5 space-y-5">
+          <TabsContent key={ws.id} value={ws.id} className="mt-5 space-y-4">
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
               <span className="truncate">cwd: {ws.cwd}</span>
               <span className="truncate">remote: {ws.remote}</span>
@@ -117,15 +117,15 @@ export function ScopeDemo() {
               {ws.vaults.map((v) => (
                 <div
                   key={v.name}
-                  className="rounded-2xl border border-white/80 bg-white/75 px-4 py-3.5 shadow-[0_2px_12px_rgba(15,58,55,0.04)] ring-1 ring-border/70 backdrop-blur-md"
+                  className="rounded-md border border-border bg-background px-4 py-3.5"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-foreground">{v.name}</span>
                     <span
                       className={
                         v.state === "active"
-                          ? "h-2 w-2 rounded-full bg-primary"
-                          : "h-2 w-2 rounded-full bg-border"
+                          ? "h-2 w-2 rounded-full bg-emerald-400"
+                          : "h-2 w-2 rounded-full bg-input"
                       }
                       aria-label={v.state}
                     />
@@ -137,15 +137,15 @@ export function ScopeDemo() {
               ))}
             </div>
 
-            <div className="rounded-2xl border border-white/80 bg-white/75 p-4 shadow-[0_2px_12px_rgba(15,58,55,0.04)] ring-1 ring-border/70 backdrop-blur-md sm:p-5">
+            <div className="rounded-md border border-border bg-background p-4 sm:p-5">
               <div className="text-sm font-medium text-muted-foreground">
                 $ memtwig search "deploy"
               </div>
-              <div className="mt-3 divide-y divide-border/80">
+              <div className="mt-3 divide-y divide-border">
                 {ws.results.map((r) => (
                   <div key={`${r.vault}:${r.path}`} className="py-2.5 first:pt-0 last:pb-0">
                     <div className="flex flex-wrap items-baseline gap-2 text-sm">
-                      <span className="font-medium text-primary">{r.vault}</span>
+                      <span className="font-medium text-emerald-400">{r.vault}</span>
                       <span className="font-medium text-foreground break-all">{r.path}</span>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{r.snippet}</p>

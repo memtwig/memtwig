@@ -16,8 +16,8 @@ const snippets: Snippet[] = [
     code: `curl -fsSL https://memtwig.com/install.sh | sh
 # or: go install github.com/memtwig/memtwig/cmd/memtwig@latest
 
-memtwig init ~/notes --name personal --kind personal
-memtwig search "deploy"`,
+memtwig setup
+memtwig ui`,
   },
   {
     id: "multiorg",
@@ -77,7 +77,7 @@ export function QuickstartTabs() {
 
       {snippets.map((s) => (
         <TabsContent key={s.id} value={s.id}>
-          <div className="relative rounded-3xl border border-white/80 bg-white/65 p-5 pr-14 shadow-[0_12px_36px_rgba(15,58,55,0.06)] ring-1 ring-border backdrop-blur-xl sm:p-6 sm:pr-16">
+          <div className="relative rounded-lg border border-border bg-card p-5 pr-14 sm:p-6 sm:pr-16">
             <Button
               variant="ghost"
               size="icon"
@@ -85,7 +85,7 @@ export function QuickstartTabs() {
               onClick={() => handleCopy(s.id, s.code)}
               className="absolute top-3.5 right-3.5"
             >
-              {copiedId === s.id ? <Check size={18} className="text-primary" /> : <Copy size={18} />}
+              {copiedId === s.id ? <Check size={18} className="text-emerald-400" /> : <Copy size={18} />}
             </Button>
             <pre className="overflow-x-auto text-sm leading-relaxed text-foreground whitespace-pre">
               <code>{s.code}</code>
