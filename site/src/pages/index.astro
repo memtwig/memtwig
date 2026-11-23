@@ -6,9 +6,14 @@ import { MobileNav } from "@/components/MobileNav";
 import { ScopeDemo } from "@/components/ScopeDemo";
 import { QuickstartTabs } from "@/components/QuickstartTabs";
 
+const siteUrl = "https://memtwig.com";
 const repoUrl = "https://github.com/vittoriocompagno/memtwig";
 const releasesUrl = "https://github.com/vittoriocompagno/memtwig/releases";
 const docsUrl = "https://github.com/vittoriocompagno/memtwig/tree/main/docs";
+
+const title = "memtwig — Git-native, multi-org memory layer for AI agents";
+const description =
+  "Curated Markdown vaults routed by Git remote. Single static Go binary with SQLite FTS5, proposal governance, MCP, and hooks for Claude Code, Codex, and Cursor.";
 
 const metrics = [
   { value: "105 ms", label: "109 Markdown notes indexed into SQLite FTS5" },
@@ -63,6 +68,85 @@ const comparison = [
     staticFiles: "Tool-specific filenames",
   },
 ];
+
+const faqs = [
+  {
+    q: "What is memtwig?",
+    a: "memtwig is an open-source, single-binary Go memory layer for AI agents that stores curated facts in Git-backed Markdown vaults with multi-org isolation, hybrid SQLite FTS5 search, MCP, and proposal governance.",
+  },
+  {
+    q: "How does memtwig isolate memory across multiple client orgs?",
+    a: "Each org vault defines match_paths and match_git_remotes. memtwig resolves active vaults from the current working directory and enforces vault_id IN (...) directly inside SQLite queries, so agents in Client A's repo never see Client B's notes.",
+  },
+  {
+    q: "How does memtwig compare to Mem0 or vector memory APIs?",
+    a: "Vector memory APIs store extracted facts in opaque databases and allow autonomous overwrites. memtwig keeps plain Markdown in Git, works offline with zero external services, scans for leaked secrets, and requires human approval for proposals on org or owner-locked notes.",
+  },
+  {
+    q: "Which AI coding agents work with memtwig?",
+    a: "memtwig works with Claude Code, Cursor, Codex, Antigravity, Hermes, and any MCP-compatible client via stdio MCP (memtwig mcp), Streamable HTTP MCP (memtwig serve), and native per-turn hooks (memtwig install).",
+  },
+  {
+    q: "Does memtwig require a vector database or paid API key?",
+    a: "No. memtwig embeds pure-Go SQLite with FTS5 BM25 out of the box. Embeddings via Ollama, OpenAI, or Cloudflare and semantic curation (curate --llm) are optional and degrade cleanly to local BM25 when offline.",
+  },
+];
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${siteUrl}/#website`,
+      url: `${siteUrl}/`,
+      name: "memtwig",
+      description,
+      inLanguage: "en",
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${siteUrl}/#software`,
+      name: "memtwig",
+      url: `${siteUrl}/`,
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Linux, macOS, Windows",
+      softwareVersion: "1.0.0",
+      datePublished: "2026-11-23",
+      dateModified: "2026-11-23",
+      license: "https://www.apache.org/licenses/LICENSE-2.0",
+      codeRepository: repoUrl,
+      downloadUrl: `${releasesUrl}/tag/v1.0.0`,
+      description,
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+      author: {
+        "@type": "Person",
+        name: "Vittorio Compagno",
+        url: "https://vittoriocompagno.com",
+        sameAs: [
+          "https://github.com/vittoriocompagno",
+          "https://x.com/itstorio_",
+          "https://www.linkedin.com/in/vittorio-compagno",
+        ],
+      },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${siteUrl}/#faq`,
+      mainEntity: faqs.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.a,
+        },
+      })),
+    },
+  ],
+};
 ---
 
 <!doctype html>
@@ -70,12 +154,28 @@ const comparison = [
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>memtwig — Git-native, multi-org memory layer for AI agents</title>
-    <meta
-      name="description"
-      content="Curated Markdown vaults routed by Git remote. One static Go binary for Claude Code, Codex, and Cursor."
-    />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={`${siteUrl}/`} />
+    <link rel="alternate" type="text/markdown" href={`${siteUrl}/llms.txt`} title="LLMs summary" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="memtwig" />
+    <meta property="og:url" content={`${siteUrl}/`} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={`${siteUrl}/og-image.png`} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:creator" content="@itstorio_" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={`${siteUrl}/og-image.png`} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
   <body class="min-h-screen text-foreground">
     <div class="sticky top-4 z-40 px-4 sm:px-6">
@@ -89,6 +189,7 @@ const comparison = [
           <a href="#isolation" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Isolation</a>
           <a href="#architecture" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Architecture</a>
           <a href="#comparison" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Comparison</a>
+          <a href="#faq" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">FAQ</a>
           <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Docs</a>
         </nav>
 
@@ -207,6 +308,20 @@ const comparison = [
           <QuickstartTabs client:load />
         </div>
       </section>
+
+      <section id="faq" class="mx-auto max-w-4xl scroll-mt-24 px-5 py-12 pb-20 sm:px-8 sm:py-16 sm:pb-24">
+        <h2 class="text-center text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+          FAQ
+        </h2>
+        <div class="mt-10 divide-y divide-border/80 rounded-3xl border border-white/80 bg-white/60 px-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl sm:px-8">
+          {faqs.map((item) => (
+            <div class="py-6">
+              <h3 class="text-lg font-medium text-foreground">{item.q}</h3>
+              <p class="mt-2 text-base leading-relaxed text-muted-foreground">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </main>
 
     <footer class="border-t border-border/80 bg-white/50 backdrop-blur-md">
@@ -220,6 +335,7 @@ const comparison = [
           <a href={repoUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">GitHub</a>
           <a href={releasesUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Releases</a>
           <a href={docsUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Docs</a>
+          <a href="/llms.txt" class="hover:text-foreground">llms.txt</a>
           <span>© 2026 Vittorio Compagno</span>
         </div>
       </div>
