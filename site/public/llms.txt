@@ -11,6 +11,7 @@
 - Performance: 109 Markdown notes / 1,078 chunks indexed in ~105 ms.
 
 ## Guides & Comparisons
+- [Memtwig Cloud](https://memtwig.com/cloud): Managed Cloud Curator, hosted HTTPS MCP with RBAC, managed embeddings, and GitHub/GitLab sync (early-access waitlist).
 - [memtwig vs Mem0](https://memtwig.com/vs/mem0): Git-native curated Markdown vs vector/graph memory APIs.
 - [memtwig vs CLAUDE.md](https://memtwig.com/vs/claude-md): Scaling static rules files across repositories and AI harnesses.
 - [Open-Source MCP Memory Server](https://memtwig.com/mcp-memory): Stdio and Streamable HTTP MCP tools, RBAC tokens, and audit logs.

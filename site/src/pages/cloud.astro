@@ -1,0 +1,189 @@
+---
+import ArticleLayout from "@/layouts/ArticleLayout.astro";
+import CloudDiagram from "@/components/CloudDiagram.astro";
+import { WaitlistForm } from "@/components/WaitlistForm";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const valueCards = [
+  {
+    title: "Cloud Curator",
+    body: "Nightly and on-push LLM hygiene catches stale notes, contradictions, and oversized files as reviewable diffs.",
+  },
+  {
+    title: "Hosted HTTPS MCP + RBAC",
+    body: "Instant https://<org>.memtwig.com/mcp endpoint with per-bot Bearer tokens and audit logs for Grok Bot, OpenBot, and CI.",
+  },
+  {
+    title: "Zero-Key Embeddings & Sync",
+    body: "Two-way GitHub and GitLab sync keeps vaults and 1024-dim semantic search warm on every commit.",
+  },
+  {
+    title: "Your Git, Zero Lock-In",
+    body: "Every approved diff commits back to plain Markdown in your repo. Switch back to the local binary anytime.",
+  },
+];
+
+const faqs = [
+  {
+    q: "Can I leave Memtwig Cloud and run locally anytime?",
+    a: "Yes. Every note and decision stays as plain Markdown inside your Git repository, so you can drop back to the free Go binary in seconds.",
+  },
+  {
+    q: "Does Cloud Curator edit my notes without approval?",
+    a: "Never. Cloud Curator only opens reviewable diffs or pull requests for you or your team to approve or reject.",
+  },
+  {
+    q: "When does early access open?",
+    a: "We are onboarding waitlist teams in batches starting with multi-client freelancers and teams running hosted MCP agents.",
+  },
+];
+---
+
+<ArticleLayout
+  title="Memtwig Cloud — Managed Cloud Curator & Hosted MCP"
+  description="Managed Memtwig Cloud: scheduled Cloud Curator, hosted HTTPS MCP with per-agent RBAC, managed 1024-dim embeddings, and two-way GitHub/GitLab sync."
+  path="/cloud"
+  faqs={faqs}
+>
+  <header class="max-w-3xl">
+    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.06]">
+      Memtwig Cloud.
+    </h1>
+    <p class="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+      Managed Cloud Curator, hosted HTTPS MCP, and Git sync for teams and always-on bots.
+    </p>
+    <div class="mt-7 flex flex-wrap items-center gap-3">
+      <a href="#waitlist" class={cn(buttonVariants({ size: "lg" }))}>Join the waitlist</a>
+      <a href="/#install" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>Self-host free</a>
+    </div>
+  </header>
+
+  <section class="mt-10">
+    <CloudDiagram />
+  </section>
+
+  <section class="mt-12 grid gap-4 sm:grid-cols-2">
+    {valueCards.map((card) => (
+      <div class="rounded-lg border border-border bg-card p-6">
+        <h2 class="text-lg font-medium text-foreground">{card.title}</h2>
+        <p class="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">{card.body}</p>
+      </div>
+    ))}
+  </section>
+
+  <section class="mt-16">
+    <h2 class="text-2xl font-medium tracking-tight text-foreground sm:text-3xl">Pricing</h2>
+    <div class="mt-6 grid gap-4 md:grid-cols-3">
+      <!-- Open Source -->
+      <div class="flex flex-col justify-between rounded-lg border border-border bg-card p-6">
+        <div>
+          <h3 class="text-lg font-medium text-foreground">Open Source</h3>
+          <div class="mt-3 text-3xl font-light tracking-tight text-foreground tabular-nums">
+            $0 <span class="text-sm font-normal text-muted-foreground">forever</span>
+          </div>
+          <ul class="mt-6 space-y-2.5 text-sm text-muted-foreground">
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-500"></span>
+              <span>Local CLI, Studio UI &amp; TUI</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-500"></span>
+              <span>SQLite FTS5 + BYO keys</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-500"></span>
+              <span>Self-host memtwig serve</span>
+            </li>
+          </ul>
+        </div>
+        <div class="mt-7">
+          <a href="/#install" class={cn(buttonVariants({ variant: "outline", size: "default" }), "w-full")}>
+            Install free
+          </a>
+        </div>
+      </div>
+
+      <!-- Cloud Pro -->
+      <div class="flex flex-col justify-between rounded-lg border border-zinc-600 bg-card p-6">
+        <div>
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="text-lg font-medium text-foreground">Cloud Pro</h3>
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          </div>
+          <div class="mt-3 text-3xl font-light tracking-tight text-foreground tabular-nums">
+            $19 <span class="text-sm font-normal text-muted-foreground">/ mo</span>
+          </div>
+          <ul class="mt-6 space-y-2.5 text-sm text-muted-foreground">
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+              <span>Cloud Curator (nightly LLM hygiene)</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+              <span>Hosted HTTPS /mcp endpoint</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+              <span>Managed 1024-dim embeddings</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+              <span>GitHub / GitLab sync · up to 5 vaults</span>
+            </li>
+          </ul>
+        </div>
+        <div class="mt-7">
+          <a href="#waitlist" data-plan="pro" class={cn(buttonVariants({ size: "default" }), "w-full")}>
+            Join waitlist
+          </a>
+        </div>
+      </div>
+
+      <!-- Cloud Team -->
+      <div class="flex flex-col justify-between rounded-lg border border-border bg-card p-6">
+        <div>
+          <h3 class="text-lg font-medium text-foreground">Cloud Team</h3>
+          <div class="mt-3 text-3xl font-light tracking-tight text-foreground tabular-nums">
+            $49 <span class="text-sm font-normal text-muted-foreground">/ mo</span>
+          </div>
+          <ul class="mt-6 space-y-2.5 text-sm text-muted-foreground">
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+              <span>Unlimited client vaults</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+              <span>Per-agent &amp; teammate RBAC tokens</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+              <span>PR approval flow &amp; audit retention</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+              <span>Priority onboarding</span>
+            </li>
+          </ul>
+        </div>
+        <div class="mt-7">
+          <a href="#waitlist" data-plan="team" class={cn(buttonVariants({ variant: "outline", size: "default" }), "w-full")}>
+            Join waitlist
+          </a>
+        </div>
+      </div>
+    </div>
+    <p class="mt-4 text-xs text-muted-foreground sm:text-sm">
+      Planned early-access pricing — join the waitlist to get invited first.
+    </p>
+  </section>
+
+  <section id="waitlist" class="mt-16 scroll-mt-20">
+    <div class="rounded-lg border border-border bg-card p-6 sm:p-8">
+      <h2 class="text-2xl font-medium tracking-tight text-foreground">Request early access</h2>
+      <div class="mt-6">
+        <WaitlistForm client:load />
+      </div>
+    </div>
+  </section>
+</ArticleLayout>
