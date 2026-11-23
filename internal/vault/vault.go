@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -48,8 +49,19 @@ var (
 	reOwner     = regexp.MustCompile(`(?i)^(?:owner|proprietario)\s*:\s*(\S+)`)
 )
 
-// Init scaffolds a new memtwig vault directory.
+// InitOptions customizes vault scaffolding.
+type InitOptions struct {
+	NoScaffold bool
+	GitInit    bool
+}
+
+// Init scaffolds a new memtwig vault directory with default options.
 func Init(root string) error {
+	return InitWithOptions(root, InitOptions{})
+}
+
+// InitWithOptions scaffolds a new memtwig vault directory.
+func InitWithOptions(root string, opts InitOptions) error {
 	dirs := []string{
 		"projects",
 		"decisions",
@@ -80,9 +92,10 @@ func Init(root string) error {
 		}
 	}
 
-	welcome := filepath.Join(root, "projects", "getting-started.md")
-	if _, err := os.Stat(welcome); os.IsNotExist(err) {
-		content := fmt.Sprintf(`---
+	if !opts.NoScaffold {
+		welcome := filepath.Join(root, "projects", "getting-started.md")
+		if _, err := os.Stat(welcome); os.IsNotExist(err) {
+			content := fmt.Sprintf(`---
 status: active
 valid_from: %s
 updated: %s
@@ -92,8 +105,17 @@ updated: %s
 
 - [%s · memtwig] Vault initialized. Keep facts in projects/ and infra/, decisions in decisions/, and user preferences in persona/.
 `, today, today, today)
-		if err := os.WriteFile(welcome, []byte(content), 0o644); err != nil {
-			return err
+			if err := os.WriteFile(welcome, []byte(content), 0o644); err != nil {
+				return err
+			}
+		}
+	}
+
+	if opts.GitInit {
+		if _, err := os.Stat(filepath.Join(root, ".git")); os.IsNotExist(err) {
+			if gitBin, err := exec.LookPath("git"); err == nil {
+				_ = exec.Command(gitBin, "-C", root, "init", "-q").Run()
+			}
 		}
 	}
 

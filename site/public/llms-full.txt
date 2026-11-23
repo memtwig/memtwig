@@ -1,48 +1,153 @@
-# memtwig — Complete Technical Reference
+# memtwig — Complete Technical Reference (v1.3.1)
 
-memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory layer for AI coding agents and assistants, distributed as a single static Go binary (`CGO_ENABLED=0`, ~12 MB, Linux/macOS/Windows).
+memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory layer for AI coding agents and assistants, distributed as a single static Go binary (`CGO_ENABLED=0`, ~14 MB, Linux/macOS/Windows) with an embedded local Studio Web UI (`memtwig ui`) and interactive TUI (`memtwig tui`).
 
-## What problem memtwig solves
-Developers and freelancers using multiple AI harnesses (Claude Code, Codex, Cursor, Antigravity, Hermes) across multiple clients suffer from context amnesia, fragmented memory stores, and cross-client data leaks. Cloud vector memory APIs lock facts inside opaque databases and let agents overwrite truth autonomously. memtwig keeps all memory as curated Markdown files in plain Git repositories, enforces strict multi-org isolation at query time, and gates agent writes behind deterministic human-reviewed proposals.
-
-## Core Architecture
-1. **Multi-Vault Git Storage**: Each vault is a standard Git repository of Markdown notes (YAML frontmatter or lightweight headers: `status`, `valid_from`, `updated`, `owner`). Notes have a soft 8 KB cap; outdated facts are moved to append-only `archive/` files via `memtwig invalidate` rather than deleted.
-2. **Scope Router (`cwd` + `git remote`)**: Every CLI command, hook, and MCP call resolves active vaults from the current working directory and Git remote. When working inside Client A's repo, the agent sees `personal/persona/**` (via `always_include`) and `client-a/*`, and is strictly blind to `client-b/*` at the SQL `WHERE vault_id IN (...)` level.
-3. **Hybrid Retrieval (`index` + `search`)**: Embedded SQLite (`modernc.org/sqlite`, zero CGO) with FTS5 BM25 fused with optional Ollama, OpenAI, or Cloudflare embeddings via Reciprocal Rank Fusion (`k=60`). Automatically degrades to BM25 if the embedding provider is offline. Indexes 109 notes (1,078 chunks) in ~105 ms.
-4. **Anti-Noise Hook Gating**: `memtwig hook <claude|codex|antigravity>` skips courtesy/filler prompts, deduplicates per conversation turn, enforces signal thresholds, and injects a persistence reminder when the user corrects the agent.
-5. **Governance & Hygiene**:
-   - `default_write`: `direct` | `propose` | `readonly` per vault.
-   - `owner`: notes with an owner header block direct agent writes even in `direct` vaults.
-   - Deterministic proposals in `.curator/proposals.json` with SHA1 IDs and append-only `.curator/history.jsonl` so rejected proposals never reopen.
-   - Built-in secret scanner (`memtwig check`) blocks `memtwig sync` if API keys or private keys are detected.
-   - `memtwig decide` logs dated decisions in `decisions/YYYY-MM.md` and appends/proposes updates to project notes.
-   - `memtwig curate` flags oversize notes, stale active notes, and unsynced decisions; `memtwig curate --llm` checks related note pairs for semantic contradictions via OpenAI-compatible or Ollama endpoints and only creates review proposals.
-6. **Team HTTP Server (`memtwig serve`)**: Exposes Streamable HTTP MCP (`/mcp`) and REST API (`/api/v1/status`, `/api/v1/search`, `/api/v1/proposals`, `/api/v1/proposals/<vault>/<id>/<approve|reject>`, `/api/v1/audit`) protected by Bearer token RBAC (`reader`, `proposer`, `writer`, `admin`) and append-only `audit.jsonl`.
-
-## Installation & Quickstart
+## Install
+```bash
+curl -fsSL https://memtwig.com/install.sh | sh
+# Ensure ~/.local/bin is in PATH:
+export PATH="$HOME/.local/bin:$PATH"
+memtwig version   # memtwig 1.3.1
+```
+Or with Go:
 ```bash
 go install github.com/vittoriocompagno/memtwig/cmd/memtwig@latest
-# Prebuilt binaries: https://github.com/vittoriocompagno/memtwig/releases/tag/v1.0.0
+```
 
-memtwig init ~/notes-acme --name acme --kind org
-memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
+## Quickstart (One-Command Vault Setup)
+```bash
+# 1. Personal vault (always includes persona/** inside client org repos)
+memtwig init ~/notes/personal --name personal --kind personal \
+  --always-include "persona/**"
+
+# 2. Isolated client org vaults (default_write=propose, auto git init, no sample clutter)
+memtwig init ~/notes/acme --name acme --kind org \
+  --match-path "$HOME/work/acme-payments/**" \
+  --match-remote "github.com/acme-corp/*"
+
+memtwig init ~/notes/nordic --name nordic --kind org \
+  --match-path "$HOME/work/nordic-store/**" \
+  --match-remote "github.com/nordic-retail/*"
+
+# 3. Inspect vaults, index, and diagnose
+memtwig vault list
+memtwig index --full
 memtwig doctor
-memtwig index
-memtwig search "deploy"
+
+# 4. Search (strictly scoped by cwd + git remote; supports prefix matching, e.g. "Postgres" -> "PostgreSQL")
+cd ~/work/acme-payments && memtwig search "Postgres"
+cd ~/work/acme-payments && memtwig search "Shopify"   # -> no matches (active vaults: acme, personal)
+
+# 5. Governance & deterministic proposals
+memtwig proposal add infra/postgres.md --vault acme --kind append \
+  --reason "Add pg_stat_statements alert" \
+  --content "- [2026-11-23 · dev] Alert if p95 > 250ms."
+memtwig proposal list --vault acme
+memtwig proposal show <id> --vault acme
+memtwig proposal ok <id> --vault acme
+memtwig proposal no <id> "outdated" --vault acme
+
+# 6. Lint all vaults, curate, open local Studio Web UI or TUI
+memtwig check --all
+memtwig curate             # add --llm for semantic contradiction check
+memtwig ui                 # embedded local Web UI at http://127.0.0.1:8787
+memtwig tui                # interactive terminal UI
+
+# 7. Connect AI harnesses
 memtwig install claude --dry-run
 memtwig install cursor --dry-run
 memtwig install codex --dry-run
-memtwig mcp
-memtwig serve --addr 127.0.0.1:8787
+memtwig mcp                # stdio MCP server
+memtwig serve --addr 127.0.0.1:8787   # Streamable HTTP MCP + REST API + RBAC + Studio UI
 ```
 
-## Comparison
-- vs. Vector Memory APIs (Mem0, Supermemory, Zep): memtwig requires no external database or cloud subscription, stores human-editable Markdown in Git, isolates org vaults automatically by working directory/Git remote, scans for secrets, and routes agent edits through a reviewable proposal queue.
-- vs. Static Rules Files (`CLAUDE.md`, `.cursorrules`): memtwig works identically across all harnesses via MCP and hooks, indexes multi-file vaults with BM25 + RRF instead of stuffing entire files into context, and tracks decisions, staleness, and archives automatically.
+## Complete `config.toml` Schema (`~/.config/memtwig/config.toml`)
+```toml
+[retrieval]
+default_top_k = 6
+rrf_k = 60
+max_snippet_chars = 400
+min_score = 0.005
 
-## Frequently Asked Questions
-- **What is memtwig?** memtwig is an open-source, single-binary Go memory layer for AI agents that stores curated facts in Git-backed Markdown vaults with multi-org isolation, hybrid SQLite FTS5 search, MCP, and proposal governance.
-- **How does memtwig isolate memory across multiple client orgs?** Each org vault defines `match_paths` and `match_git_remotes`. memtwig resolves active vaults from the current directory and enforces `vault_id IN (...)` directly in SQLite queries, so agents in Client A's repo never see Client B's notes.
-- **How does memtwig compare to Mem0 or vector memory APIs?** Vector memory APIs store extracted facts in opaque databases and allow autonomous overwrites. memtwig keeps plain Markdown in Git, works offline with zero external services, scans for leaked secrets, and requires human approval for proposals on org or owner-locked notes.
-- **Which AI coding agents work with memtwig?** memtwig works with Claude Code, Cursor, Codex, Antigravity, Hermes, and any MCP-compatible client via `memtwig mcp` (stdio), `memtwig serve` (HTTP MCP), and native per-turn hooks (`memtwig install <harness>`).
-- **Does memtwig require a vector database or paid API key?** No. memtwig embeds pure-Go SQLite with FTS5 BM25 out of the box. Embeddings (Ollama, OpenAI, Cloudflare) and semantic curation (`curate --llm`) are optional and degrade cleanly to local BM25 when offline.
+[embeddings]
+# provider: "none" | "ollama" | "openrouter" | "deepinfra" | "openai" | "cloudflare"
+provider = "none"
+model = ""                # e.g. "baai/bge-m3" (openrouter), "BAAI/bge-m3" (deepinfra), "nomic-embed-text" (ollama)
+base_url = ""             # optional custom endpoint override
+api_key_env = ""          # e.g. "OPENROUTER_API_KEY", "DEEPINFRA_API_KEY", "OPENAI_API_KEY"
+account_id_env = ""       # Cloudflare only
+dimensions = 1024         # default 1024; changing model/dimensions auto-invalidates SQLite index_meta
+cosine_threshold = 0.25
+
+[llm]
+# Used by `memtwig curate --llm` for semantic contradiction checks
+# provider: "none" | "openai" | "ollama" | "openrouter" | "groq"
+provider = "none"
+model = ""                # e.g. "llama-3.3-70b-versatile" (groq), "openai/gpt-4o-mini" (openrouter)
+base_url = ""
+api_key_env = ""          # e.g. "GROQ_API_KEY", "OPENROUTER_API_KEY", "OPENAI_API_KEY"
+
+[identity]
+soul_path = "~/.hermes/SOUL.md"   # optional identity file injected by `hook --event session-start`
+
+[vaults.personal]
+path = "~/notes/personal"
+kind = "personal"                 # "personal" | "org"
+default_write = "direct"          # "direct" | "propose" | "readonly"
+always_include = ["persona/**"]   # globs inside personal vault always visible in org scopes
+max_note_bytes = 8192
+
+[vaults.acme]
+path = "~/notes/acme"
+kind = "org"
+default_write = "propose"
+match_paths = ["~/work/acme-payments/**"]
+match_git_remotes = ["github.com/acme-corp/*"]
+max_note_bytes = 8192
+
+[server]
+addr = "127.0.0.1:8787"
+audit_path = "~/.cache/memtwig/audit.jsonl"
+
+# Optional RBAC tokens for team HTTP mode (if omitted, local-only admin mode is active):
+# [[server.tokens]]
+# name = "acme-ci"
+# token_env = "MEMTWIG_ACME_TOKEN"
+# role = "proposer"               # "reader" | "proposer" | "writer" | "admin"
+# vaults = ["acme"]
+# path_globs = ["infra/**"]
+```
+
+## Note Format & Governance
+Notes use YAML frontmatter or lightweight top-of-file headers:
+```markdown
+---
+status: active
+valid_from: 2026-11-23
+updated: 2026-11-23
+owner: vittorio
+---
+# Style Preferences
+
+- Keep replies concise.
+```
+- **Soft cap**: 8 KB per live note (`max_note_bytes`). Outdated facts are moved to append-only `archive/` files via `memtwig invalidate <path> --match "..." --reason "..."`.
+- **Owner lock**: Notes with `owner:` (or `proprietario:`) block direct agent writes even inside `direct` vaults; edits are routed to `.curator/proposals.json`.
+- **Deterministic proposals**: SHA1 IDs + append-only `.curator/history.jsonl` ensure rejected proposals never reopen.
+- **Secret scanner**: `memtwig check --all` detects leaked API keys/tokens/private keys and blocks `memtwig sync`.
+
+## MCP & HTTP API Reference
+- **Stdio MCP (`memtwig mcp`)**: exposes `memory_search`, `memory_get`, `memory_status`, `memory_propose`, `memory_write`, `memory_proposals_list`.
+- **HTTP Server (`memtwig serve` / `memtwig ui`)**:
+  - `GET /health`
+  - `POST /mcp` (Streamable HTTP MCP with Bearer RBAC)
+  - `GET /api/v1/status`, `GET /api/v1/notes`, `GET /api/v1/note?vault=...&path=...`, `GET /api/v1/search?q=...`
+  - `GET /api/v1/proposals` (includes unified `diff`), `POST /api/v1/proposals`, `POST /api/v1/proposals/<vault>/<id>/<approve|reject>`
+  - `POST /api/v1/reindex`, `POST /api/v1/curate`, `GET /api/v1/audit?n=50`
+  - `GET /` serves the embedded local Studio Web UI.
+
+## Links
+- Website: https://memtwig.com
+- GitHub: https://github.com/vittoriocompagno/memtwig
+- Releases: https://github.com/vittoriocompagno/memtwig/releases
+- Comparisons: https://memtwig.com/vs/mem0 · https://memtwig.com/vs/claude-md · https://memtwig.com/mcp-memory

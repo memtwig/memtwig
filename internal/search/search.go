@@ -121,7 +121,12 @@ func Query(ctx context.Context, st *index.Store, cfg *config.Config, activeVault
 	if len(terms) > 0 {
 		quoted := make([]string, len(terms))
 		for i, t := range terms {
-			quoted[i] = `"` + strings.ReplaceAll(t, `"`, ``) + `"`
+			clean := strings.ReplaceAll(t, `"`, ``)
+			if len([]rune(clean)) >= 3 {
+				quoted[i] = `"` + clean + `"*`
+			} else {
+				quoted[i] = `"` + clean + `"`
+			}
 		}
 		ftsExpr := strings.Join(quoted, " OR ")
 		sqlQ := fmt.Sprintf(`

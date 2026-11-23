@@ -111,3 +111,32 @@ func TestCourtesyAndCorrectionGate(t *testing.T) {
 		t.Fatal("expected correction detection")
 	}
 }
+
+func TestPrefixSearchPostgresMatchesPostgreSQL(t *testing.T) {
+	tmp := t.TempDir()
+	vDir := filepath.Join(tmp, "acme")
+	if err := os.MkdirAll(filepath.Join(vDir, "infra"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(vDir, "infra", "db.md"), []byte("---\nstatus: active\nupdated: 2026-11-23\n---\n# Primary Database\nProduction runs PostgreSQL 17 behind PgBouncer.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Default()
+	cfg.Vaults["acme"] = config.VaultConfig{Path: vDir, Kind: "org", DefaultWrite: "propose"}
+	st, err := index.Open(filepath.Join(tmp, "index.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	if _, err := st.RebuildOrUpdate(context.Background(), cfg, true); err != nil {
+		t.Fatal(err)
+	}
+	active := scope.Resolve(cfg, tmp, "acme")
+	results, _, err := search.Query(context.Background(), st, cfg, active, "Postgres", search.Options{TopK: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 || results[0].Path != "infra/db.md" {
+		t.Fatalf("expected prefix match on PostgreSQL for query 'Postgres', got %+v", results)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -35,7 +36,7 @@ import (
 )
 
 var (
-	version    = "1.3.0"
+	version    = "1.3.1"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -93,10 +94,12 @@ func cmdVersion() *cobra.Command {
 
 func cmdInit() *cobra.Command {
 	var registerName string
-	var kind string
+	var kind, defaultWrite string
+	var matchPaths, matchRemotes, alwaysInclude []string
+	var noScaffold, noGit bool
 	cmd := &cobra.Command{
 		Use:   "init [path]",
-		Short: "Initialize a new memtwig vault directory",
+		Short: "Initialize a new memtwig vault directory (with git init and optional routing)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := "."
@@ -107,7 +110,11 @@ func cmdInit() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := vault.Init(abs); err != nil {
+			skipSample := noScaffold || (kind == "org" && !cmd.Flags().Changed("no-scaffold"))
+			if err := vault.InitWithOptions(abs, vault.InitOptions{
+				NoScaffold: skipSample,
+				GitInit:    !noGit,
+			}); err != nil {
 				return err
 			}
 			fmt.Printf("initialized vault at %s\n", abs)
@@ -116,26 +123,39 @@ func cmdInit() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				dw := "direct"
-				if kind == "org" {
-					dw = "propose"
+				dw := defaultWrite
+				if dw == "" {
+					if kind == "org" {
+						dw = "propose"
+					} else {
+						dw = "direct"
+					}
 				}
 				cfg.Vaults[registerName] = config.VaultConfig{
-					Path:         abs,
-					Kind:         kind,
-					DefaultWrite: dw,
-					MaxNoteBytes: 8192,
+					Path:            abs,
+					Kind:            kind,
+					DefaultWrite:    dw,
+					MatchPaths:      matchPaths,
+					MatchGitRemotes: matchRemotes,
+					AlwaysInclude:   alwaysInclude,
+					MaxNoteBytes:    8192,
 				}
 				if err := config.Save(cfgPath, cfg); err != nil {
 					return err
 				}
-				fmt.Printf("registered vault %q (%s) in config\n", registerName, kind)
+				fmt.Printf("registered vault %q (%s, write=%s) in config\n", registerName, kind, dw)
 			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&registerName, "name", "", "register the vault under this name in config.toml")
 	cmd.Flags().StringVar(&kind, "kind", "personal", "vault kind: personal | org")
+	cmd.Flags().StringVar(&defaultWrite, "write", "", "direct | propose | readonly")
+	cmd.Flags().StringSliceVar(&matchPaths, "match-path", nil, "workspace path glob(s) that activate this vault")
+	cmd.Flags().StringSliceVar(&matchRemotes, "match-remote", nil, "git remote glob(s) that activate this vault")
+	cmd.Flags().StringSliceVar(&alwaysInclude, "always-include", nil, "path globs inside personal vault always included in org scopes")
+	cmd.Flags().BoolVar(&noScaffold, "no-scaffold", false, "do not create projects/getting-started.md (default true for --kind org)")
+	cmd.Flags().BoolVar(&noGit, "no-git", false, "skip git init inside the vault directory")
 	return cmd
 }
 
@@ -168,6 +188,7 @@ func cmdVault() *cobra.Command {
 					defaultWrite = "direct"
 				}
 			}
+			_, existed := cfg.Vaults[name]
 			cfg.Vaults[name] = config.VaultConfig{
 				Path:            abs,
 				Kind:            kind,
@@ -180,7 +201,11 @@ func cmdVault() *cobra.Command {
 			if err := config.Save(cfgPath, cfg); err != nil {
 				return err
 			}
-			fmt.Printf("added vault %q -> %s (kind=%s, write=%s)\n", name, abs, kind, defaultWrite)
+			verb := "added"
+			if existed {
+				verb = "updated"
+			}
+			fmt.Printf("%s vault %q -> %s (kind=%s, write=%s)\n", verb, name, abs, kind, defaultWrite)
 			return nil
 		},
 	}
@@ -209,7 +234,21 @@ func cmdVault() *cobra.Command {
 			sort.Strings(names)
 			for _, n := range names {
 				v := cfg.Vaults[n]
-				fmt.Printf("%-14s kind=%-8s write=%-8s path=%s\n", n, v.Kind, v.DefaultWrite, v.Path)
+				var extras []string
+				if len(v.MatchPaths) > 0 {
+					extras = append(extras, "paths="+strings.Join(v.MatchPaths, ","))
+				}
+				if len(v.MatchGitRemotes) > 0 {
+					extras = append(extras, "remotes="+strings.Join(v.MatchGitRemotes, ","))
+				}
+				if len(v.AlwaysInclude) > 0 {
+					extras = append(extras, "always="+strings.Join(v.AlwaysInclude, ","))
+				}
+				if len(extras) > 0 {
+					fmt.Printf("%-14s kind=%-8s write=%-8s path=%s  [%s]\n", n, v.Kind, v.DefaultWrite, v.Path, strings.Join(extras, " "))
+				} else {
+					fmt.Printf("%-14s kind=%-8s write=%-8s path=%s\n", n, v.Kind, v.DefaultWrite, v.Path)
+				}
 			}
 			return nil
 		},
@@ -364,7 +403,15 @@ func cmdSearch() *cobra.Command {
 				return enc.Encode(results)
 			}
 			if len(results) == 0 {
-				fmt.Println("no matches")
+				var names []string
+				for _, av := range active {
+					names = append(names, av.Name)
+				}
+				if len(names) > 0 {
+					fmt.Printf("no matches (active vaults: %s)\n", strings.Join(names, ", "))
+				} else {
+					fmt.Println("no matches (no active vaults in scope)")
+				}
 				return nil
 			}
 			for i, r := range results {
@@ -383,18 +430,31 @@ func cmdSearch() *cobra.Command {
 
 func cmdCheck() *cobra.Command {
 	var asJSON bool
+	var allVaults bool
 	cmd := &cobra.Command{
 		Use:   "check",
-		Short: "Run deterministic linter and secret scanner on active vaults",
+		Short: "Run deterministic linter and secret scanner on active (or --all) vaults",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)
 			if err != nil {
 				return err
 			}
-			active := scope.Resolve(cfg, cwdFlag, vaultFlag)
+			var targets []scope.ActiveVault
+			if allVaults {
+				names := make([]string, 0, len(cfg.Vaults))
+				for k := range cfg.Vaults {
+					names = append(names, k)
+				}
+				sort.Strings(names)
+				for _, n := range names {
+					targets = append(targets, scope.ActiveVault{Name: n, Config: cfg.Vaults[n], FullAccess: true})
+				}
+			} else {
+				targets = scope.Resolve(cfg, cwdFlag, vaultFlag)
+			}
 			var reports []lint.Report
 			totalErrors := 0
-			for _, av := range active {
+			for _, av := range targets {
 				rep, err := lint.CheckVault(av.Name, config.ExpandHome(av.Config.Path), av.Config.MaxNoteBytes)
 				if err != nil {
 					return err
@@ -421,13 +481,14 @@ func cmdCheck() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "JSON output")
+	cmd.Flags().BoolVar(&allVaults, "all", false, "check all configured vaults regardless of current directory")
 	return cmd
 }
 
 func cmdProposal() *cobra.Command {
 	pc := &cobra.Command{
 		Use:   "proposal",
-		Short: "Manage agent proposals (list, add, ok, no)",
+		Short: "Manage agent proposals (list, add, show, ok, no)",
 	}
 
 	resolveOneVault := func(cfg *config.Config) (string, string, error) {
@@ -546,7 +607,65 @@ func cmdProposal() *cobra.Command {
 		},
 	}
 
-	pc.AddCommand(listCmd, showCmd, okCmd, noCmd)
+	var addKind, addContent, addContentFile, addReason, addAuthor string
+	addCmd := &cobra.Command{
+		Use:   "add <rel-path>",
+		Short: "Queue a deterministic review proposal (append, replace, or create)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(cfgPath)
+			if err != nil {
+				return err
+			}
+			vName, vRoot, err := resolveOneVault(cfg)
+			if err != nil {
+				return err
+			}
+			content := addContent
+			if addContentFile != "" {
+				raw, err := os.ReadFile(config.ExpandHome(addContentFile))
+				if err != nil {
+					return err
+				}
+				content = string(raw)
+			} else if content == "" {
+				if fi, err := os.Stdin.Stat(); err == nil && (fi.Mode()&os.ModeCharDevice) == 0 {
+					raw, err := io.ReadAll(os.Stdin)
+					if err != nil {
+						return err
+					}
+					content = string(raw)
+				}
+			}
+			if strings.TrimSpace(content) == "" {
+				return fmt.Errorf("--content, --content-file, or stdin content is required")
+			}
+			relPath := filepath.ToSlash(strings.TrimPrefix(args[0], "/"))
+			p, created, err := proposal.Add(vRoot, proposal.Proposal{
+				Kind:    addKind,
+				Path:    relPath,
+				Content: content,
+				Reason:  addReason,
+				Author:  addAuthor,
+			})
+			if err != nil {
+				return err
+			}
+			state := "existing"
+			if created {
+				state = "created"
+			}
+			fmt.Printf("%s proposal %s [%s] %s (%s)\n", state, p.ID, vName, p.Path, p.Kind)
+			return nil
+		},
+	}
+	addCmd.Flags().StringVar(&addKind, "kind", "append", "proposal kind: append | replace | create")
+	addCmd.Flags().StringVar(&addContent, "content", "", "proposed Markdown content")
+	addCmd.Flags().StringVar(&addContentFile, "content-file", "", "read proposed Markdown content from file")
+	addCmd.Flags().StringVar(&addReason, "reason", "", "why this change is proposed")
+	addCmd.Flags().StringVar(&addAuthor, "author", "cli", "author label recorded on the proposal")
+
+	pc.AddCommand(listCmd, addCmd, showCmd, okCmd, noCmd)
 	return pc
 }
 
