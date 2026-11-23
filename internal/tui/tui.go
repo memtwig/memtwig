@@ -14,6 +14,7 @@ import (
 	"github.com/vittoriocompagno/memtwig/internal/config"
 	"github.com/vittoriocompagno/memtwig/internal/curator"
 	"github.com/vittoriocompagno/memtwig/internal/index"
+	"github.com/vittoriocompagno/memtwig/internal/install"
 	"github.com/vittoriocompagno/memtwig/internal/proposal"
 	"github.com/vittoriocompagno/memtwig/internal/scope"
 	"github.com/vittoriocompagno/memtwig/internal/search"
@@ -26,6 +27,7 @@ const (
 	TabSearch Tab = iota
 	TabProposals
 	TabVaults
+	TabSettings
 )
 
 type ProposalItem struct {
@@ -36,6 +38,7 @@ type ProposalItem struct {
 
 type Model struct {
 	cfg           *config.Config
+	cfgPath       string
 	store         *index.Store
 	auditLog      *audit.Logger
 	activeVaults  []scope.ActiveVault
@@ -44,19 +47,22 @@ type Model struct {
 	width, height int
 
 	// Search state
-	query        string
-	typingQuery  bool
-	results      []search.Result
-	selectedIdx  int
-	previewText  string
+	query         string
+	typingQuery   bool
+	results       []search.Result
+	selectedIdx   int
+	previewText   string
 	previewScroll int
 
 	// Proposals state
-	proposals     []ProposalItem
-	selectedProp  int
+	proposals    []ProposalItem
+	selectedProp int
 
 	// Audit state
 	auditEvents []audit.Event
+
+	// Settings state
+	settingIdx int
 
 	showHelp  bool
 	statusMsg string
@@ -99,10 +105,20 @@ func New(cfg *config.Config, st *index.Store, aud *audit.Logger, cwd, explicitVa
 }
 
 func Run(cfg *config.Config, st *index.Store, aud *audit.Logger, cwd, explicitVault, version string) error {
+	return RunWithConfigPath(cfg, "", st, aud, cwd, explicitVault, version)
+}
+
+func RunWithConfigPath(cfg *config.Config, cfgPath string, st *index.Store, aud *audit.Logger, cwd, explicitVault, version string) error {
 	m := New(cfg, st, aud, cwd, explicitVault, version)
+	m.cfgPath = cfgPath
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	_, err := p.Run()
 	return err
+}
+
+func (m Model) WithConfigPath(p string) Model {
+	m.cfgPath = p
+	return m
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -177,8 +193,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tab = TabVaults
 			m.refreshAudit()
 			return m, nil
+		case "4":
+			m.tab = TabSettings
+			return m, nil
 		case "tab":
-			m.tab = (m.tab + 1) % 3
+			m.tab = (m.tab + 1) % 4
 			if m.tab == TabProposals {
 				m.refreshProposals()
 			} else if m.tab == TabVaults {
@@ -186,7 +205,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "shift+tab":
-			m.tab = (m.tab + 2) % 3
+			m.tab = (m.tab + 3) % 4
 			if m.tab == TabProposals {
 				m.refreshProposals()
 			} else if m.tab == TabVaults {
@@ -231,6 +250,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.loadSelectedPreview()
 			} else if m.tab == TabProposals && m.selectedProp > 0 {
 				m.selectedProp--
+			} else if m.tab == TabSettings && m.settingIdx > 0 {
+				m.settingIdx--
 			}
 			return m, nil
 		case "down", "j":
@@ -240,6 +261,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.loadSelectedPreview()
 			} else if m.tab == TabProposals && m.selectedProp < len(m.proposals)-1 {
 				m.selectedProp++
+			} else if m.tab == TabSettings && m.settingIdx < 5 {
+				m.settingIdx++
+			}
+			return m, nil
+		case "enter", " ", "right", "l":
+			if m.tab == TabSettings {
+				m.applySettingAction(1)
+			}
+			return m, nil
+		case "left", "h":
+			if m.tab == TabSettings {
+				m.applySettingAction(-1)
+			}
+			return m, nil
+		case "s":
+			if m.tab == TabSettings {
+				if err := config.Save(m.cfgPath, m.cfg); err != nil {
+					m.statusMsg = "save error: " + err.Error()
+				} else {
+					stats, _ := m.store.EnsureFresh(context.Background(), m.cfg)
+					m.statusMsg = fmt.Sprintf("saved config.toml · reindexed %d note(s)", stats.Indexed)
+				}
 			}
 			return m, nil
 		case "J", "pgdown":
@@ -400,6 +443,7 @@ func (m Model) View() string {
 	t1 := tabInactive.Render("1 Search")
 	t2 := tabInactive.Render(fmt.Sprintf("2 Proposals (%d)", len(m.proposals)))
 	t3 := tabInactive.Render(fmt.Sprintf("3 Vaults (%d)", len(m.activeVaults)))
+	t4 := tabInactive.Render("4 Settings")
 	switch m.tab {
 	case TabSearch:
 		t1 = tabActive.Render("1 Search")
@@ -407,11 +451,13 @@ func (m Model) View() string {
 		t2 = tabActive.Render(fmt.Sprintf("2 Proposals (%d)", len(m.proposals)))
 	case TabVaults:
 		t3 = tabActive.Render(fmt.Sprintf("3 Vaults (%d)", len(m.activeVaults)))
+	case TabSettings:
+		t4 = tabActive.Render("4 Settings")
 	}
 	topBar := lipgloss.JoinHorizontal(lipgloss.Center,
 		headerStyle.Render("memtwig "+m.version),
 		"   ",
-		t1, " ", t2, " ", t3,
+		t1, " ", t2, " ", t3, " ", t4,
 	)
 
 	bodyH := h - 6
@@ -430,6 +476,8 @@ func (m Model) View() string {
 			body = m.viewProposals(w, bodyH)
 		case TabVaults:
 			body = m.viewVaults(w, bodyH)
+		case TabSettings:
+			body = m.viewSettings(w, bodyH)
 		}
 	}
 
@@ -440,11 +488,13 @@ func (m Model) View() string {
 	case m.typingQuery:
 		helpText = "Enter run search · Ctrl+U clear · Esc cancel"
 	case m.tab == TabSearch:
-		helpText = "/ search · Esc clear · j/k select · J/K scroll · 1/2/3 tabs · i reindex · ? help · q quit"
+		helpText = "/ search · Esc clear · j/k select · J/K scroll · 1-4 tabs · i reindex · ? help · q quit"
 	case m.tab == TabProposals:
-		helpText = "j/k select · a approve · x reject · c curate · 1/2/3 tabs · ? help · q quit"
+		helpText = "j/k select · a approve · x reject · c curate · 1-4 tabs · ? help · q quit"
+	case m.tab == TabSettings:
+		helpText = "j/k select · Enter/←/→ cycle or connect · s save & reindex · 1-4 tabs · q quit"
 	default:
-		helpText = "i reindex · c curate · 1/2/3 tabs · ? help · q quit"
+		helpText = "i reindex · c curate · 1-4 tabs · ? help · q quit"
 	}
 	help := mutedStyle.Render(helpText)
 	status := ""
@@ -627,6 +677,119 @@ func (m Model) viewVaults(w, h int) string {
 		for _, ev := range m.auditEvents {
 			lines = append(lines, truncate(fmt.Sprintf("  %s  %-10s %-14s %s %s (%s)",
 				ev.Timestamp, ev.Actor, ev.Action, ev.Vault, ev.Path, ev.Outcome), w-6))
+		}
+	}
+	return boxStyle.Width(w - 2).Height(h - 1).Render(strings.Join(lines, "\n"))
+}
+
+func (m *Model) applySettingAction(dir int) {
+	embProviders := []struct{ p, model, env, endpoint string }{
+		{"none", "", "", ""},
+		{"ollama", "bge-m3", "", "http://127.0.0.1:11434/api/embeddings"},
+		{"openrouter", "baai/bge-m3", "OPENROUTER_API_KEY", ""},
+		{"deepinfra", "BAAI/bge-m3", "DEEPINFRA_API_KEY", ""},
+		{"openai", "text-embedding-3-small", "OPENAI_API_KEY", ""},
+		{"cloudflare", "@cf/baai/bge-m3", "CLOUDFLARE_API_TOKEN", ""},
+	}
+	llmProviders := []struct{ p, model, env string }{
+		{"none", "", ""},
+		{"groq", "llama-3.3-70b-versatile", "GROQ_API_KEY"},
+		{"openrouter", "openai/gpt-4o-mini", "OPENROUTER_API_KEY"},
+		{"openai", "gpt-4o-mini", "OPENAI_API_KEY"},
+		{"ollama", "llama3.2", ""},
+	}
+	harnesses := []string{"claude", "cursor", "codex", "antigravity"}
+
+	switch m.settingIdx {
+	case 0:
+		cur := 0
+		for i, ep := range embProviders {
+			if ep.p == m.cfg.Embeddings.Provider {
+				cur = i
+				break
+			}
+		}
+		next := (cur + dir + len(embProviders)) % len(embProviders)
+		p := embProviders[next]
+		m.cfg.Embeddings.Provider = p.p
+		m.cfg.Embeddings.Model = p.model
+		m.cfg.Embeddings.APIKeyEnv = p.env
+		m.cfg.Embeddings.Endpoint = p.endpoint
+		if m.cfg.Embeddings.Dimensions <= 0 {
+			m.cfg.Embeddings.Dimensions = 1024
+		}
+		m.statusMsg = fmt.Sprintf("embeddings -> %s (%s) · press 's' to save", p.p, p.model)
+	case 1:
+		cur := 0
+		for i, lp := range llmProviders {
+			if lp.p == m.cfg.LLM.Provider {
+				cur = i
+				break
+			}
+		}
+		next := (cur + dir + len(llmProviders)) % len(llmProviders)
+		p := llmProviders[next]
+		m.cfg.LLM.Provider = p.p
+		m.cfg.LLM.Model = p.model
+		m.cfg.LLM.APIKeyEnv = p.env
+		m.statusMsg = fmt.Sprintf("llm curator -> %s (%s) · press 's' to save", p.p, p.model)
+	case 2, 3, 4, 5:
+		hID := harnesses[m.settingIdx-2]
+		res, err := install.Install(hID, "", "", false)
+		if err != nil {
+			m.statusMsg = "connect " + hID + " error: " + err.Error()
+		} else {
+			m.statusMsg = fmt.Sprintf("connected %s (%s)", res.Harness, res.ConfigPath)
+		}
+	}
+}
+
+func envBadge(varName string) string {
+	if strings.TrimSpace(varName) == "" {
+		return "no key needed"
+	}
+	if strings.TrimSpace(os.Getenv(varName)) != "" {
+		return lipgloss.NewStyle().Foreground(greenDiff).Render(varName + " [SET]")
+	}
+	return lipgloss.NewStyle().Foreground(redDiff).Render(varName + " [MISSING]")
+}
+
+func (m Model) viewSettings(w, h int) string {
+	home, _ := os.UserHomeDir()
+	harnessRows := []struct{ id, label, rel string }{
+		{"claude", "Claude Code", ".claude"},
+		{"cursor", "Cursor", ".cursor"},
+		{"codex", "Codex", ".codex"},
+		{"antigravity", "Antigravity", ".gemini"},
+	}
+
+	rows := []string{
+		fmt.Sprintf("Embeddings provider : %-12s model=%-22s dim=%d  %s",
+			m.cfg.Embeddings.Provider, m.cfg.Embeddings.Model, m.cfg.Embeddings.Dimensions, envBadge(m.cfg.Embeddings.APIKeyEnv)),
+		fmt.Sprintf("LLM curator provider: %-12s model=%-22s %s",
+			m.cfg.LLM.Provider, m.cfg.LLM.Model, envBadge(m.cfg.LLM.APIKeyEnv)),
+	}
+	for _, hr := range harnessRows {
+		state := "not detected"
+		if _, err := os.Stat(filepath.Join(home, hr.rel)); err == nil {
+			state = "detected"
+		}
+		rows = append(rows, fmt.Sprintf("Connect harness     : %-12s (%s)  [Enter to install hooks/MCP]", hr.label, state))
+	}
+
+	lines := []string{
+		selStyle.Render("Providers & AI Harnesses (no manual config.toml editing needed)"),
+		mutedStyle.Render("Use j/k to select, Enter or ←/→ to change provider / connect harness, 's' to save & reindex."),
+		"",
+	}
+	for i, r := range rows {
+		if i == 2 {
+			lines = append(lines, "", selStyle.Render("AI Harnesses"))
+		}
+		if i == m.settingIdx {
+			lines = append(lines, selStyle.Render("› "+r))
+		} else {
+			lines = append(lines, "  "+r)
 		}
 	}
 	return boxStyle.Width(w - 2).Height(h - 1).Render(strings.Join(lines, "\n"))

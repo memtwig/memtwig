@@ -184,7 +184,8 @@ func TestServerUIAndNoteEndpoints(t *testing.T) {
 	}
 
 	uiFS := ui.FS()
-	srv := &server.Server{Cfg: cfg, Store: st, Audit: audit.New(filepath.Join(tmp, "audit.jsonl")), StaticUI: uiFS, Version: "1.3.0-test"}
+	cfgFile := filepath.Join(tmp, "config.toml")
+	srv := &server.Server{Cfg: cfg, ConfigPath: cfgFile, Store: st, Audit: audit.New(filepath.Join(tmp, "audit.jsonl")), StaticUI: uiFS, Version: "1.4.0-test"}
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 
@@ -340,5 +341,46 @@ func TestServerUIAndNoteEndpoints(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200 for admin on %s, got %d", ep, resp.StatusCode)
 		}
+	}
+
+	// 9. GET/PUT /api/v1/config and POST/DELETE /api/v1/vaults enforce admin role and persist config.toml
+	req, _ = http.NewRequest(http.MethodGet, ts.URL+"/api/v1/config", nil)
+	req.Header.Set("Authorization", "Bearer tok-read")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for reader on /api/v1/config, got %d", resp.StatusCode)
+	}
+
+	req, _ = http.NewRequest(http.MethodPut, ts.URL+"/api/v1/config", strings.NewReader(`{"embeddings":{"provider":"deepinfra","model":"BAAI/bge-m3","api_key_env":"DEEPINFRA_API_KEY","dimensions":1024},"llm":{"provider":"groq","model":"llama-3.3-70b-versatile","api_key_env":"GROQ_API_KEY"}}`))
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 on PUT /api/v1/config, got %d", resp.StatusCode)
+	}
+	reloaded, err := config.Load(cfgFile)
+	if err != nil || reloaded.Embeddings.Provider != "deepinfra" || reloaded.LLM.Provider != "groq" {
+		t.Fatalf("expected persisted deepinfra+groq config, got err=%v emb=%+v llm=%+v", err, reloaded.Embeddings, reloaded.LLM)
+	}
+
+	gammaDir := filepath.Join(tmp, "gamma")
+	req, _ = http.NewRequest(http.MethodPost, ts.URL+"/api/v1/vaults", strings.NewReader(`{"name":"gamma","path":"`+gammaDir+`","kind":"org","default_write":"propose","init_if_missing":true}`))
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 on POST /api/v1/vaults, got %d", resp.StatusCode)
+	}
+	if _, err := os.Stat(filepath.Join(gammaDir, "memtwig.toml")); err != nil {
+		t.Fatalf("expected gamma vault initialized on disk: %v", err)
+	}
+
+	req, _ = http.NewRequest(http.MethodDelete, ts.URL+"/api/v1/vaults/gamma", nil)
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 on DELETE /api/v1/vaults/gamma, got %d", resp.StatusCode)
 	}
 }

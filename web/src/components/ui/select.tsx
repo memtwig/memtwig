@@ -1,0 +1,16 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+
+export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  ({ className, ...props }, ref) => (
+    <select
+      ref={ref}
+      className={cn(
+        "flex h-8 w-full rounded-md border border-input bg-[#0d1214] px-2.5 text-[13px] text-foreground focus-visible:outline-none focus-visible:border-primary",
+        className,
+      )}
+      {...props}
+    />
+  ),
+);
+Select.displayName = "Select";

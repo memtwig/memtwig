@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	version    = "1.3.2"
+	version    = "1.4.0"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -1063,11 +1063,12 @@ func cmdServe() *cobra.Command {
 				}
 			}
 			srv := &server.Server{
-				Cfg:      cfg,
-				Store:    st,
-				Audit:    audit.New(auditPath),
-				StaticUI: ui.FS(),
-				Version:  version,
+				Cfg:        cfg,
+				ConfigPath: cfgPath,
+				Store:      st,
+				Audit:      audit.New(auditPath),
+				StaticUI:   ui.FS(),
+				Version:    version,
 			}
 			fmt.Printf("memtwig %s listening on http://%s (ui=/, mcp=/mcp, api=/api/v1/*, tokens=%d)\n",
 				version, addr, len(cfg.Server.Tokens))
@@ -1104,11 +1105,12 @@ func cmdUI() *cobra.Command {
 				}
 			}
 			srv := &server.Server{
-				Cfg:      cfg,
-				Store:    st,
-				Audit:    audit.New(auditPath),
-				StaticUI: ui.FS(),
-				Version:  version,
+				Cfg:        cfg,
+				ConfigPath: cfgPath,
+				Store:      st,
+				Audit:      audit.New(auditPath),
+				StaticUI:   ui.FS(),
+				Version:    version,
 			}
 			fmt.Printf("memtwig Studio %s -> http://%s\n", version, addr)
 			return server.ListenAndServe(context.Background(), addr, srv)
@@ -1121,7 +1123,7 @@ func cmdUI() *cobra.Command {
 func cmdTUI() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tui",
-		Short: "Launch interactive terminal UI (search notes, review proposal diffs, inspect vaults & audit)",
+		Short: "Launch interactive terminal UI (search notes, review proposal diffs, inspect vaults & settings)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)
 			if err != nil {
@@ -1138,7 +1140,7 @@ func cmdTUI() *cobra.Command {
 					auditPath = filepath.Join(cdir, "audit.jsonl")
 				}
 			}
-			return tui.Run(cfg, st, audit.New(auditPath), cwdFlag, vaultFlag, version)
+			return tui.RunWithConfigPath(cfg, cfgPath, st, audit.New(auditPath), cwdFlag, vaultFlag, version)
 		},
 	}
 }

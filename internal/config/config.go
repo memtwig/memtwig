@@ -28,48 +28,48 @@ type Config struct {
 }
 
 type LLMConfig struct {
-	Provider  string `toml:"provider"` // none | openai | ollama | openrouter | groq
-	Model     string `toml:"model"`
-	Endpoint  string `toml:"endpoint"`
-	APIKeyEnv string `toml:"api_key_env"`
-	TimeoutMS int    `toml:"timeout_ms"`
+	Provider  string `toml:"provider" json:"provider"` // none | openai | ollama | openrouter | groq
+	Model     string `toml:"model" json:"model"`
+	Endpoint  string `toml:"endpoint" json:"endpoint"`
+	APIKeyEnv string `toml:"api_key_env" json:"api_key_env"`
+	TimeoutMS int    `toml:"timeout_ms" json:"timeout_ms"`
 }
 
 type ServerConfig struct {
-	Addr         string        `toml:"addr"`
-	AuditLogPath string        `toml:"audit_log_path"`
-	Tokens       []TokenPolicy `toml:"tokens"`
+	Addr         string        `toml:"addr" json:"addr"`
+	AuditLogPath string        `toml:"audit_log_path" json:"audit_log_path"`
+	Tokens       []TokenPolicy `toml:"tokens" json:"tokens"`
 }
 
 type TokenPolicy struct {
-	Name      string   `toml:"name"`
-	TokenEnv  string   `toml:"token_env"`
-	Token     string   `toml:"token,omitempty"`
-	Role      string   `toml:"role"` // reader | proposer | writer | admin
-	Vaults    []string `toml:"vaults"`
-	PathGlobs []string `toml:"path_globs"`
+	Name      string   `toml:"name" json:"name"`
+	TokenEnv  string   `toml:"token_env" json:"token_env"`
+	Token     string   `toml:"token,omitempty" json:"token,omitempty"`
+	Role      string   `toml:"role" json:"role"` // reader | proposer | writer | admin
+	Vaults    []string `toml:"vaults" json:"vaults"`
+	PathGlobs []string `toml:"path_globs" json:"path_globs"`
 }
 
 type IdentityConfig struct {
-	SoulFile             string `toml:"soul_file"`
-	InjectOnSessionStart bool   `toml:"inject_on_session_start"`
+	SoulFile             string `toml:"soul_file" json:"soul_file"`
+	InjectOnSessionStart bool   `toml:"inject_on_session_start" json:"inject_on_session_start"`
 }
 
 type EmbeddingsConfig struct {
-	Provider        string  `toml:"provider"` // none | ollama | openai | cloudflare | openrouter | deepinfra
-	Model           string  `toml:"model"`
-	Endpoint        string  `toml:"endpoint"`
-	APIKeyEnv       string  `toml:"api_key_env"`
-	AccountID       string  `toml:"account_id"`
-	Dimensions      int     `toml:"dimensions"`
-	TimeoutMS       int     `toml:"timeout_ms"`
-	CosineThreshold float64 `toml:"cosine_threshold"`
+	Provider        string  `toml:"provider" json:"provider"` // none | ollama | openai | cloudflare | openrouter | deepinfra
+	Model           string  `toml:"model" json:"model"`
+	Endpoint        string  `toml:"endpoint" json:"endpoint"`
+	APIKeyEnv       string  `toml:"api_key_env" json:"api_key_env"`
+	AccountID       string  `toml:"account_id" json:"account_id"`
+	Dimensions      int     `toml:"dimensions" json:"dimensions"`
+	TimeoutMS       int     `toml:"timeout_ms" json:"timeout_ms"`
+	CosineThreshold float64 `toml:"cosine_threshold" json:"cosine_threshold"`
 }
 
 type RetrievalConfig struct {
-	DefaultTopK     int `toml:"default_top_k"`
-	MaxSnippetChars int `toml:"max_snippet_chars"`
-	RRFK            int `toml:"rrf_k"`
+	DefaultTopK     int `toml:"default_top_k" json:"default_top_k"`
+	MaxSnippetChars int `toml:"max_snippet_chars" json:"max_snippet_chars"`
+	RRFK            int `toml:"rrf_k" json:"rrf_k"`
 }
 
 type VaultConfig struct {

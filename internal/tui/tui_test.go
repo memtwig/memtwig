@@ -74,4 +74,21 @@ func TestTUISearchAndProposalApprove(t *testing.T) {
 	if !strings.Contains(m4.View(), "Active Vaults in Current Scope") {
 		t.Fatalf("expected vaults tab view")
 	}
+
+	// Switch to Settings tab ('4'), cycle embeddings provider, and save to temp config.toml
+	cfgPath := filepath.Join(tmp, "config.toml")
+	m5 := m4.(tui.Model).WithConfigPath(cfgPath)
+	m6, _ := m5.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}})
+	if !strings.Contains(m6.View(), "Providers & AI Harnesses") {
+		t.Fatalf("expected settings tab view, got:\n%s", m6.View())
+	}
+	m7, _ := m6.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m8, _ := m7.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	if !strings.Contains(m8.View(), "saved config.toml") {
+		t.Fatalf("expected saved config status, got:\n%s", m8.View())
+	}
+	savedCfg, err := config.Load(cfgPath)
+	if err != nil || savedCfg.Embeddings.Provider == "none" {
+		t.Fatalf("expected updated embeddings provider persisted, got err=%v prov=%q", err, savedCfg.Embeddings.Provider)
+	}
 }

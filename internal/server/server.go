@@ -20,6 +20,7 @@ import (
 	"github.com/vittoriocompagno/memtwig/internal/config"
 	"github.com/vittoriocompagno/memtwig/internal/curator"
 	"github.com/vittoriocompagno/memtwig/internal/index"
+	"github.com/vittoriocompagno/memtwig/internal/install"
 	"github.com/vittoriocompagno/memtwig/internal/mcp"
 	"github.com/vittoriocompagno/memtwig/internal/proposal"
 	"github.com/vittoriocompagno/memtwig/internal/scope"
@@ -28,11 +29,12 @@ import (
 )
 
 type Server struct {
-	Cfg      *config.Config
-	Store    *index.Store
-	Audit    *audit.Logger
-	StaticUI fs.FS
-	Version  string
+	Cfg        *config.Config
+	ConfigPath string
+	Store      *index.Store
+	Audit      *audit.Logger
+	StaticUI   fs.FS
+	Version    string
 }
 
 type principal struct {
@@ -75,6 +77,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/v1/proposals/", s.withAuth("writer", s.handleProposalAction))
 	mux.HandleFunc("/api/v1/reindex", s.withAuth("writer", s.handleReindex))
 	mux.HandleFunc("/api/v1/curate", s.withAuth("writer", s.handleCurate))
+	mux.HandleFunc("/api/v1/config", s.withAuth("admin", s.handleConfig))
+	mux.HandleFunc("/api/v1/vaults", s.withAuth("admin", s.handleVaults))
+	mux.HandleFunc("/api/v1/vaults/", s.withAuth("admin", s.handleVaultItem))
+	mux.HandleFunc("/api/v1/harnesses", s.withAuth("admin", s.handleHarnesses))
+	mux.HandleFunc("/api/v1/harnesses/", s.withAuth("admin", s.handleHarnessInstall))
 	mux.HandleFunc("/api/v1/audit", s.withAuth("admin", s.handleAudit))
 	if s.StaticUI != nil {
 		fileSrv := http.FileServer(http.FS(s.StaticUI))
@@ -730,6 +737,271 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request, p principal
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"events": events})
+}
+
+func envPresent(varName string) bool {
+	if strings.TrimSpace(varName) == "" {
+		return false
+	}
+	return strings.TrimSpace(os.Getenv(strings.TrimSpace(varName))) != ""
+}
+
+func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request, p principal) {
+	switch r.Method {
+	case http.MethodGet:
+		cfgPath := s.ConfigPath
+		if cfgPath == "" {
+			cfgPath, _ = config.DefaultConfigPath()
+		}
+		type vaultRow struct {
+			Name            string   `json:"name"`
+			Path            string   `json:"path"`
+			Kind            string   `json:"kind"`
+			DefaultWrite    string   `json:"default_write"`
+			MatchPaths      []string `json:"match_paths"`
+			MatchGitRemotes []string `json:"match_git_remotes"`
+			AlwaysInclude   []string `json:"always_include"`
+			MaxNoteBytes    int      `json:"max_note_bytes"`
+		}
+		names := make([]string, 0, len(s.Cfg.Vaults))
+		for k := range s.Cfg.Vaults {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		vaults := make([]vaultRow, 0, len(names))
+		for _, n := range names {
+			v := s.Cfg.Vaults[n]
+			vaults = append(vaults, vaultRow{
+				Name:            n,
+				Path:            v.Path,
+				Kind:            v.Kind,
+				DefaultWrite:    v.DefaultWrite,
+				MatchPaths:      v.MatchPaths,
+				MatchGitRemotes: v.MatchGitRemotes,
+				AlwaysInclude:   v.AlwaysInclude,
+				MaxNoteBytes:    v.MaxNoteBytes,
+			})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"config_path": cfgPath,
+			"embeddings":  s.Cfg.Embeddings,
+			"llm":         s.Cfg.LLM,
+			"identity":    s.Cfg.Identity,
+			"retrieval":   s.Cfg.Retrieval,
+			"vaults":      vaults,
+			"env_status": map[string]bool{
+				"embeddings": envPresent(s.Cfg.Embeddings.APIKeyEnv),
+				"llm":        envPresent(s.Cfg.LLM.APIKeyEnv),
+			},
+		})
+
+	case http.MethodPut:
+		var req struct {
+			Embeddings *config.EmbeddingsConfig `json:"embeddings"`
+			LLM        *config.LLMConfig        `json:"llm"`
+			Identity   *config.IdentityConfig   `json:"identity"`
+			Retrieval  *config.RetrievalConfig  `json:"retrieval"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		if req.Embeddings != nil {
+			e := *req.Embeddings
+			if e.Provider == "" {
+				e.Provider = "none"
+			}
+			if e.Dimensions <= 0 {
+				e.Dimensions = 1024
+			}
+			if e.TimeoutMS <= 0 {
+				e.TimeoutMS = 3000
+			}
+			if e.CosineThreshold <= 0 {
+				e.CosineThreshold = 0.45
+			}
+			s.Cfg.Embeddings = e
+		}
+		if req.LLM != nil {
+			l := *req.LLM
+			if l.Provider == "" {
+				l.Provider = "none"
+			}
+			if l.TimeoutMS <= 0 {
+				l.TimeoutMS = 15000
+			}
+			s.Cfg.LLM = l
+		}
+		if req.Identity != nil {
+			s.Cfg.Identity = *req.Identity
+		}
+		if req.Retrieval != nil {
+			rt := *req.Retrieval
+			if rt.DefaultTopK <= 0 {
+				rt.DefaultTopK = 5
+			}
+			if rt.MaxSnippetChars <= 0 {
+				rt.MaxSnippetChars = 400
+			}
+			if rt.RRFK <= 0 {
+				rt.RRFK = 60
+			}
+			s.Cfg.Retrieval = rt
+		}
+		if err := config.Save(s.ConfigPath, s.Cfg); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		stats, _ := s.Store.EnsureFresh(r.Context(), s.Cfg)
+		_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "config_update", Outcome: "ok", Detail: "embeddings=" + s.Cfg.Embeddings.Provider + " llm=" + s.Cfg.LLM.Provider})
+		writeJSON(w, http.StatusOK, map[string]any{
+			"saved": true,
+			"stats": stats,
+			"env_status": map[string]bool{
+				"embeddings": envPresent(s.Cfg.Embeddings.APIKeyEnv),
+				"llm":        envPresent(s.Cfg.LLM.APIKeyEnv),
+			},
+		})
+
+	default:
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "GET or PUT required"})
+	}
+}
+
+func (s *Server) handleVaults(w http.ResponseWriter, r *http.Request, p principal) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST required"})
+		return
+	}
+	var req struct {
+		Name            string   `json:"name"`
+		Path            string   `json:"path"`
+		Kind            string   `json:"kind"`
+		DefaultWrite    string   `json:"default_write"`
+		MatchPaths      []string `json:"match_paths"`
+		MatchGitRemotes []string `json:"match_git_remotes"`
+		AlwaysInclude   []string `json:"always_include"`
+		InitIfMissing   bool     `json:"init_if_missing"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	rawPath := strings.TrimSpace(req.Path)
+	if name == "" || rawPath == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name and path are required"})
+		return
+	}
+	abs, err := filepath.Abs(config.ExpandHome(rawPath))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	kind := req.Kind
+	if kind != "org" {
+		kind = "personal"
+	}
+	dw := req.DefaultWrite
+	if dw == "" {
+		if kind == "org" {
+			dw = "propose"
+		} else {
+			dw = "direct"
+		}
+	}
+	if req.InitIfMissing {
+		if _, statErr := os.Stat(abs); os.IsNotExist(statErr) {
+			if err := vault.InitWithOptions(abs, vault.InitOptions{NoScaffold: kind == "org", GitInit: true}); err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
+			}
+		}
+	}
+	s.Cfg.Vaults[name] = config.VaultConfig{
+		Path:            abs,
+		Kind:            kind,
+		DefaultWrite:    dw,
+		MatchPaths:      req.MatchPaths,
+		MatchGitRemotes: req.MatchGitRemotes,
+		AlwaysInclude:   req.AlwaysInclude,
+		MaxNoteBytes:    8192,
+	}
+	if err := config.Save(s.ConfigPath, s.Cfg); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	stats, _ := s.Store.RebuildOrUpdate(r.Context(), s.Cfg, false)
+	_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "vault_save", Vault: name, Outcome: "ok", Detail: abs})
+	writeJSON(w, http.StatusOK, map[string]any{"vault": name, "path": abs, "stats": stats})
+}
+
+func (s *Server) handleVaultItem(w http.ResponseWriter, r *http.Request, p principal) {
+	if r.Method != http.MethodDelete {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "DELETE required"})
+		return
+	}
+	name := strings.TrimPrefix(r.URL.Path, "/api/v1/vaults/")
+	name = strings.TrimSpace(strings.Trim(name, "/"))
+	if name == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "vault name required"})
+		return
+	}
+	if _, ok := s.Cfg.Vaults[name]; !ok {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "vault not found"})
+		return
+	}
+	delete(s.Cfg.Vaults, name)
+	if err := config.Save(s.ConfigPath, s.Cfg); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	_, _ = s.Store.RebuildOrUpdate(r.Context(), s.Cfg, false)
+	_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "vault_remove", Vault: name, Outcome: "ok"})
+	writeJSON(w, http.StatusOK, map[string]any{"removed": name})
+}
+
+func (s *Server) handleHarnesses(w http.ResponseWriter, r *http.Request, p principal) {
+	home, _ := os.UserHomeDir()
+	type hInfo struct {
+		ID       string `json:"id"`
+		Label    string `json:"label"`
+		Detected bool   `json:"detected"`
+		Marker   string `json:"marker"`
+	}
+	defs := []struct{ id, label, rel string }{
+		{"claude", "Claude Code", ".claude"},
+		{"cursor", "Cursor", ".cursor"},
+		{"codex", "Codex", ".codex"},
+		{"antigravity", "Antigravity", ".gemini"},
+	}
+	out := make([]hInfo, 0, len(defs))
+	for _, d := range defs {
+		marker := filepath.Join(home, d.rel)
+		_, err := os.Stat(marker)
+		out = append(out, hInfo{ID: d.id, Label: d.label, Detected: err == nil, Marker: "~/" + d.rel})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"harnesses": out})
+}
+
+func (s *Server) handleHarnessInstall(w http.ResponseWriter, r *http.Request, p principal) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST required"})
+		return
+	}
+	trimmed := strings.TrimPrefix(r.URL.Path, "/api/v1/harnesses/")
+	parts := strings.Split(strings.Trim(trimmed, "/"), "/")
+	if len(parts) != 2 || parts[1] != "install" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "expected /api/v1/harnesses/<id>/install"})
+		return
+	}
+	res, err := install.Install(parts[0], "", "", false)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "harness_install", Outcome: "ok", Detail: parts[0]})
+	writeJSON(w, http.StatusOK, res)
 }
 
 func ListenAndServe(ctx context.Context, addr string, srv *Server) error {

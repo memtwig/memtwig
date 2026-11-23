@@ -9,6 +9,7 @@ import {
   Graph,
   LockSimple,
   MagnifyingGlass,
+  SlidersHorizontal,
   X,
 } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownView } from "@/components/MarkdownView";
 import { GraphView, type GraphEdge, type GraphNode } from "@/components/GraphView";
+import { SettingsView } from "@/components/SettingsView";
 import { cn } from "@/lib/utils";
 
-type Section = "notes" | "graph" | "proposals" | "audit";
+type Section = "notes" | "graph" | "proposals" | "audit" | "settings";
 type NoteMode = "read" | "raw" | "edit";
 
 type VaultInfo = {
@@ -110,7 +112,7 @@ function countDiffAdditions(diff: string): number {
 export function App() {
   const initialSection = (): Section => {
     const p = new URLSearchParams(window.location.search).get("tab");
-    if (p === "graph" || p === "proposals" || p === "audit") return p;
+    if (p === "graph" || p === "proposals" || p === "audit" || p === "settings") return p;
     return "notes";
   };
 
@@ -554,6 +556,20 @@ export function App() {
               </span>
               <span className="text-[11px] tabular-nums text-muted-foreground">{auditEvents.length}</span>
             </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => setSection("settings")}
+              className={cn(
+                "h-8 w-full justify-between px-2 text-[13px] font-normal",
+                section === "settings" && "bg-[#182124] font-medium text-foreground hover:bg-[#182124]",
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <SlidersHorizontal size={15} weight={section === "settings" ? "fill" : "regular"} />
+                <span>Settings</span>
+              </span>
+            </Button>
           </nav>
 
           <div className="mt-5 px-2 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -702,6 +718,17 @@ export function App() {
             }}
           >
             Diff{proposals.length > 0 ? ` (${proposals.length})` : ""}
+          </Button>
+          <Button
+            variant={section === "settings" ? "outline" : "ghost"}
+            size="icon"
+            aria-label="Settings"
+            onClick={() => {
+              setSection("settings");
+              setMobileShowDetail(false);
+            }}
+          >
+            <SlidersHorizontal size={15} />
           </Button>
         </div>
       </header>
@@ -1171,6 +1198,8 @@ export function App() {
           </div>
         </main>
       )}
+      {/* SETTINGS VIEW */}
+      {section === "settings" && <SettingsView onChanged={loadAll} flash={flash} />}
     </div>
   );
 }
