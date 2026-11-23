@@ -58,6 +58,7 @@ type Model struct {
 	// Audit state
 	auditEvents []audit.Event
 
+	showHelp  bool
 	statusMsg string
 }
 
@@ -119,10 +120,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
+		if m.showHelp {
+			if k == "?" || k == "esc" || k == "q" || k == "enter" {
+				m.showHelp = false
+			}
+			return m, nil
+		}
+
 		if m.typingQuery {
 			switch k {
 			case "esc":
 				m.typingQuery = false
+				return m, nil
+			case "ctrl+u":
+				m.query = ""
 				return m, nil
 			case "enter":
 				m.typingQuery = false
@@ -145,6 +156,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "q":
 			return m, tea.Quit
+		case "?":
+			m.showHelp = true
+			return m, nil
+		case "esc":
+			if m.tab == TabSearch && m.query != "" {
+				m.query = ""
+				m.loadDefaultNotes()
+				m.statusMsg = "cleared search"
+			}
+			return m, nil
 		case "1":
 			m.tab = TabSearch
 			return m, nil
@@ -158,6 +179,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "tab":
 			m.tab = (m.tab + 1) % 3
+			if m.tab == TabProposals {
+				m.refreshProposals()
+			} else if m.tab == TabVaults {
+				m.refreshAudit()
+			}
+			return m, nil
+		case "shift+tab":
+			m.tab = (m.tab + 2) % 3
 			if m.tab == TabProposals {
 				m.refreshProposals()
 			} else if m.tab == TabVaults {
@@ -391,16 +420,33 @@ func (m Model) View() string {
 	}
 
 	var body string
-	switch m.tab {
-	case TabSearch:
-		body = m.viewSearch(w, bodyH)
-	case TabProposals:
-		body = m.viewProposals(w, bodyH)
-	case TabVaults:
-		body = m.viewVaults(w, bodyH)
+	if m.showHelp {
+		body = m.viewHelp(w, bodyH)
+	} else {
+		switch m.tab {
+		case TabSearch:
+			body = m.viewSearch(w, bodyH)
+		case TabProposals:
+			body = m.viewProposals(w, bodyH)
+		case TabVaults:
+			body = m.viewVaults(w, bodyH)
+		}
 	}
 
-	help := mutedStyle.Render("1/2/3 tabs · / search · j/k move · J/K scroll · a approve · x reject · i reindex · c curate · q quit")
+	var helpText string
+	switch {
+	case m.showHelp:
+		helpText = "Esc / ? close help"
+	case m.typingQuery:
+		helpText = "Enter run search · Ctrl+U clear · Esc cancel"
+	case m.tab == TabSearch:
+		helpText = "/ search · Esc clear · j/k select · J/K scroll · 1/2/3 tabs · i reindex · ? help · q quit"
+	case m.tab == TabProposals:
+		helpText = "j/k select · a approve · x reject · c curate · 1/2/3 tabs · ? help · q quit"
+	default:
+		helpText = "i reindex · c curate · 1/2/3 tabs · ? help · q quit"
+	}
+	help := mutedStyle.Render(helpText)
 	status := ""
 	if m.statusMsg != "" {
 		status = statusStyle.Render("▸ " + m.statusMsg)
@@ -412,6 +458,34 @@ func (m Model) View() string {
 	}
 	parts = append(parts, help)
 	return strings.Join(parts, "\n")
+}
+
+func (m Model) viewHelp(w, h int) string {
+	lines := []string{
+		selStyle.Render("Keyboard Shortcuts"),
+		"",
+		"  Navigation",
+		"    1 / 2 / 3        Switch between Search, Proposals, Vaults",
+		"    Tab / Shift+Tab  Cycle tabs forward / backward",
+		"    j / k  or ↑ / ↓  Move selection",
+		"    J / K  or PgUp/Dn Scroll note preview",
+		"",
+		"  Search & Maintenance",
+		"    /                Focus search bar (prefix matching supported)",
+		"    Ctrl+U           Clear search input while typing",
+		"    Esc              Cancel typing or reset active search",
+		"    i                Incremental reindex",
+		"    c                Run deterministic curator pass",
+		"",
+		"  Proposals",
+		"    a                Approve selected proposal and reindex",
+		"    x / r            Reject selected proposal (archived, never reopens)",
+		"",
+		"  General",
+		"    ?                Toggle this help screen",
+		"    q / Ctrl+C       Quit",
+	}
+	return boxStyle.Width(w - 2).Height(h - 1).Render(strings.Join(lines, "\n"))
 }
 
 func (m Model) viewSearch(w, h int) string {
@@ -430,14 +504,16 @@ func (m Model) viewSearch(w, h int) string {
 
 	var leftLines []string
 	if len(m.results) == 0 {
+		leftLines = append(leftLines, selStyle.Render("Notes (0)"))
 		leftLines = append(leftLines, mutedStyle.Render("No notes found in active scope."))
 	} else {
-		maxRows := paneH - 1
+		leftLines = append(leftLines, selStyle.Render(fmt.Sprintf("Notes (%d/%d)", m.selectedIdx+1, len(m.results))))
+		maxRows := paneH - 2
 		start := 0
 		if m.selectedIdx >= maxRows {
 			start = m.selectedIdx - maxRows + 1
 		}
-		for i := start; i < len(m.results) && len(leftLines) < maxRows; i++ {
+		for i := start; i < len(m.results) && len(leftLines)-1 < maxRows; i++ {
 			r := m.results[i]
 			label := truncate(fmt.Sprintf("[%s] %s", r.Vault, r.Path), leftW-4)
 			if i == m.selectedIdx {
@@ -453,11 +529,15 @@ func (m Model) viewSearch(w, h int) string {
 	if start >= len(previewLines) {
 		start = max(0, len(previewLines)-1)
 	}
-	end := start + paneH - 1
+	end := start + paneH - 2
 	if end > len(previewLines) {
 		end = len(previewLines)
 	}
 	var rightLines []string
+	if len(m.results) > 0 && m.selectedIdx < len(m.results) {
+		sel := m.results[m.selectedIdx]
+		rightLines = append(rightLines, selStyle.Render(truncate(fmt.Sprintf("%s:%s", sel.Vault, sel.Path), rightW-2)))
+	}
 	for _, l := range previewLines[start:end] {
 		rightLines = append(rightLines, truncate(l, rightW-2))
 	}

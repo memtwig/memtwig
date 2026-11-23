@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	version    = "1.3.1"
+	version    = "1.3.2"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -45,41 +45,162 @@ var (
 
 func main() {
 	root := &cobra.Command{
-		Use:   "memtwig",
-		Short: "Git-native, multi-org Markdown memory layer for AI agents",
+		Use:          "memtwig",
+		Short:        "Git-native, multi-org Markdown memory layer for AI agents",
+		SilenceUsage: true,
 	}
 	root.PersistentFlags().StringVar(&cfgPath, "config", "", "path to config.toml (default ~/.config/memtwig/config.toml)")
 	root.PersistentFlags().StringVar(&dbPath, "db", "", "path to SQLite index (default ~/.cache/memtwig/index.db)")
 	root.PersistentFlags().StringVar(&vaultFlag, "vault", "", "explicit vault override")
 	root.PersistentFlags().StringVar(&cwdFlag, "cwd", "", "working directory override for scope resolution")
 
+	root.AddGroup(
+		&cobra.Group{ID: "start", Title: "Getting Started & Interfaces:"},
+		&cobra.Group{ID: "memory", Title: "Search, Vaults & Scope:"},
+		&cobra.Group{ID: "govern", Title: "Governance & Hygiene:"},
+		&cobra.Group{ID: "connect", Title: "Harnesses & Server:"},
+	)
+
+	withGroup := func(id string, c *cobra.Command) *cobra.Command {
+		c.GroupID = id
+		return c
+	}
+
 	root.AddCommand(
-		cmdVersion(),
-		cmdInit(),
-		cmdVault(),
-		cmdStatus(),
-		cmdDoctor(),
-		cmdMigrate(),
-		cmdIndex(),
-		cmdWatch(),
-		cmdSearch(),
-		cmdCheck(),
-		cmdDecide(),
-		cmdInvalidate(),
-		cmdCurate(),
-		cmdSync(),
-		cmdProposal(),
-		cmdMCP(),
-		cmdServe(),
-		cmdUI(),
-		cmdTUI(),
-		cmdHook(),
-		cmdInstall(),
+		withGroup("start", cmdSetup()),
+		withGroup("start", cmdInit()),
+		withGroup("start", cmdMigrate()),
+		withGroup("start", cmdUI()),
+		withGroup("start", cmdTUI()),
+		withGroup("start", cmdDoctor()),
+
+		withGroup("memory", cmdSearch()),
+		withGroup("memory", cmdStatus()),
+		withGroup("memory", cmdVault()),
+		withGroup("memory", cmdIndex()),
+		withGroup("memory", cmdWatch()),
+
+		withGroup("govern", cmdProposal()),
+		withGroup("govern", cmdDecide()),
+		withGroup("govern", cmdInvalidate()),
+		withGroup("govern", cmdCurate()),
+		withGroup("govern", cmdCheck()),
+		withGroup("govern", cmdSync()),
+
+		withGroup("connect", cmdInstall()),
+		withGroup("connect", cmdMCP()),
+		withGroup("connect", cmdServe()),
+		withGroup("connect", cmdHook()),
+		withGroup("connect", cmdVersion()),
 	)
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func cmdSetup() *cobra.Command {
+	var dir string
+	var name string
+	var applyInstall bool
+	cmd := &cobra.Command{
+		Use:   "setup",
+		Short: "One-command setup: create or import personal vault, index it, and detect AI harnesses",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			abs, err := filepath.Abs(config.ExpandHome(dir))
+			if err != nil {
+				return err
+			}
+			cfg, err := config.Load(cfgPath)
+			if err != nil {
+				return err
+			}
+
+			if _, exists := cfg.Vaults[name]; !exists {
+				if _, statErr := os.Stat(abs); os.IsNotExist(statErr) {
+					if err := vault.InitWithOptions(abs, vault.InitOptions{GitInit: true}); err != nil {
+						return err
+					}
+					fmt.Printf("1. Created personal vault %q at %s\n", name, abs)
+				} else {
+					fmt.Printf("1. Imported existing notes folder %q at %s\n", name, abs)
+				}
+				cfg.Vaults[name] = config.VaultConfig{
+					Path:          abs,
+					Kind:          "personal",
+					DefaultWrite:  "direct",
+					AlwaysInclude: []string{"persona/**"},
+					MaxNoteBytes:  8192,
+				}
+				if err := config.Save(cfgPath, cfg); err != nil {
+					return err
+				}
+			} else {
+				fmt.Printf("1. Vault %q already configured (%s)\n", name, cfg.Vaults[name].Path)
+			}
+
+			st, err := index.Open(dbPath)
+			if err != nil {
+				return err
+			}
+			defer st.Close()
+			stats, err := st.RebuildOrUpdate(context.Background(), cfg, false)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("2. Indexed %d vault(s): %d updated, %d skipped, %d chunks\n",
+				stats.Vaults, stats.Indexed, stats.Skipped, stats.Chunks)
+
+			home, _ := os.UserHomeDir()
+			type candidate struct {
+				id, label, marker string
+			}
+			candidates := []candidate{
+				{"claude", "Claude Code", filepath.Join(home, ".claude")},
+				{"cursor", "Cursor", filepath.Join(home, ".cursor")},
+				{"codex", "Codex", filepath.Join(home, ".codex")},
+				{"antigravity", "Antigravity", filepath.Join(home, ".gemini")},
+			}
+			var found []candidate
+			for _, c := range candidates {
+				if _, err := os.Stat(c.marker); err == nil {
+					found = append(found, c)
+				}
+			}
+			if len(found) == 0 {
+				fmt.Println("3. No AI harness config folders detected yet (run `memtwig install <claude|cursor|codex|antigravity>` anytime)")
+			} else if applyInstall {
+				fmt.Println("3. Connecting detected AI harnesses:")
+				for _, c := range found {
+					res, err := install.Install(c.id, "", "", false)
+					if err != nil {
+						fmt.Printf("   - %s: error (%v)\n", c.label, err)
+					} else {
+						state := "updated"
+						if !res.Changed {
+							state = "already configured"
+						}
+						fmt.Printf("   - %s: %s (%s)\n", c.label, res.ConfigPath, state)
+					}
+				}
+			} else {
+				fmt.Println("3. Detected AI harnesses (pass `--install` or run individually):")
+				for _, c := range found {
+					fmt.Printf("   - %s -> memtwig install %s\n", c.label, c.id)
+				}
+			}
+
+			fmt.Println("\nNext:")
+			fmt.Println("  memtwig ui                  # open local Studio Web UI")
+			fmt.Println("  memtwig tui                 # open terminal UI")
+			fmt.Println("  memtwig search \"query\"      # search active vaults")
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&dir, "dir", "~/notes", "personal vault directory to create or import")
+	cmd.Flags().StringVar(&name, "name", "personal", "vault name")
+	cmd.Flags().BoolVar(&applyInstall, "install", false, "automatically install hooks/MCP into detected harnesses")
+	return cmd
 }
 
 func cmdVersion() *cobra.Command {
@@ -216,8 +337,9 @@ func cmdVault() *cobra.Command {
 	addCmd.Flags().StringSliceVar(&alwaysInclude, "always-include", nil, "path globs inside personal vault always included in org scopes")
 
 	listCmd := &cobra.Command{
-		Use:   "list",
-		Short: "List configured vaults",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List configured vaults",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)
 			if err != nil {
@@ -367,8 +489,9 @@ func cmdSearch() *cobra.Command {
 	var noRefresh bool
 	var maxChars int
 	cmd := &cobra.Command{
-		Use:   "search <query>",
-		Short: "Search active vaults with hybrid BM25 + vector RRF (auto-refreshes changed files)",
+		Use:     "search <query>",
+		Aliases: []string{"s"},
+		Short:   "Search active vaults with hybrid BM25 + vector RRF (auto-refreshes changed files)",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)
@@ -487,8 +610,9 @@ func cmdCheck() *cobra.Command {
 
 func cmdProposal() *cobra.Command {
 	pc := &cobra.Command{
-		Use:   "proposal",
-		Short: "Manage agent proposals (list, add, show, ok, no)",
+		Use:     "proposal",
+		Aliases: []string{"p", "proposals"},
+		Short:   "Manage agent proposals (list, add, show, ok, no)",
 	}
 
 	resolveOneVault := func(cfg *config.Config) (string, string, error) {
@@ -746,7 +870,8 @@ func cmdDecide() *cobra.Command {
 	var project, targetNote string
 	cmd := &cobra.Command{
 		Use:   "decide <summary>",
-		Short: "Log a dated decision in decisions/YYYY-MM.md and link it to a project note",
+		Short: "Log a dated decision in decisions/YYYY-MM.md and link/propose it on a note",
+		Long:  "Log a dated decision at the top of decisions/YYYY-MM.md. When --note is set, personal direct vaults append directly; org vaults (default_write=propose) or owner-locked notes queue a review proposal.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)

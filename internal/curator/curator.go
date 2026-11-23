@@ -158,8 +158,12 @@ func Invalidate(vaultRoot, relPath, needle, reason string) (int, string, error) 
 	}
 
 	pointer := fmt.Sprintf("- [%s · invalidated] %d line(s) moved to `%s` (%s).", today, len(moved), archiveRel, reason)
-	kept = append(kept, pointer)
-	if err := os.WriteFile(abs, []byte(strings.Join(kept, "\n")), 0o644); err != nil {
+	body := strings.TrimRight(strings.Join(kept, "\n"), "\n")
+	if body != "" {
+		body += "\n"
+	}
+	body += pointer + "\n"
+	if err := os.WriteFile(abs, []byte(body), 0o644); err != nil {
 		return 0, "", err
 	}
 	return len(moved), archiveRel, nil

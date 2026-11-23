@@ -1,4 +1,4 @@
-# memtwig — Complete Technical Reference (v1.3.1)
+# memtwig — Complete Technical Reference (v1.3.2)
 
 memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory layer for AI coding agents and assistants, distributed as a single static Go binary (`CGO_ENABLED=0`, ~14 MB, Linux/macOS/Windows) with an embedded local Studio Web UI (`memtwig ui`) and interactive TUI (`memtwig tui`).
 
@@ -7,20 +7,22 @@ memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory la
 curl -fsSL https://memtwig.com/install.sh | sh
 # Ensure ~/.local/bin is in PATH:
 export PATH="$HOME/.local/bin:$PATH"
-memtwig version   # memtwig 1.3.1
+memtwig version   # memtwig 1.3.2
 ```
 Or with Go:
 ```bash
 go install github.com/vittoriocompagno/memtwig/cmd/memtwig@latest
 ```
 
-## Quickstart (One-Command Vault Setup)
+## Quickstart (One-Command Setup)
 ```bash
-# 1. Personal vault (always includes persona/** inside client org repos)
+# Fastest start (creates or imports ~/notes, indexes it, detects installed AI harnesses):
+memtwig setup            # add --install to connect detected harnesses automatically
+
+# Or set up explicit multi-org vaults in one command each:
 memtwig init ~/notes/personal --name personal --kind personal \
   --always-include "persona/**"
 
-# 2. Isolated client org vaults (default_write=propose, auto git init, no sample clutter)
 memtwig init ~/notes/acme --name acme --kind org \
   --match-path "$HOME/work/acme-payments/**" \
   --match-remote "github.com/acme-corp/*"
@@ -63,32 +65,36 @@ memtwig serve --addr 127.0.0.1:8787   # Streamable HTTP MCP + REST API + RBAC + 
 
 ## Complete `config.toml` Schema (`~/.config/memtwig/config.toml`)
 ```toml
+version = 1
+
+[identity]
+soul_file = "~/.config/memtwig/SOUL.md"   # optional identity file injected by `hook --event session-start`
+inject_on_session_start = true
+
 [retrieval]
-default_top_k = 6
-rrf_k = 60
+default_top_k = 5
 max_snippet_chars = 400
-min_score = 0.005
+rrf_k = 60
 
 [embeddings]
 # provider: "none" | "ollama" | "openrouter" | "deepinfra" | "openai" | "cloudflare"
 provider = "none"
-model = ""                # e.g. "baai/bge-m3" (openrouter), "BAAI/bge-m3" (deepinfra), "nomic-embed-text" (ollama)
-base_url = ""             # optional custom endpoint override
+model = "bge-m3"          # e.g. "baai/bge-m3" (openrouter), "BAAI/bge-m3" (deepinfra), "bge-m3" (ollama)
+endpoint = "http://127.0.0.1:11434/api/embeddings"
 api_key_env = ""          # e.g. "OPENROUTER_API_KEY", "DEEPINFRA_API_KEY", "OPENAI_API_KEY"
-account_id_env = ""       # Cloudflare only
+account_id = ""           # Cloudflare Workers AI account ID
 dimensions = 1024         # default 1024; changing model/dimensions auto-invalidates SQLite index_meta
-cosine_threshold = 0.25
+timeout_ms = 3000
+cosine_threshold = 0.45
 
 [llm]
 # Used by `memtwig curate --llm` for semantic contradiction checks
 # provider: "none" | "openai" | "ollama" | "openrouter" | "groq"
 provider = "none"
 model = ""                # e.g. "llama-3.3-70b-versatile" (groq), "openai/gpt-4o-mini" (openrouter)
-base_url = ""
+endpoint = ""
 api_key_env = ""          # e.g. "GROQ_API_KEY", "OPENROUTER_API_KEY", "OPENAI_API_KEY"
-
-[identity]
-soul_path = "~/.hermes/SOUL.md"   # optional identity file injected by `hook --event session-start`
+timeout_ms = 15000
 
 [vaults.personal]
 path = "~/notes/personal"
@@ -107,7 +113,7 @@ max_note_bytes = 8192
 
 [server]
 addr = "127.0.0.1:8787"
-audit_path = "~/.cache/memtwig/audit.jsonl"
+audit_log_path = "~/.cache/memtwig/audit.jsonl"
 
 # Optional RBAC tokens for team HTTP mode (if omitted, local-only admin mode is active):
 # [[server.tokens]]
@@ -131,8 +137,9 @@ owner: vittorio
 
 - Keep replies concise.
 ```
-- **Soft cap**: 8 KB per live note (`max_note_bytes`). Outdated facts are moved to append-only `archive/` files via `memtwig invalidate <path> --match "..." --reason "..."`.
+- **Soft cap**: 8 KB per live note (`max_note_bytes`). Outdated facts are moved to append-only `<dir>/archive/<file>` files (e.g. `infra/archive/postgres.md`) via `memtwig invalidate <path> --match "..." --reason "..."`.
 - **Owner lock**: Notes with `owner:` (or `proprietario:`) block direct agent writes even inside `direct` vaults; edits are routed to `.curator/proposals.json`.
+- **Decisions**: `memtwig decide "..." --note <path>` logs to `decisions/YYYY-MM.md`; in `org` vaults (`default_write = "propose"`) or owner-locked notes, the update to `--note` is queued as a review proposal.
 - **Deterministic proposals**: SHA1 IDs + append-only `.curator/history.jsonl` ensure rejected proposals never reopen.
 - **Secret scanner**: `memtwig check --all` detects leaked API keys/tokens/private keys and blocks `memtwig sync`.
 

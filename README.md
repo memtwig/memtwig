@@ -22,8 +22,11 @@ make build
 ## Quick start
 
 ```bash
-# 1. Initialize a vault or import an existing Obsidian / ~/notes folder
-memtwig init ~/notes-acme --name acme --kind org
+# Fastest one-command start (creates or imports ~/notes, indexes it, detects installed harnesses)
+memtwig setup
+
+# Or set up isolated client org vaults explicitly
+memtwig init ~/notes-acme --name acme --kind org --match-path "$HOME/work/acme/**" --match-remote "github.com/acme-corp/*"
 memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
 
 # 2. Check environment & build local SQLite FTS5 (+ optional embeddings) index
