@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 
@@ -237,6 +238,35 @@ func (s *Store) RebuildOrUpdate(ctx context.Context, cfg *config.Config, full bo
 		}
 	}
 	return stats, nil
+}
+
+// EnsureFresh performs a fast incremental update so searches and hooks always see recent note edits.
+// Files whose SHA256 matches the SQLite table are skipped without re-chunking or re-embedding.
+func (s *Store) EnsureFresh(ctx context.Context, cfg *config.Config) (Stats, error) {
+	return s.RebuildOrUpdate(ctx, cfg, false)
+}
+
+// Watch periodically checks configured vaults for modified or deleted Markdown notes and refreshes the index.
+func (s *Store) Watch(ctx context.Context, cfg *config.Config, interval time.Duration, onChange func(Stats)) error {
+	if interval <= 0 {
+		interval = 3 * time.Second
+	}
+	if stats, err := s.EnsureFresh(ctx, cfg); err == nil && (stats.Indexed > 0 || stats.Removed > 0) && onChange != nil {
+		onChange(stats)
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			stats, err := s.EnsureFresh(ctx, cfg)
+			if err == nil && (stats.Indexed > 0 || stats.Removed > 0) && onChange != nil {
+				onChange(stats)
+			}
+		}
+	}
 }
 
 type mdSection struct {

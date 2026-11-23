@@ -168,6 +168,7 @@ func (s *Server) callTool(ctx context.Context, name string, args map[string]any)
 		if q == "" {
 			return "query is required", true
 		}
+		_, _ = s.Store.EnsureFresh(ctx, s.Cfg)
 		active := s.activeVaults(strArg("vault"))
 		results, warn, err := search.Query(ctx, s.Store, s.Cfg, active, q, search.Options{
 			TopK: intArg("limit", s.Cfg.Retrieval.DefaultTopK),

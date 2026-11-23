@@ -60,34 +60,77 @@ func installClaude(bin, home string, dryRun bool) (Result, error) {
 	if hooks == nil {
 		hooks = map[string]any{}
 	}
-	cmdStr := bin + " hook claude"
-	ups, _ := hooks["UserPromptSubmit"].([]any)
-	already := false
-	for _, entry := range ups {
-		if m, ok := entry.(map[string]any); ok {
-			if raw, _ := json.Marshal(m); strings.Contains(string(raw), "memtwig hook claude") {
-				already = true
-				break
+
+	changed := false
+	ensureHook := func(event, cmdStr string) {
+		arr, _ := hooks[event].([]any)
+		for _, entry := range arr {
+			if raw, _ := json.Marshal(entry); strings.Contains(string(raw), cmdStr) {
+				return
 			}
 		}
-	}
-	if !already {
-		ups = append(ups, map[string]any{
+		arr = append(arr, map[string]any{
 			"hooks": []map[string]any{
 				{"type": "command", "command": cmdStr},
 			},
 		})
-		hooks["UserPromptSubmit"] = ups
-		data["hooks"] = hooks
+		hooks[event] = arr
+		changed = true
 	}
+
+	ensureHook("UserPromptSubmit", bin+" hook claude")
+	ensureHook("SessionStart", bin+" hook claude --event session-start")
+	data["hooks"] = hooks
+
 	out, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return Result{}, err
 	}
-	res := Result{Harness: "claude", ConfigPath: path, Changed: !already, DryRun: dryRun, Preview: string(out)}
-	if !dryRun && !already {
-		if err := writeWithBackup(path, append(out, '\n')); err != nil {
-			return res, err
+
+	// Also configure Claude Code MCP server in ~/.claude.json
+	mcpPath := filepath.Join(home, ".claude.json")
+	mcpData, err := readJSONMap(mcpPath)
+	if err != nil {
+		return Result{}, err
+	}
+	servers, _ := mcpData["mcpServers"].(map[string]any)
+	if servers == nil {
+		servers = map[string]any{}
+	}
+	mcpChanged := false
+	if _, exists := servers["memtwig"]; !exists {
+		servers["memtwig"] = map[string]any{
+			"type":    "stdio",
+			"command": bin,
+			"args":    []string{"mcp"},
+		}
+		mcpData["mcpServers"] = servers
+		mcpChanged = true
+		changed = true
+	}
+	mcpOut, err := json.MarshalIndent(mcpData, "", "  ")
+	if err != nil {
+		return Result{}, err
+	}
+
+	preview := fmt.Sprintf("# %s\n%s\n\n# %s\n%s", path, string(out), mcpPath, string(mcpOut))
+	res := Result{
+		Harness:    "claude",
+		ConfigPath: path + " + " + mcpPath,
+		Changed:    changed,
+		DryRun:     dryRun,
+		Preview:    preview,
+	}
+	if !dryRun {
+		if changed {
+			if err := writeWithBackup(path, append(out, '\n')); err != nil {
+				return res, err
+			}
+		}
+		if mcpChanged {
+			if err := writeWithBackup(mcpPath, append(mcpOut, '\n')); err != nil {
+				return res, err
+			}
 		}
 	}
 	return res, nil

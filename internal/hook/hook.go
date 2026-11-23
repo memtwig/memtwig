@@ -24,8 +24,39 @@ var (
 	reRuntime = regexp.MustCompile(`(?is)<runtime_info>.*?</runtime_info>`)
 )
 
+// RunSessionStart injects the configured identity/SOUL.md file at session start when enabled.
+func RunSessionStart(harness string, cfg *config.Config, w io.Writer) error {
+	if !cfg.Identity.InjectOnSessionStart || strings.TrimSpace(cfg.Identity.SoulFile) == "" {
+		return writeEmpty(harness, w)
+	}
+	soulPath := config.ExpandHome(cfg.Identity.SoulFile)
+	raw, err := os.ReadFile(soulPath)
+	if err != nil || len(strings.TrimSpace(string(raw))) == 0 {
+		return writeEmpty(harness, w)
+	}
+	content := fmt.Sprintf("## Identity & Rules (%s)\n%s", cfg.Identity.SoulFile, strings.TrimSpace(string(raw)))
+	switch harness {
+	case "antigravity":
+		return writeInjected("antigravity", content, w)
+	default:
+		out := map[string]any{
+			"hookSpecificOutput": map[string]any{
+				"hookEventName":     "SessionStart",
+				"additionalContext": content,
+			},
+		}
+		b, err := json.Marshal(out)
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(append(b, '\n'))
+		return err
+	}
+}
+
 // Run reads hook JSON payload from r, performs gated scoped retrieval, and writes harness-specific JSON to w.
 func Run(ctx context.Context, harness string, cfg *config.Config, st *index.Store, r io.Reader, w io.Writer) error {
+	_, _ = st.EnsureFresh(ctx, cfg)
 	raw, err := io.ReadAll(r)
 	if err != nil {
 		return err

@@ -213,6 +213,46 @@ func Get(vaultRoot, id string) (Proposal, bool, error) {
 	return p, ok, nil
 }
 
+// FormatDiff produces a readable unified-style diff preview against the current live file on disk.
+func FormatDiff(vaultRoot string, p Proposal) string {
+	target := filepath.Join(vaultRoot, filepath.FromSlash(p.Path))
+	existingBytes, err := os.ReadFile(target)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("--- a/%s\n+++ b/%s\n", p.Path, p.Path))
+	if err != nil {
+		sb.WriteString("@@ new file @@\n")
+		for _, l := range strings.Split(strings.TrimRight(p.Content, "\n"), "\n") {
+			sb.WriteString("+ " + l + "\n")
+		}
+		return sb.String()
+	}
+	existing := strings.Split(strings.TrimRight(string(existingBytes), "\n"), "\n")
+	proposed := strings.Split(strings.TrimRight(p.Content, "\n"), "\n")
+	switch p.Kind {
+	case "append":
+		start := len(existing) - 3
+		if start < 0 {
+			start = 0
+		}
+		sb.WriteString(fmt.Sprintf("@@ append after line %d @@\n", len(existing)))
+		for _, l := range existing[start:] {
+			sb.WriteString("  " + l + "\n")
+		}
+		for _, l := range proposed {
+			sb.WriteString("+ " + l + "\n")
+		}
+	default:
+		sb.WriteString(fmt.Sprintf("@@ -1,%d +1,%d @@\n", len(existing), len(proposed)))
+		for _, l := range existing {
+			sb.WriteString("- " + l + "\n")
+		}
+		for _, l := range proposed {
+			sb.WriteString("+ " + l + "\n")
+		}
+	}
+	return sb.String()
+}
+
 // Reject marks a proposal rejected and writes it to append-only history so it never reopens.
 func Reject(vaultRoot, id, reason string) (Proposal, error) {
 	all, err := LoadAll(vaultRoot)

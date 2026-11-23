@@ -13,10 +13,10 @@ const snippets: Snippet[] = [
   {
     id: "install",
     label: "Install",
-    code: `go install github.com/vittoriocompagno/memtwig/cmd/memtwig@latest
+    code: `curl -fsSL https://memtwig.com/install.sh | sh
+# or: go install github.com/vittoriocompagno/memtwig/cmd/memtwig@latest
 
 memtwig init ~/notes --name personal --kind personal
-memtwig index
 memtwig search "deploy"`,
   },
   {

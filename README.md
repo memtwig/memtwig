@@ -12,6 +12,8 @@ Git-native, multi-org Markdown memory layer for AI agents — shipped as a singl
 ## Install
 
 ```bash
+curl -fsSL https://memtwig.com/install.sh | sh
+# or with Go
 go install github.com/vittoriocompagno/memtwig/cmd/memtwig@latest
 # or build locally
 make build

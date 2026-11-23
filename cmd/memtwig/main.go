@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -30,7 +33,7 @@ import (
 )
 
 var (
-	version    = "1.0.0"
+	version    = "1.1.0"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -55,6 +58,7 @@ func main() {
 		cmdDoctor(),
 		cmdMigrate(),
 		cmdIndex(),
+		cmdWatch(),
 		cmdSearch(),
 		cmdCheck(),
 		cmdDecide(),
@@ -285,14 +289,43 @@ func cmdIndex() *cobra.Command {
 	return cmd
 }
 
+func cmdWatch() *cobra.Command {
+	var interval time.Duration
+	cmd := &cobra.Command{
+		Use:   "watch",
+		Short: "Continuously watch configured vaults and incrementally refresh the SQLite index",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(cfgPath)
+			if err != nil {
+				return err
+			}
+			st, err := index.Open(dbPath)
+			if err != nil {
+				return err
+			}
+			defer st.Close()
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			fmt.Printf("watching %d vault(s) every %s (Ctrl+C to stop)\n", len(cfg.Vaults), interval)
+			return st.Watch(ctx, cfg, interval, func(s index.Stats) {
+				fmt.Printf("[%s] refreshed: indexed=%d removed=%d chunks=%d\n",
+					time.Now().Format("15:04:05"), s.Indexed, s.Removed, s.Chunks)
+			})
+		},
+	}
+	cmd.Flags().DurationVar(&interval, "interval", 3*time.Second, "poll interval")
+	return cmd
+}
+
 func cmdSearch() *cobra.Command {
 	var topK int
 	var asJSON bool
 	var noVectors bool
+	var noRefresh bool
 	var maxChars int
 	cmd := &cobra.Command{
 		Use:   "search <query>",
-		Short: "Search active vaults with hybrid BM25 + vector RRF",
+		Short: "Search active vaults with hybrid BM25 + vector RRF (auto-refreshes changed files)",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)
@@ -305,6 +338,9 @@ func cmdSearch() *cobra.Command {
 			}
 			defer st.Close()
 
+			if !noRefresh {
+				_, _ = st.EnsureFresh(context.Background(), cfg)
+			}
 			active := scope.Resolve(cfg, cwdFlag, vaultFlag)
 			q := strings.Join(args, " ")
 			results, warn, err := search.Query(context.Background(), st, cfg, active, q, search.Options{
@@ -336,6 +372,7 @@ func cmdSearch() *cobra.Command {
 	cmd.Flags().IntVarP(&topK, "n", "n", 5, "max results")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "JSON output")
 	cmd.Flags().BoolVar(&noVectors, "no-vectors", false, "BM25 only")
+	cmd.Flags().BoolVar(&noRefresh, "no-refresh", false, "skip automatic incremental reindex before searching")
 	cmd.Flags().IntVar(&maxChars, "max-chars", 400, "max snippet length")
 	return cmd
 }
@@ -499,8 +536,8 @@ func cmdProposal() *cobra.Command {
 			if !ok {
 				return fmt.Errorf("proposal %s not found in vault %s", args[0], vName)
 			}
-			fmt.Printf("ID:      %s\nVault:   %s\nStatus:  %s\nKind:    %s\nPath:    %s\nAuthor:  %s\nCreated: %s\nReason:  %s\n\n--- Proposed Content ---\n%s\n",
-				p.ID, vName, p.Status, p.Kind, p.Path, p.Author, p.CreatedAt, p.Reason, p.Content)
+			fmt.Printf("ID:      %s\nVault:   %s\nStatus:  %s\nKind:    %s\nPath:    %s\nAuthor:  %s\nCreated: %s\nReason:  %s\n\n%s",
+				p.ID, vName, p.Status, p.Kind, p.Path, p.Author, p.CreatedAt, p.Reason, proposal.FormatDiff(vRoot, p))
 			return nil
 		},
 	}
@@ -536,14 +573,18 @@ func cmdMCP() *cobra.Command {
 }
 
 func cmdHook() *cobra.Command {
-	return &cobra.Command{
+	var event string
+	cmd := &cobra.Command{
 		Use:   "hook <claude|codex|antigravity>",
-		Short: "Run per-turn prefetch & correction-nudge hook adapter",
+		Short: "Run per-turn prefetch, correction-nudge, or session-start identity hook",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)
 			if err != nil {
 				return err
+			}
+			if event == "session-start" {
+				return hook.RunSessionStart(args[0], cfg, os.Stdout)
 			}
 			st, err := index.Open(dbPath)
 			if err != nil {
@@ -553,6 +594,8 @@ func cmdHook() *cobra.Command {
 			return hook.Run(context.Background(), args[0], cfg, st, os.Stdin, os.Stdout)
 		},
 	}
+	cmd.Flags().StringVar(&event, "event", "prompt", "hook event: prompt | session-start")
+	return cmd
 }
 
 func resolvePrimaryVault(cfg *config.Config) (scope.ActiveVault, error) {
