@@ -1,8 +1,15 @@
 import * as React from "react";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  useInView,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from "motion/react";
 import {
   ArrowClockwise,
-  Check,
   Folder,
   LockSimple,
   MagnifyingGlass,
@@ -115,17 +122,85 @@ const marqueeRowTwo = [
   { label: "HTTP RBAC", href: "/mcp-memory", dot: "#f09a7a" },
 ];
 
+const diffLines = [
+  { text: "- region: us-east-1", cls: "bg-red-500/12 text-red-300" },
+  { text: "+ region: eu-central-1", cls: "bg-[#58cc7d]/14 text-[#7ee09e]" },
+  { text: "+ pool_max_conns: 40", cls: "bg-[#58cc7d]/14 text-[#7ee09e]" },
+];
+
 export function ProductBento() {
   const [activeWs, setActiveWs] = React.useState("acme");
+  const [mounted, setMounted] = React.useState(false);
+  const [wsPaused, setWsPaused] = React.useState(false);
+  const [wsInteracted, setWsInteracted] = React.useState(false);
   const [diffState, setDiffState] = React.useState<"pending" | "approved" | "rejected">("pending");
+
+  const wsRef = React.useRef<HTMLDivElement>(null);
+  const wsInView = useInView(wsRef, { amount: 0.35 });
+  const prefersReduced = useReducedMotion();
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const reduceMotion = mounted && Boolean(prefersReduced);
+
+  React.useEffect(() => {
+    if (!mounted || prefersReduced || wsPaused || wsInteracted || !wsInView) return;
+    const timer = window.setInterval(() => {
+      setActiveWs((cur) => {
+        const idx = workspaces.findIndex((w) => w.id === cur);
+        return workspaces[(idx + 1) % workspaces.length].id;
+      });
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [mounted, prefersReduced, wsPaused, wsInteracted, wsInView]);
+
+  // Mouse-only subtle 3D tilt for the Stored in plain Git frosted file card
+  const tiltX = useMotionValue(0);
+  const tiltY = useMotionValue(0);
+  const smoothRotateX = useSpring(tiltX, { stiffness: 260, damping: 24 });
+  const smoothRotateY = useSpring(tiltY, { stiffness: 260, damping: 24 });
+
+  const handleVaultPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (reduceMotion || e.pointerType !== "mouse") return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    tiltX.set(-py * 8);
+    tiltY.set(px * 8);
+  };
+
+  const resetVaultTilt = () => {
+    tiltX.set(0);
+    tiltY.set(0);
+  };
 
   return (
     <MotionConfig reducedMotion="user">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* Card 1: Live Vault Isolation Switcher */}
-        <div className="flex min-w-0 flex-col justify-between rounded-[28px] border border-white/[0.08] bg-[#1c1c1f] p-6 sm:p-8 lg:col-span-7">
+        <motion.div
+          ref={wsRef}
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: "some" }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          onMouseEnter={() => setWsPaused(true)}
+          onMouseLeave={() => setWsPaused(false)}
+          onFocus={() => setWsPaused(true)}
+          onBlur={() => setWsPaused(false)}
+          className="flex min-w-0 flex-col justify-between rounded-[28px] border border-white/[0.08] bg-[#1c1c1f] p-6 sm:p-8 lg:col-span-7"
+        >
           <div className="rounded-2xl border border-white/[0.07] bg-[#141415] p-4 sm:p-5">
-            <Tabs value={activeWs} onValueChange={setActiveWs} className="w-full">
+            <Tabs
+              value={activeWs}
+              onValueChange={(next) => {
+                setWsInteracted(true);
+                setActiveWs(next);
+              }}
+              className="w-full"
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-xs font-medium text-zinc-400">Workspace</span>
                 <TabsList className="grid w-full grid-cols-3 gap-0.5 sm:inline-flex sm:w-auto">
@@ -133,8 +208,16 @@ export function ProductBento() {
                     <TabsTrigger
                       key={ws.id}
                       value={ws.id}
-                      className="px-2 text-xs sm:px-3.5 sm:text-sm"
+                      className="relative z-10 px-2 text-xs text-zinc-400 transition-colors data-[state=active]:bg-transparent data-[state=active]:text-[#141415] data-[state=active]:shadow-none sm:px-3.5 sm:text-sm"
                     >
+                      {activeWs === ws.id && (
+                        <motion.span
+                          layoutId="bento-ws-pill"
+                          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                          className="absolute inset-0 -z-10 rounded-full bg-white"
+                          aria-hidden="true"
+                        />
+                      )}
                       {ws.label}
                     </TabsTrigger>
                   ))}
@@ -147,7 +230,7 @@ export function ProductBento() {
                     key={activeWs === ws.id ? `ws-${ws.id}` : ws.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.22 }}
                     className="space-y-3.5"
                   >
                     <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-400">
@@ -156,9 +239,12 @@ export function ProductBento() {
                     </div>
 
                     <div className="grid gap-2.5 sm:grid-cols-3">
-                      {ws.vaults.map((v) => (
-                        <div
+                      {ws.vaults.map((v, idx) => (
+                        <motion.div
                           key={v.name}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: idx * 0.04 }}
                           className={
                             v.active
                               ? "rounded-xl border border-white/10 bg-[#1c1c1f] px-3.5 py-3"
@@ -168,13 +254,16 @@ export function ProductBento() {
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-sm font-medium text-white">{v.name}</span>
                             {v.active ? (
-                              <span className="size-2 rounded-full bg-[#58cc7d]" aria-label="active" />
+                              <span className="relative flex size-2" aria-label="active">
+                                <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#58cc7d] opacity-60" />
+                                <span className="relative inline-flex size-2 rounded-full bg-[#58cc7d]" />
+                              </span>
                             ) : (
                               <LockSimple size={14} className="text-zinc-500" aria-label="isolated" />
                             )}
                           </div>
                           <div className="mt-1 text-xs text-zinc-400">{v.mode}</div>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
 
@@ -184,14 +273,20 @@ export function ProductBento() {
                         <MagnifyingGlass size={14} className="shrink-0 text-zinc-500" aria-hidden="true" />
                       </div>
                       <div className="mt-3 divide-y divide-white/[0.06]">
-                        {ws.results.map((r) => (
-                          <div key={`${r.vault}:${r.path}`} className="py-2.5 first:pt-0 last:pb-0">
+                        {ws.results.map((r, rIdx) => (
+                          <motion.div
+                            key={`${r.vault}:${r.path}`}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: 0.08 + rIdx * 0.05 }}
+                            className="py-2.5 first:pt-0 last:pb-0"
+                          >
                             <div className="flex flex-wrap items-baseline gap-2 text-xs sm:text-sm">
                               <span className="font-medium text-[#58cc7d]">{r.vault}</span>
                               <span className="font-medium text-zinc-200 break-all">{r.path}</span>
                             </div>
                             <p className="mt-1 text-xs leading-relaxed text-zinc-400 sm:text-sm">{r.snippet}</p>
-                          </div>
+                          </motion.div>
                         ))}
                       </div>
                     </div>
@@ -207,19 +302,25 @@ export function ProductBento() {
               Switch client repositories and memtwig isolates context automatically by directory and Git remote.
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Right Stack: Agent Marquee + Vivid Mint Stored in Plain Git */}
         <div className="flex min-w-0 flex-col gap-5 lg:col-span-5">
           {/* Card 2: Agent Marquee */}
-          <div className="flex flex-col justify-between overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#1c1c1f] py-6 sm:py-7">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: "some" }}
+            transition={{ duration: 0.4, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col justify-between overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#1c1c1f] py-6 sm:py-7"
+          >
             <div className="marquee-group marquee-mask overflow-hidden">
               <div className="marquee-track gap-2.5">
                 {[...marqueeRowOne, ...marqueeRowOne].map((item, idx) => (
                   <a
                     key={`r1-${idx}-${item.label}`}
                     href={item.href}
-                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-[#252529] px-4 py-2 text-sm font-medium text-zinc-100 transition-colors hover:border-[#58cc7d]/60 hover:bg-[#2c2c32]"
+                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-[#252529] px-4 py-2 text-sm font-medium text-zinc-100 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:border-[#58cc7d]/60 hover:bg-[#2c2c32]"
                   >
                     <span
                       className="size-2 shrink-0 rounded-full"
@@ -235,7 +336,7 @@ export function ProductBento() {
                   <a
                     key={`r2-${idx}-${item.label}`}
                     href={item.href}
-                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-[#252529] px-4 py-2 text-sm font-medium text-zinc-100 transition-colors hover:border-[#58cc7d]/60 hover:bg-[#2c2c32]"
+                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-[#252529] px-4 py-2 text-sm font-medium text-zinc-100 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:border-[#58cc7d]/60 hover:bg-[#2c2c32]"
                   >
                     <span
                       className="size-2 shrink-0 rounded-full"
@@ -257,10 +358,18 @@ export function ProductBento() {
                 </a>
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 3: Vivid Mint Card — Stored in plain Git */}
-          <div className="overflow-hidden rounded-[28px] bg-[#58cc7d] p-6 text-[#111312] sm:p-7">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: "some" }}
+            transition={{ duration: 0.4, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+            onPointerMove={handleVaultPointerMove}
+            onPointerLeave={resetVaultTilt}
+            className="group overflow-hidden rounded-[28px] bg-[#58cc7d] p-6 text-[#111312] sm:p-7"
+          >
             <div className="grid items-center gap-5 sm:grid-cols-12">
               <div className="sm:col-span-6">
                 <h3 className="text-2xl font-medium leading-[1.12] tracking-[-0.025em] text-[#111312]">
@@ -271,28 +380,44 @@ export function ProductBento() {
                 </p>
               </div>
 
-              <div className="sm:col-span-6">
-                <div className="rounded-2xl border border-black/12 bg-white/45 p-4 text-[#111312] shadow-[0_14px_34px_rgba(0,0,0,0.14)] backdrop-blur-xs">
+              <div className="sm:col-span-6" style={{ perspective: "900px" }}>
+                <motion.div
+                  style={
+                    reduceMotion
+                      ? undefined
+                      : { rotateX: smoothRotateX, rotateY: smoothRotateY }
+                  }
+                  className="rounded-2xl border border-black/12 bg-white/45 p-4 text-[#111312] shadow-[0_14px_34px_rgba(0,0,0,0.14)] backdrop-blur-xs"
+                >
                   <div className="flex items-center justify-between gap-2 border-b border-black/10 pb-2.5 text-xs font-medium">
                     <span>Your vault</span>
                     <LockSimple size={14} aria-hidden="true" />
                   </div>
                   <ul className="mt-3 space-y-2 text-sm font-medium">
                     {["projects/", "clients/", "decisions/", "persona/"].map((dir) => (
-                      <li key={dir} className="flex items-center gap-2.5">
+                      <li
+                        key={dir}
+                        className="flex items-center gap-2.5 transition-transform duration-200 group-hover:translate-x-0.5"
+                      >
                         <Folder size={16} className="shrink-0 text-[#111312]/75" aria-hidden="true" />
                         <span>{dir}</span>
                       </li>
                     ))}
                   </ul>
-                </div>
+                </motion.div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Card 4: Live Interactive Diff Approval */}
-        <div className="flex flex-col justify-between rounded-[28px] border border-white/[0.08] bg-[#1c1c1f] p-6 sm:p-8 lg:col-span-7">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: "some" }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="flex min-w-0 flex-col justify-between rounded-[28px] border border-white/[0.08] bg-[#1c1c1f] p-6 sm:p-8 lg:col-span-7"
+        >
           <div className="flex min-h-[220px] flex-col justify-between rounded-2xl border border-white/[0.07] bg-[#141415] p-5">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] pb-3.5">
               <div className="flex items-center gap-2 text-sm font-medium text-white">
@@ -315,23 +440,29 @@ export function ProductBento() {
                   className="mt-4 space-y-4"
                 >
                   <div className="space-y-1.5 text-xs sm:text-sm">
-                    <div className="rounded-lg bg-red-500/12 px-3 py-1.5 text-red-300">
-                      - region: us-east-1
-                    </div>
-                    <div className="rounded-lg bg-[#58cc7d]/14 px-3 py-1.5 text-[#7ee09e]">
-                      + region: eu-central-1
-                    </div>
-                    <div className="rounded-lg bg-[#58cc7d]/14 px-3 py-1.5 text-[#7ee09e]">
-                      + pool_max_conns: 40
-                    </div>
+                    {diffLines.map((line, i) => (
+                      <motion.div
+                        key={line.text}
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: i * 0.05 }}
+                        className={`rounded-lg px-3 py-1.5 ${line.cls}`}
+                      >
+                        {line.text}
+                      </motion.div>
+                    ))}
                   </div>
                   <div className="flex items-center justify-end gap-2.5 pt-1">
-                    <Button variant="outline" size="sm" onClick={() => setDiffState("rejected")}>
-                      Reject
-                    </Button>
-                    <Button variant="default" size="sm" onClick={() => setDiffState("approved")}>
-                      Approve
-                    </Button>
+                    <motion.div whileTap={{ scale: 0.96 }}>
+                      <Button variant="outline" size="sm" onClick={() => setDiffState("rejected")}>
+                        Reject
+                      </Button>
+                    </motion.div>
+                    <motion.div whileTap={{ scale: 0.96 }}>
+                      <Button variant="default" size="sm" onClick={() => setDiffState("approved")}>
+                        Approve
+                      </Button>
+                    </motion.div>
                   </div>
                 </motion.div>
               ) : (
@@ -340,7 +471,7 @@ export function ProductBento() {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.18 }}
+                  transition={{ duration: 0.2 }}
                   className="flex flex-1 flex-col justify-between py-4"
                 >
                   <div
@@ -350,7 +481,25 @@ export function ProductBento() {
                         : "flex items-center gap-2.5 rounded-xl border border-white/10 bg-[#1c1c1f] px-4 py-3 text-sm font-medium text-zinc-300"
                     }
                   >
-                    {diffState === "approved" && <Check size={17} className="shrink-0 text-[#58cc7d]" />}
+                    {diffState === "approved" && (
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="size-4 shrink-0 text-[#58cc7d]"
+                        aria-hidden="true"
+                      >
+                        <motion.path
+                          d="M4.5 10.5L8.2 14.2L15.8 6.5"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{ duration: 0.32, ease: "easeOut" }}
+                        />
+                      </svg>
+                    )}
                     <span>
                       {diffState === "approved"
                         ? "Committed to Git · acme/infra/postgres.md"
@@ -374,17 +523,31 @@ export function ProductBento() {
               Protected org notes never get silently overwritten. Every edit queues as a clean Git diff.
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Card 5: Automated Hygiene Pipeline */}
-        <div className="flex flex-col justify-between rounded-[28px] border border-white/[0.08] bg-[#1c1c1f] p-6 sm:p-8 lg:col-span-5">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: "some" }}
+          transition={{ duration: 0.4, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+          className="flex min-w-0 flex-col justify-between rounded-[28px] border border-white/[0.08] bg-[#1c1c1f] p-6 sm:p-8 lg:col-span-5"
+        >
           <div>
-            <div className="rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
-              <div className="text-xs font-medium text-white">Pre-turn hook</div>
-              <div className="mt-0.5 text-xs text-zinc-400">Inject top-3 snippets (~400 chars)</div>
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
+              <div>
+                <div className="text-xs font-medium text-white">Pre-turn hook</div>
+                <div className="mt-0.5 text-xs text-zinc-400">Inject top-3 snippets (~400 chars)</div>
+              </div>
+              <span className="relative flex size-2 shrink-0" aria-hidden="true">
+                <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#58cc7d] opacity-60" />
+                <span className="relative inline-flex size-2 rounded-full bg-[#58cc7d]" />
+              </span>
             </div>
 
-            <div className="mx-auto h-4 w-px border-l border-dashed border-white/20" aria-hidden="true" />
+            <div className="relative mx-auto h-5 w-px border-l border-dashed border-white/20" aria-hidden="true">
+              <span className="pipeline-pulse absolute top-0 left-1/2 size-1.5 rounded-full bg-[#58cc7d] shadow-[0_0_8px_#58cc7d]" />
+            </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div className="rounded-xl border border-white/[0.07] bg-[#141415] p-3">
@@ -397,7 +560,9 @@ export function ProductBento() {
               </div>
             </div>
 
-            <div className="mx-auto h-4 w-px border-l border-dashed border-white/20" aria-hidden="true" />
+            <div className="relative mx-auto h-5 w-px border-l border-dashed border-white/20" aria-hidden="true">
+              <span className="pipeline-pulse-delayed absolute top-0 left-1/2 size-1.5 rounded-full bg-[#58cc7d] shadow-[0_0_8px_#58cc7d]" />
+            </div>
 
             <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
               <div>
@@ -416,7 +581,7 @@ export function ProductBento() {
               Curation, secret scanning, and append-only archives run locally without bloating prompts.
             </p>
           </div>
-        </div>
+        </motion.div>
       </div>
     </MotionConfig>
   );

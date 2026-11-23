@@ -2,13 +2,15 @@
 import "@/styles/global.css";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Terminal, Code, GitFork, PlugsConnected, Desktop } from "@phosphor-icons/react";
 import SiteHeader from "@/components/SiteHeader.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
+import { HeroTwigBadge } from "@/components/HeroMark";
 import { StudioShowcase } from "@/components/StudioShowcase";
 import { ProductBento } from "@/components/ProductBento";
+import { ZeroShowcase } from "@/components/ZeroShowcase";
 import { CloudDeck } from "@/components/CloudDeck";
 import { QuickstartTabs } from "@/components/QuickstartTabs";
+import { InstallGrid } from "@/components/InstallGrid";
 
 const siteUrl = "https://memtwig.com";
 const repoUrl = "https://github.com/memtwig/memtwig";
@@ -133,7 +135,7 @@ const jsonLd = {
   </head>
   <body class="relative min-h-screen bg-background text-foreground">
     <div class="pointer-events-none absolute inset-x-0 top-0 h-[560px] overflow-hidden" aria-hidden="true">
-      <div class="absolute -top-36 right-[-8%] h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(88,204,125,0.18)_0%,rgba(107,181,255,0.1)_40%,transparent_72%)] blur-3xl" />
+      <div class="hero-beam absolute -top-36 right-[-8%] h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(88,204,125,0.18)_0%,rgba(107,181,255,0.1)_40%,transparent_72%)] blur-3xl" />
     </div>
 
     <SiteHeader currentPath="/" />
@@ -143,15 +145,7 @@ const jsonLd = {
       <section class="mx-auto max-w-6xl px-5 pt-16 pb-20 sm:px-8 sm:pt-24 sm:pb-24">
         <div class="mx-auto max-w-4xl text-center">
           <h1 class="text-balance text-5xl font-medium leading-[1.02] tracking-[-0.04em] text-white sm:text-7xl xl:text-[5.25rem]">
-            Git-native
-            <img
-              src="/favicon.svg"
-              alt=""
-              width="68"
-              height="68"
-              class="mx-1.5 inline-block size-11 align-[-0.14em] rounded-2xl shadow-[0_12px_36px_rgba(88,204,125,0.35)] sm:mx-2.5 sm:size-16 xl:size-[4.25rem]"
-            />
-            memory<br />for every AI agent.
+            Git-native <HeroTwigBadge client:load /> memory<br />for every AI agent.
           </h1>
           <p class="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-xl">
             Plain Markdown vaults shared across Claude Code, Codex, Cursor, Hermes, Grok Bot, and OpenBot — isolated per client, in one local binary.
@@ -192,68 +186,7 @@ const jsonLd = {
           class="pointer-events-none absolute inset-0 mx-auto my-auto h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(88,204,125,0.14)_0%,transparent_70%)] blur-3xl"
           aria-hidden="true"
         />
-        <div class="relative z-10">
-          <p class="text-base text-zinc-400 sm:text-lg">Free and open source</p>
-          <svg
-            viewBox="0 0 420 200"
-            class="mx-auto mt-2 h-auto w-64 select-none sm:w-96"
-            role="img"
-            aria-label="Zero dollars"
-          >
-            <defs>
-              <linearGradient id="sculpt-chrome" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#2a2b30" />
-                <stop offset="28%" stop-color="#9ca3af" />
-                <stop offset="46%" stop-color="#e8f3ff" />
-                <stop offset="56%" stop-color="#9be7b5" />
-                <stop offset="72%" stop-color="#ebb89a" />
-                <stop offset="100%" stop-color="#1c1c20" />
-              </linearGradient>
-              <linearGradient id="sculpt-rim" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="rgba(255,255,255,0.22)" />
-                <stop offset="50%" stop-color="rgba(255,255,255,0.45)" />
-                <stop offset="100%" stop-color="rgba(255,255,255,0.06)" />
-              </linearGradient>
-            </defs>
-            <text
-              x="210"
-              y="156"
-              text-anchor="middle"
-              font-size="168"
-              font-weight="600"
-              letter-spacing="-8"
-              fill="url(#sculpt-chrome)"
-              stroke="url(#sculpt-rim)"
-              stroke-width="1.5"
-            >
-              $0
-            </text>
-          </svg>
-
-          <div class="mt-6 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-sm text-zinc-300 sm:text-base">
-            <span class="inline-flex items-center gap-2">
-              <span class="text-[#58cc7d]" aria-hidden="true">✓</span>
-              <span>Apache 2.0</span>
-            </span>
-            <span class="inline-flex items-center gap-2">
-              <span class="text-[#58cc7d]" aria-hidden="true">✓</span>
-              <span>Single 14 MB Go binary</span>
-            </span>
-            <span class="inline-flex items-center gap-2">
-              <span class="text-[#58cc7d]" aria-hidden="true">✓</span>
-              <span>Works 100% offline</span>
-            </span>
-          </div>
-
-          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <a href="#install" class={cn(buttonVariants({ variant: "default", size: "lg" }))}>
-              Install locally
-            </a>
-            <a href="/cloud" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
-              Memtwig Cloud →
-            </a>
-          </div>
-        </div>
+        <ZeroShowcase client:visible />
       </section>
 
       <!-- Memtwig Cloud Interactive Deck -->
@@ -286,100 +219,8 @@ const jsonLd = {
           <QuickstartTabs client:load />
         </div>
 
-        <div class="mt-8 grid gap-4 md:grid-cols-6">
-          <div class="flex min-h-[240px] flex-col justify-between rounded-[26px] bg-[#d5a8f8] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-2">
-            <div class="flex items-start justify-between gap-2">
-              <Terminal size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
-              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80">
-                HOOKS + MCP
-              </span>
-            </div>
-            <div class="mt-8">
-              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">Claude Code</h3>
-              <p class="mt-2 text-sm leading-relaxed text-[#111312]/80">
-                Native UserPromptSubmit &amp; SessionStart hooks wired with one command.
-              </p>
-              <div class="mt-5 flex flex-wrap gap-4 text-sm font-medium">
-                <a href="/integrations/claude-code" class="hover:underline">Setup guide →</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex min-h-[240px] flex-col justify-between rounded-[26px] bg-[#58cc7d] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-2">
-            <div class="flex items-start justify-between gap-2">
-              <Code size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
-              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80">
-                STDIO MCP
-              </span>
-            </div>
-            <div class="mt-8">
-              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">Cursor &amp; Codex</h3>
-              <p class="mt-2 text-sm leading-relaxed text-[#111312]/80">
-                Shared multi-org vaults without bloated rules files copied per repo.
-              </p>
-              <div class="mt-5 flex flex-wrap gap-4 text-sm font-medium">
-                <a href="/integrations/cursor" class="hover:underline">Cursor →</a>
-                <a href="/integrations/codex" class="hover:underline">Codex →</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex min-h-[240px] flex-col justify-between rounded-[26px] bg-[#ebb85e] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-2">
-            <div class="flex items-start justify-between gap-2">
-              <GitFork size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
-              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80">
-                WORKTREE SAFE
-              </span>
-            </div>
-            <div class="mt-8">
-              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">Hermes &amp; T3 Code</h3>
-              <p class="mt-2 text-sm leading-relaxed text-[#111312]/80">
-                One SOUL.md identity and Git-remote vault routing across providers.
-              </p>
-              <div class="mt-5 flex flex-wrap gap-4 text-sm font-medium">
-                <a href="/integrations/hermes" class="hover:underline">Hermes →</a>
-                <a href="/integrations/t3-code" class="hover:underline">T3 Code →</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex min-h-[230px] flex-col justify-between rounded-[26px] bg-[#6bb5ff] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-3">
-            <div class="flex items-start justify-between gap-2">
-              <PlugsConnected size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
-              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80">
-                HTTP RBAC
-              </span>
-            </div>
-            <div class="mt-8">
-              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">Grok Bot &amp; OpenBot</h3>
-              <p class="mt-2 max-w-md text-sm leading-relaxed text-[#111312]/80">
-                Scoped Bearer tokens, path globs, and append-only audit logs for always-on bots.
-              </p>
-              <div class="mt-5 flex flex-wrap gap-5 text-sm font-medium">
-                <a href="/integrations/grok-bot" class="hover:underline">Grok Bot →</a>
-                <a href="/integrations/openbot" class="hover:underline">OpenBot →</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex min-h-[230px] flex-col justify-between rounded-[26px] bg-[#f09a7a] p-7 text-[#111312] transition-transform duration-200 hover:-translate-y-0.5 sm:p-8 md:col-span-3">
-            <div class="flex items-start justify-between gap-2">
-              <Desktop size={30} weight="regular" className="text-[#111312]/80" aria-hidden="true" />
-              <span class="rounded-full bg-black/10 px-3 py-1 text-xs font-medium text-[#111312]/80 tabular-nums">
-                v1.4.2
-              </span>
-            </div>
-            <div class="mt-8">
-              <h3 class="text-2xl font-medium tracking-[-0.025em] text-[#111312]">macOS, Linux &amp; Windows</h3>
-              <p class="mt-2 max-w-md text-sm leading-relaxed text-[#111312]/80">
-                Zero runtime dependencies, Antigravity PreInvocation hooks, embedded Studio UI &amp; TUI.
-              </p>
-              <div class="mt-5 flex flex-wrap gap-5 text-sm font-medium">
-                <a href={releasesUrl} target="_blank" rel="noreferrer" class="hover:underline">Prebuilt releases ↗</a>
-                <a href="/integrations" class="hover:underline">All 8 integrations →</a>
-              </div>
-            </div>
-          </div>
+        <div class="mt-8">
+          <InstallGrid client:visible />
         </div>
       </section>
 

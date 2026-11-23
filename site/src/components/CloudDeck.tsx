@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { AnimatePresence, MotionConfig, motion, useInView, useReducedMotion } from "motion/react";
 import { CloudArrowUp, GitBranch, GitDiff, Graph } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,6 @@ type CloudCardItem = {
   title: string;
   body: string;
   bg: string;
-  borderAccent: string;
 };
 
 const cards: CloudCardItem[] = [
@@ -22,7 +21,6 @@ const cards: CloudCardItem[] = [
     title: "Cloud Curator",
     body: "Nightly and on-push LLM hygiene catches stale notes, contradictions, and oversized files as reviewable PRs.",
     bg: "#58cc7d",
-    borderAccent: "border-[#58cc7d]",
   },
   {
     id: "mcp",
@@ -31,7 +29,6 @@ const cards: CloudCardItem[] = [
     title: "Hosted HTTPS MCP",
     body: "Instant https://<org>.memtwig.com/mcp endpoint with per-bot Bearer tokens and append-only audit logs.",
     bg: "#6bb5ff",
-    borderAccent: "border-[#6bb5ff]",
   },
   {
     id: "embeddings",
@@ -40,7 +37,6 @@ const cards: CloudCardItem[] = [
     title: "Managed Embeddings",
     body: "Two-way GitHub and GitLab sync keeps 1024-dim semantic search warm on every commit, zero keys needed.",
     bg: "#d5a8f8",
-    borderAccent: "border-[#d5a8f8]",
   },
   {
     id: "git",
@@ -49,7 +45,6 @@ const cards: CloudCardItem[] = [
     title: "Your Git, Zero Lock-In",
     body: "Every approved diff commits straight to plain Markdown in your repo. Drop back to the local binary anytime.",
     bg: "#ebb85e",
-    borderAccent: "border-[#ebb85e]",
   },
 ];
 
@@ -65,15 +60,51 @@ function DeckIcon({ id }: { id: string }) {
   return <GitBranch {...props} />;
 }
 
+const CYCLE_MS = 5500;
+
 export function CloudDeck({ showHeader = true }: { showHeader?: boolean }) {
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const [mounted, setMounted] = React.useState(false);
+  const [paused, setPaused] = React.useState(false);
+  const [manual, setManual] = React.useState(false);
+
+  const deckRef = React.useRef<HTMLDivElement>(null);
+  const inView = useInView(deckRef, { amount: 0.35 });
+  const prefersReduced = useReducedMotion();
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const shouldAutoPlay = mounted && !prefersReduced && !paused && !manual && inView;
+
+  React.useEffect(() => {
+    if (!shouldAutoPlay) return;
+    const timer = window.setInterval(() => {
+      setActiveIndex((i) => (i + 1) % cards.length);
+    }, CYCLE_MS);
+    return () => window.clearInterval(timer);
+  }, [shouldAutoPlay]);
+
   const active = cards[activeIndex];
   const nextOne = cards[(activeIndex + 1) % cards.length];
   const nextTwo = cards[(activeIndex + 2) % cards.length];
 
+  const selectCard = (idx: number) => {
+    setManual(true);
+    setActiveIndex(idx);
+  };
+
   return (
     <MotionConfig reducedMotion="user">
-      <div className="grid gap-10 lg:grid-cols-12 lg:items-center">
+      <div
+        ref={deckRef}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
+        className="grid gap-10 lg:grid-cols-12 lg:items-center"
+      >
         {/* Left Navigation Column */}
         <div className="min-w-0 lg:col-span-5">
           {showHeader && (
@@ -85,10 +116,10 @@ export function CloudDeck({ showHeader = true }: { showHeader?: boolean }) {
                 Cloud Curator, hosted HTTPS MCP, and managed Git sync for teams and always-on bots.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <a href="/cloud#waitlist" class={cn(buttonVariants({ variant: "default", size: "default" }))}>
+                <a href="/cloud#waitlist" className={cn(buttonVariants({ variant: "default", size: "default" }))}>
                   Join waitlist
                 </a>
-                <a href="/cloud" class={cn(buttonVariants({ variant: "outline", size: "default" }))}>
+                <a href="/cloud" className={cn(buttonVariants({ variant: "outline", size: "default" }))}>
                   See pricing →
                 </a>
               </div>
@@ -103,14 +134,25 @@ export function CloudDeck({ showHeader = true }: { showHeader?: boolean }) {
                   key={card.id}
                   type="button"
                   variant="ghost"
-                  onClick={() => setActiveIndex(idx)}
+                  onClick={() => selectCard(idx)}
                   className={cn(
-                    "h-auto w-full justify-start rounded-none border-l-2 px-4 py-3 text-left transition-colors hover:bg-white/[0.04]",
-                    selected
-                      ? `${card.borderAccent} text-white`
-                      : "border-white/10 text-zinc-500 hover:text-zinc-200",
+                    "relative h-auto w-full justify-start rounded-none px-4 py-3 text-left transition-colors hover:bg-white/[0.04]",
+                    selected ? "text-white" : "text-zinc-500 hover:text-zinc-200",
                   )}
                 >
+                  <span
+                    className="absolute top-0 bottom-0 left-0 w-px bg-white/10"
+                    aria-hidden="true"
+                  />
+                  {selected && (
+                    <motion.span
+                      layoutId="cloud-rail-indicator"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      className="absolute top-0 bottom-0 left-0 w-0.5"
+                      style={{ backgroundColor: card.bg }}
+                      aria-hidden="true"
+                    />
+                  )}
                   <span className="w-7 text-xs font-medium tabular-nums opacity-70">{card.num}</span>
                   <span className="text-base font-medium">{card.title}</span>
                 </Button>
@@ -122,25 +164,35 @@ export function CloudDeck({ showHeader = true }: { showHeader?: boolean }) {
         {/* Right Interactive Stacked Card */}
         <div className="min-w-0 lg:col-span-7">
           <div className="relative py-5">
-            <div
-              className="pointer-events-none absolute inset-x-4 top-0 h-12 rounded-[28px] opacity-80"
+            <motion.div
+              key={`top-${nextTwo.id}`}
+              initial={{ opacity: 0.5, y: 6 }}
+              animate={{ opacity: 0.8, y: 0 }}
+              transition={{ duration: 0.28 }}
+              className="pointer-events-none absolute inset-x-4 top-0 h-12 rounded-[28px]"
               style={{ backgroundColor: nextTwo.bg }}
               aria-hidden="true"
             />
-            <div
-              className="pointer-events-none absolute inset-x-4 bottom-0 h-12 rounded-[28px] opacity-85"
+
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={`Next card: ${nextOne.title}`}
+              onClick={() => selectCard((activeIndex + 1) % cards.length)}
+              className="absolute inset-x-4 bottom-0 z-0 h-12 w-auto rounded-[28px] p-0 opacity-85 transition-opacity hover:opacity-100"
               style={{ backgroundColor: nextOne.bg }}
-              aria-hidden="true"
-            />
+            >
+              <span className="sr-only">Next card</span>
+            </Button>
 
             <AnimatePresence mode="wait">
               <motion.div
                 key={active.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.22 }}
-                className="relative z-10 flex min-h-[260px] flex-col justify-between rounded-[28px] p-7 text-[#111312] shadow-[0_24px_70px_rgba(0,0,0,0.45)] bg-architectural-grid sm:min-h-[370px] sm:p-10"
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                className="relative z-10 flex min-h-[260px] flex-col justify-between overflow-hidden rounded-[28px] p-7 text-[#111312] shadow-[0_24px_70px_rgba(0,0,0,0.45)] bg-architectural-grid sm:min-h-[370px] sm:p-10"
                 style={{ backgroundColor: active.bg }}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -161,10 +213,27 @@ export function CloudDeck({ showHeader = true }: { showHeader?: boolean }) {
                       {active.body}
                     </p>
                   </div>
-                  <div className="self-end sm:self-center">
+                  <motion.div
+                    initial={{ scale: 0.84, rotate: -8, opacity: 0 }}
+                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                    className="self-end sm:self-center"
+                  >
                     <DeckIcon id={active.id} />
-                  </div>
+                  </motion.div>
                 </div>
+
+                {shouldAutoPlay && (
+                  <motion.div
+                    key={`progress-${active.id}`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: CYCLE_MS / 1000, ease: "linear" }}
+                    style={{ transformOrigin: "0% 50%" }}
+                    className="absolute right-7 bottom-0 left-7 h-0.5 bg-black/20"
+                    aria-hidden="true"
+                  />
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
