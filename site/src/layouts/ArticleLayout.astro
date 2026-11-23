@@ -1,0 +1,159 @@
+---
+import "@/styles/global.css";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { MobileNav } from "@/components/MobileNav";
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  faqs?: Array<{ q: string; a: string }>;
+}
+
+const { title, description, path, faqs = [] } = Astro.props;
+const siteUrl = "https://memtwig.com";
+const canonicalUrl = `${siteUrl}${path}`;
+const repoUrl = "https://github.com/vittoriocompagno/memtwig";
+const releasesUrl = "https://github.com/vittoriocompagno/memtwig/releases";
+const docsUrl = "https://github.com/vittoriocompagno/memtwig/tree/main/docs";
+
+const graph: Record<string, unknown>[] = [
+  {
+    "@type": "TechArticle",
+    "@id": `${canonicalUrl}#article`,
+    headline: title,
+    description,
+    url: canonicalUrl,
+    datePublished: "2026-11-23",
+    dateModified: "2026-11-23",
+    inLanguage: "en",
+    author: {
+      "@type": "Person",
+      name: "Vittorio Compagno",
+      url: "https://vittoriocompagno.com",
+    },
+    about: {
+      "@type": "SoftwareApplication",
+      name: "memtwig",
+      url: `${siteUrl}/`,
+    },
+  },
+];
+
+if (faqs.length > 0) {
+  graph.push({
+    "@type": "FAQPage",
+    "@id": `${canonicalUrl}#faq`,
+    mainEntity: faqs.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.a,
+      },
+    })),
+  });
+}
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": graph,
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — memtwig</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="alternate" type="text/markdown" href={`${siteUrl}/llms.txt`} title="LLMs summary" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="memtwig" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={`${title} — memtwig`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={`${siteUrl}/og-image.png`} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:creator" content="@itstorio_" />
+    <meta name="twitter:title" content={`${title} — memtwig`} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={`${siteUrl}/og-image.png`} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </head>
+  <body class="min-h-screen text-foreground">
+    <div class="sticky top-4 z-40 px-4 sm:px-6">
+      <header class="mx-auto flex h-14 max-w-4xl items-center justify-between rounded-full border border-white/85 bg-white/70 px-3 pl-4 shadow-[0_10px_34px_rgba(15,58,55,0.08)] ring-1 ring-border backdrop-blur-xl">
+        <a href="/" class="flex items-center gap-2.5 text-base font-semibold tracking-tight text-foreground">
+          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-md" />
+          <span>memtwig</span>
+        </a>
+
+        <nav class="hidden items-center gap-1 md:flex">
+          <a href="/vs/mem0" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">vs Mem0</a>
+          <a href="/vs/claude-md" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">vs CLAUDE.md</a>
+          <a href="/mcp-memory" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">MCP Memory</a>
+          <a href={docsUrl} target="_blank" rel="noreferrer" class="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">Docs</a>
+        </nav>
+
+        <div class="hidden items-center gap-2 md:flex">
+          <a href={repoUrl} target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+            GitHub
+          </a>
+          <a href="/#install" class={cn(buttonVariants({ variant: "default", size: "sm" }))}>
+            Install
+          </a>
+        </div>
+
+        <div class="md:hidden">
+          <MobileNav client:media="(max-width: 767px)" />
+        </div>
+      </header>
+    </div>
+
+    <main class="relative z-10 mx-auto max-w-4xl px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-24">
+      <slot />
+
+      {faqs.length > 0 && (
+        <section class="mt-16">
+          <h2 class="text-2xl font-medium tracking-tight text-foreground sm:text-3xl">FAQ</h2>
+          <div class="mt-6 divide-y divide-border/80 rounded-3xl border border-white/80 bg-white/60 px-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl sm:px-8">
+            {faqs.map((item) => (
+              <div class="py-5">
+                <h3 class="text-lg font-medium text-foreground">{item.q}</h3>
+                <p class="mt-2 text-base leading-relaxed text-muted-foreground">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </main>
+
+    <footer class="border-t border-border/80 bg-white/50 backdrop-blur-md">
+      <div class="mx-auto flex max-w-5xl flex-col items-center gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
+        <a href="/" class="flex items-center gap-2.5 text-foreground font-medium">
+          <img src="/favicon.svg" alt="" width="20" height="20" class="rounded-sm" />
+          <span>memtwig</span>
+          <span class="text-muted-foreground font-normal">· Apache 2.0</span>
+        </a>
+        <div class="flex flex-wrap items-center justify-center gap-5">
+          <a href="/vs/mem0" class="hover:text-foreground">vs Mem0</a>
+          <a href="/vs/claude-md" class="hover:text-foreground">vs CLAUDE.md</a>
+          <a href="/mcp-memory" class="hover:text-foreground">MCP Memory</a>
+          <a href={repoUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">GitHub</a>
+          <a href={releasesUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Releases</a>
+          <a href="/llms.txt" class="hover:text-foreground">llms.txt</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

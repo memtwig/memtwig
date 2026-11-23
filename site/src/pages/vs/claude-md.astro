@@ -1,0 +1,78 @@
+---
+import ArticleLayout from "@/layouts/ArticleLayout.astro";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const rows = [
+  { dim: "Context window cost", memtwig: "Top-K relevant snippets via FTS5 + RRF (~400 chars each)", staticMd: "Entire file loaded into every prompt" },
+  { dim: "Cross-tool portability", memtwig: "Works identically across Claude Code, Codex, Cursor, Antigravity, MCP", staticMd: "Fragmented across CLAUDE.md, AGENTS.md, .cursorrules" },
+  { dim: "Multi-repo & multi-org", memtwig: "One vault per client org + shared personal preferences (always_include)", staticMd: "Duplicated manually in every repository" },
+  { dim: "Hygiene & staleness", memtwig: "8 KB cap, append-only invalidate archive, curate staleness alerts", staticMd: "Grows unbounded until rules contradict each other" },
+  { dim: "Agent edits", memtwig: "owner-lock & deterministic proposal queue", staticMd: "Unchecked edits or manual copy-paste" },
+  { dim: "Audit & secrets", memtwig: "Secret scanner blocks sync; HTTP mode logs audit.jsonl", staticMd: "None" },
+];
+
+const faqs = [
+  {
+    q: "Do I have to delete my existing CLAUDE.md or AGENTS.md files?",
+    a: "No. Keep repo-specific build commands in CLAUDE.md, and use memtwig for cross-repo facts, client infrastructure, architectural decisions, and personal style rules shared across harnesses.",
+  },
+  {
+    q: "How fast is memtwig compared to reading Markdown files directly?",
+    a: "memtwig indexes 109 Markdown notes (1,078 chunks) into embedded SQLite FTS5 in roughly 105 ms and returns gated per-turn snippets in milliseconds, skipping courtesy prompts like 'ok thanks' automatically.",
+  },
+];
+---
+
+<ArticleLayout
+  title="memtwig vs CLAUDE.md"
+  description="Why static CLAUDE.md and .cursorrules files break across multiple repositories and harnesses, and how memtwig scales Markdown memory with FTS5, multi-org routing, and curation."
+  path="/vs/claude-md"
+  faqs={faqs}
+>
+  <header class="text-center">
+    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.08]">
+      memtwig vs CLAUDE.md
+    </h1>
+    <p class="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+      Static files like CLAUDE.md and .cursorrules work for a single repository and a single tool. memtwig turns curated Markdown folders into an indexed, scoped, cross-harness memory layer without bloating every prompt.
+    </p>
+  </header>
+
+  <section class="mt-12 overflow-x-auto rounded-3xl border border-white/80 bg-white/65 shadow-[0_12px_36px_rgba(15,58,55,0.06)] ring-1 ring-border backdrop-blur-xl">
+    <table class="w-full min-w-[580px] border-collapse text-left text-sm sm:text-base">
+      <thead>
+        <tr class="border-b border-border bg-muted/50">
+          <th class="px-5 py-4 font-semibold text-foreground">Dimension</th>
+          <th class="px-5 py-4 font-semibold text-primary">memtwig</th>
+          <th class="px-5 py-4 font-semibold text-foreground">CLAUDE.md / .cursorrules</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border/70">
+        {rows.map((r) => (
+          <tr>
+            <td class="px-5 py-4 font-medium text-foreground">{r.dim}</td>
+            <td class="px-5 py-4 text-foreground">{r.memtwig}</td>
+            <td class="px-5 py-4 text-muted-foreground">{r.staticMd}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="mt-12 rounded-3xl border border-white/80 bg-white/60 p-6 shadow-[0_10px_30px_rgba(15,58,55,0.05)] ring-1 ring-border backdrop-blur-xl sm:p-8">
+    <h2 class="text-2xl font-medium text-foreground">Migrate existing notes in 30 seconds</h2>
+    <pre class="mt-4 overflow-x-auto text-sm leading-relaxed text-foreground"><code>{`memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
+memtwig index
+memtwig install claude
+memtwig install cursor
+memtwig install codex`}</code></pre>
+  </section>
+
+  <div class="mt-12 flex flex-wrap justify-center gap-3">
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.0.0</a>
+    <a href="/mcp-memory" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+      Explore MCP Memory Server
+    </a>
+  </div>
+</ArticleLayout>

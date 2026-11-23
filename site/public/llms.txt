@@ -10,6 +10,11 @@
 - Language / Distribution: Pure Go static binary (Linux, macOS, Windows), zero CGO, zero external vector DB.
 - Performance: 109 Markdown notes / 1,078 chunks indexed in ~105 ms.
 
+## Guides & Comparisons
+- [memtwig vs Mem0](https://memtwig.com/vs/mem0): Git-native curated Markdown vs vector/graph memory APIs.
+- [memtwig vs CLAUDE.md](https://memtwig.com/vs/claude-md): Scaling static rules files across repositories and AI harnesses.
+- [Open-Source MCP Memory Server](https://memtwig.com/mcp-memory): Stdio and Streamable HTTP MCP tools, RBAC tokens, and audit logs.
+
 ## Documentation
 - [Full Reference (Markdown)](https://memtwig.com/llms-full.txt): Consolidated single-file technical reference for LLMs.
 - [Architecture](https://github.com/vittoriocompagno/memtwig/blob/main/docs/architecture.md): Storage, scope routing, SQLite FTS5 + RRF engine, hook gating, MCP stdio/HTTP, RBAC, audit.
