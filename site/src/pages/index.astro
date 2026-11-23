@@ -1,0 +1,221 @@
+---
+import "@/styles/global.css";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { MobileNav } from "@/components/MobileNav";
+import { ScopeDemo } from "@/components/ScopeDemo";
+import { QuickstartTabs } from "@/components/QuickstartTabs";
+
+const repoUrl = "https://github.com/vittoriocompagno/memtwig";
+const releasesUrl = "https://github.com/vittoriocompagno/memtwig/releases";
+const docsUrl = "https://github.com/vittoriocompagno/memtwig/tree/main/docs";
+
+const metrics = [
+  { value: "105 ms", label: "109 Markdown notes indexed into SQLite FTS5" },
+  { value: "12 MB", label: "Single static Go binary, zero CGO" },
+  { value: "0", label: "External vector databases required" },
+];
+
+const pillars = [
+  {
+    title: "Git + Markdown",
+    body: "Every vault is a plain Git repository. Notes use YAML frontmatter or lightweight headers, an 8 KB soft cap, and append-only archives instead of silent deletion.",
+  },
+  {
+    title: "Hybrid FTS5 + RRF",
+    body: "Local SQLite FTS5 BM25 fused with optional Ollama, OpenAI, or Cloudflare embeddings via Reciprocal Rank Fusion. Degrades cleanly to BM25 offline.",
+  },
+  {
+    title: "Proposals + RBAC",
+    body: "Org vaults and owner-locked notes block direct agent writes. Agents queue deterministic proposals in .curator/proposals.json; rejected IDs never reopen.",
+  },
+];
+
+const comparison = [
+  {
+    dimension: "Storage format",
+    memtwig: "Plain Markdown in Git",
+    vectorApi: "Proprietary cloud DB",
+    staticFiles: "Unindexed flat files",
+  },
+  {
+    dimension: "Multi-org isolation",
+    memtwig: "cwd & git remote routing in SQL",
+    vectorApi: "Manual tenant IDs in app code",
+    staticFiles: "Per-repo only",
+  },
+  {
+    dimension: "Agent write safety",
+    memtwig: "owner-lock + proposal queue",
+    vectorApi: "Autonomous overwrite",
+    staticFiles: "Unrestricted edits",
+  },
+  {
+    dimension: "Secret scanning",
+    memtwig: "Built-in linter blocks sync",
+    vectorApi: "None",
+    staticFiles: "Manual hooks",
+  },
+  {
+    dimension: "Cross-harness",
+    memtwig: "CLI, stdio/HTTP MCP, native hooks",
+    vectorApi: "SDK integration required",
+    staticFiles: "Tool-specific filenames",
+  },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>memtwig — Git-native, multi-org memory layer for AI agents</title>
+    <meta
+      name="description"
+      content="Single static Go binary for curated Markdown memory across Claude Code, Codex, Cursor, and MCP clients with strict multi-org isolation."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <header class="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-sm">
+      <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
+        <a href="#" class="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground">
+          <img src="/favicon.svg" alt="" width="26" height="26" class="rounded-md" />
+          <span>memtwig</span>
+        </a>
+
+        <nav class="hidden items-center gap-7 md:flex">
+          <a href="#isolation" class="text-sm font-medium text-muted-foreground hover:text-foreground">Isolation</a>
+          <a href="#architecture" class="text-sm font-medium text-muted-foreground hover:text-foreground">Architecture</a>
+          <a href="#comparison" class="text-sm font-medium text-muted-foreground hover:text-foreground">Comparison</a>
+          <a href={docsUrl} target="_blank" rel="noreferrer" class="text-sm font-medium text-muted-foreground hover:text-foreground">Docs</a>
+          <a href={repoUrl} target="_blank" rel="noreferrer" class="text-sm font-medium text-muted-foreground hover:text-foreground">GitHub</a>
+          <a href="#install" class={cn(buttonVariants({ variant: "outline", size: "sm" }))}>Install</a>
+        </nav>
+
+        <div class="md:hidden">
+          <MobileNav client:media="(max-width: 767px)" />
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="mx-auto max-w-6xl px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-24">
+        <div class="max-w-4xl">
+          <h1 class="text-4xl font-normal tracking-tight text-foreground sm:text-6xl xl:text-7xl leading-[1.06]">
+            Git-native memory for AI agents across every org.
+          </h1>
+          <p class="mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed">
+            Curated Markdown vaults routed by directory and Git remote. One static Go binary with SQLite FTS5, proposal governance, MCP, and hooks for Claude Code, Codex, and Cursor.
+          </p>
+          <div class="mt-9 flex flex-wrap items-center gap-3">
+            <a href="#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.0.0</a>
+            <a
+              href={repoUrl}
+              target="_blank"
+              rel="noreferrer"
+              class={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+            >
+              View on GitHub
+            </a>
+          </div>
+        </div>
+
+        <div id="isolation" class="mt-14 scroll-mt-24">
+          <ScopeDemo client:load />
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+        <div class="grid gap-4 sm:grid-cols-3">
+          {metrics.map((m) => (
+            <div class="rounded-2xl border border-border bg-card p-6">
+              <div class="text-4xl font-light tracking-tight text-foreground tabular-nums sm:text-5xl">
+                {m.value}
+              </div>
+              <p class="mt-2.5 text-sm text-muted-foreground">{m.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="architecture" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
+        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+          Architecture
+        </h2>
+        <div class="mt-10 grid gap-8 md:grid-cols-3">
+          {pillars.map((item) => (
+            <div class="space-y-2.5 border-t border-border pt-6">
+              <h3 class="text-xl font-medium text-foreground">{item.title}</h3>
+              <p class="text-base leading-relaxed text-muted-foreground">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="comparison" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-12 sm:px-8 sm:py-20">
+        <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+          How it compares
+        </h2>
+        <div class="mt-8 overflow-x-auto rounded-2xl border border-border">
+          <table class="w-full min-w-[600px] border-collapse text-left text-sm sm:text-base">
+            <thead>
+              <tr class="border-b border-border bg-card">
+                <th class="px-5 py-4 font-semibold text-foreground">Capability</th>
+                <th class="px-5 py-4 font-semibold text-primary">memtwig</th>
+                <th class="px-5 py-4 font-semibold text-foreground">Vector Memory APIs</th>
+                <th class="px-5 py-4 font-semibold text-foreground">Static Rules Files</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border bg-background">
+              {comparison.map((row) => (
+                <tr>
+                  <td class="px-5 py-4 font-medium text-foreground">{row.dimension}</td>
+                  <td class="px-5 py-4 text-foreground">{row.memtwig}</td>
+                  <td class="px-5 py-4 text-muted-foreground">{row.vectorApi}</td>
+                  <td class="px-5 py-4 text-muted-foreground">{row.staticFiles}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="install" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <h2 class="text-3xl font-medium tracking-tight text-foreground lg:text-4xl">
+            Quickstart
+          </h2>
+          <a
+            href={releasesUrl}
+            target="_blank"
+            rel="noreferrer"
+            class="text-sm font-medium text-primary hover:underline"
+          >
+            Download prebuilt binaries (Linux, macOS, Windows)
+          </a>
+        </div>
+        <div class="mt-8">
+          <QuickstartTabs client:load />
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-border bg-background">
+      <div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-10 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div class="flex items-center gap-2.5 text-foreground font-medium">
+          <img src="/favicon.svg" alt="" width="20" height="20" class="rounded-sm" />
+          <span>memtwig</span>
+          <span class="text-muted-foreground font-normal">· Apache 2.0</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-6">
+          <a href={repoUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">GitHub</a>
+          <a href={releasesUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Releases</a>
+          <a href={docsUrl} target="_blank" rel="noreferrer" class="hover:text-foreground">Docs</a>
+          <span>© 2026 Vittorio Compagno</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

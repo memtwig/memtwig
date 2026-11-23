@@ -3,3 +3,6 @@ bin/
 *.db-wal
 *.db-shm
 .DS_Store
+site/node_modules/
+site/dist/
+site/.astro/
