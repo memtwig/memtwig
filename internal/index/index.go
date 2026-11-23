@@ -43,6 +43,11 @@ type Chunk struct {
 }
 
 const schemaSQL = `
+CREATE TABLE IF NOT EXISTS index_meta (
+	key TEXT PRIMARY KEY,
+	value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS documents (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	vault_id TEXT NOT NULL,
@@ -119,14 +124,21 @@ func (s *Store) Close() error {
 	return s.DB.Close()
 }
 
-// RebuildOrUpdate indexes all vaults in cfg incrementally (or full when full=true).
+// RebuildOrUpdate indexes all vaults in cfg incrementally (or full when full=true or embed signature changed).
 func (s *Store) RebuildOrUpdate(ctx context.Context, cfg *config.Config, full bool) (Stats, error) {
 	var stats Stats
+	embedSig := fmt.Sprintf("%s|%s|%d", cfg.Embeddings.Provider, cfg.Embeddings.Model, cfg.Embeddings.Dimensions)
+	var prevSig string
+	_ = s.DB.QueryRow(`SELECT value FROM index_meta WHERE key = 'embed_signature'`).Scan(&prevSig)
+	if prevSig != "" && prevSig != embedSig {
+		full = true
+	}
 	if full {
 		if _, err := s.DB.Exec(`DELETE FROM chunks; DELETE FROM documents;`); err != nil {
 			return stats, err
 		}
 	}
+	_, _ = s.DB.Exec(`INSERT INTO index_meta(key, value) VALUES('embed_signature', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, embedSig)
 	prov := embed.New(cfg.Embeddings)
 	useEmbed := prov.Name() != "none"
 

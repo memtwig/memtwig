@@ -75,6 +75,7 @@ func TestSaveAndLoadRoundtrip(t *testing.T) {
 			Endpoint:        "https://api.example.test/v1/embeddings",
 			APIKeyEnv:       "CUSTOM_OPENAI_KEY",
 			AccountID:       "acc-123",
+			Dimensions:      1024,
 			TimeoutMS:       5000,
 			CosineThreshold: 0.6,
 		},

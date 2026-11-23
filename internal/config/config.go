@@ -28,7 +28,7 @@ type Config struct {
 }
 
 type LLMConfig struct {
-	Provider  string `toml:"provider"` // none | openai | ollama
+	Provider  string `toml:"provider"` // none | openai | ollama | openrouter | groq
 	Model     string `toml:"model"`
 	Endpoint  string `toml:"endpoint"`
 	APIKeyEnv string `toml:"api_key_env"`
@@ -56,11 +56,12 @@ type IdentityConfig struct {
 }
 
 type EmbeddingsConfig struct {
-	Provider        string  `toml:"provider"` // none | ollama | openai | cloudflare
+	Provider        string  `toml:"provider"` // none | ollama | openai | cloudflare | openrouter | deepinfra
 	Model           string  `toml:"model"`
 	Endpoint        string  `toml:"endpoint"`
 	APIKeyEnv       string  `toml:"api_key_env"`
 	AccountID       string  `toml:"account_id"`
+	Dimensions      int     `toml:"dimensions"`
 	TimeoutMS       int     `toml:"timeout_ms"`
 	CosineThreshold float64 `toml:"cosine_threshold"`
 }
@@ -92,6 +93,7 @@ func Default() *Config {
 			Provider:        "none",
 			Model:           "bge-m3",
 			Endpoint:        "http://127.0.0.1:11434/api/embeddings",
+			Dimensions:      1024,
 			TimeoutMS:       3000,
 			CosineThreshold: 0.45,
 		},
@@ -196,6 +198,9 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.Embeddings.Provider == "" {
 		cfg.Embeddings.Provider = "none"
+	}
+	if cfg.Embeddings.Dimensions <= 0 {
+		cfg.Embeddings.Dimensions = 1024
 	}
 	if cfg.Embeddings.TimeoutMS <= 0 {
 		cfg.Embeddings.TimeoutMS = 3000

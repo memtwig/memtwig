@@ -40,11 +40,59 @@ func New(cfg config.EmbeddingsConfig) Provider {
 		if keyEnv == "" {
 			keyEnv = "OPENAI_API_KEY"
 		}
+		model := cfg.Model
+		if model == "" {
+			model = "text-embedding-3-small"
+		}
 		return &openaiProvider{
-			endpoint: ep,
-			model:    cfg.Model,
-			apiKey:   os.Getenv(keyEnv),
-			client:   &http.Client{Timeout: time.Duration(cfg.TimeoutMS) * time.Millisecond},
+			name:       "openai",
+			endpoint:   ep,
+			model:      model,
+			apiKey:     os.Getenv(keyEnv),
+			dimensions: cfg.Dimensions,
+			client:     &http.Client{Timeout: time.Duration(cfg.TimeoutMS) * time.Millisecond},
+		}
+	case "openrouter":
+		ep := cfg.Endpoint
+		if ep == "" {
+			ep = "https://openrouter.ai/api/v1/embeddings"
+		}
+		keyEnv := cfg.APIKeyEnv
+		if keyEnv == "" {
+			keyEnv = "OPENROUTER_API_KEY"
+		}
+		model := cfg.Model
+		if model == "" {
+			model = "baai/bge-m3"
+		}
+		return &openaiProvider{
+			name:       "openrouter",
+			endpoint:   ep,
+			model:      model,
+			apiKey:     os.Getenv(keyEnv),
+			dimensions: cfg.Dimensions,
+			client:     &http.Client{Timeout: time.Duration(cfg.TimeoutMS) * time.Millisecond},
+		}
+	case "deepinfra":
+		ep := cfg.Endpoint
+		if ep == "" {
+			ep = "https://api.deepinfra.com/v1/openai/embeddings"
+		}
+		keyEnv := cfg.APIKeyEnv
+		if keyEnv == "" {
+			keyEnv = "DEEPINFRA_API_KEY"
+		}
+		model := cfg.Model
+		if model == "" {
+			model = "BAAI/bge-m3"
+		}
+		return &openaiProvider{
+			name:       "deepinfra",
+			endpoint:   ep,
+			model:      model,
+			apiKey:     os.Getenv(keyEnv),
+			dimensions: cfg.Dimensions,
+			client:     &http.Client{Timeout: time.Duration(cfg.TimeoutMS) * time.Millisecond},
 		}
 	case "cloudflare":
 		keyEnv := cfg.APIKeyEnv
@@ -114,25 +162,41 @@ func (p *ollamaProvider) Embed(ctx context.Context, texts []string) ([][]float32
 }
 
 type openaiProvider struct {
-	endpoint string
-	model    string
-	apiKey   string
-	client   *http.Client
+	name       string
+	endpoint   string
+	model      string
+	apiKey     string
+	dimensions int
+	client     *http.Client
 }
 
-func (p *openaiProvider) Name() string { return "openai" }
+func (p *openaiProvider) Name() string {
+	if p.name != "" {
+		return p.name
+	}
+	return "openai"
+}
 
 func (p *openaiProvider) Embed(ctx context.Context, texts []string) ([][]float32, error) {
 	if p.apiKey == "" {
-		return nil, errors.New("missing OpenAI API key")
+		return nil, fmt.Errorf("missing API key for %s embeddings", p.Name())
 	}
-	payload, _ := json.Marshal(map[string]any{"model": p.model, "input": texts})
+	bodyMap := map[string]any{"model": p.model, "input": texts}
+	// Pass Matryoshka dimensions parameter when requested for OpenAI text-embedding-3-* models
+	if p.dimensions > 0 && strings.Contains(strings.ToLower(p.model), "text-embedding-3") {
+		bodyMap["dimensions"] = p.dimensions
+	}
+	payload, _ := json.Marshal(bodyMap)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+p.apiKey)
 	req.Header.Set("Content-Type", "application/json")
+	if p.name == "openrouter" {
+		req.Header.Set("HTTP-Referer", "https://memtwig.com")
+		req.Header.Set("X-Title", "memtwig")
+	}
 	resp, err := p.client.Do(req)
 	if err != nil {
 		return nil, err

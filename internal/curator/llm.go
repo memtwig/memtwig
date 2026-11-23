@@ -124,16 +124,40 @@ func comparePairWithLLM(ctx context.Context, client *http.Client, cfg config.LLM
 	)
 
 	endpoint := cfg.Endpoint
-	if endpoint == "" {
-		if cfg.Provider == "ollama" {
+	model := cfg.Model
+	defaultKeyEnv := "OPENAI_API_KEY"
+	switch strings.ToLower(strings.TrimSpace(cfg.Provider)) {
+	case "ollama":
+		if endpoint == "" {
 			endpoint = "http://127.0.0.1:11434/v1/chat/completions"
-		} else {
+		}
+		if model == "" {
+			model = "llama3.2"
+		}
+		defaultKeyEnv = ""
+	case "openrouter":
+		if endpoint == "" {
+			endpoint = "https://openrouter.ai/api/v1/chat/completions"
+		}
+		if model == "" {
+			model = "google/gemini-2.5-flash"
+		}
+		defaultKeyEnv = "OPENROUTER_API_KEY"
+	case "groq":
+		if endpoint == "" {
+			endpoint = "https://api.groq.com/openai/v1/chat/completions"
+		}
+		if model == "" {
+			model = "llama-3.3-70b-versatile"
+		}
+		defaultKeyEnv = "GROQ_API_KEY"
+	default:
+		if endpoint == "" {
 			endpoint = "https://api.openai.com/v1/chat/completions"
 		}
-	}
-	model := cfg.Model
-	if model == "" {
-		model = "gpt-4o-mini"
+		if model == "" {
+			model = "gpt-4o-mini"
+		}
 	}
 
 	reqBody, _ := json.Marshal(map[string]any{
@@ -149,12 +173,18 @@ func comparePairWithLLM(ctx context.Context, client *http.Client, cfg config.LLM
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if cfg.APIKeyEnv != "" {
-		if key := os.Getenv(cfg.APIKeyEnv); key != "" {
+	keyEnv := cfg.APIKeyEnv
+	if keyEnv == "" {
+		keyEnv = defaultKeyEnv
+	}
+	if keyEnv != "" {
+		if key := os.Getenv(keyEnv); key != "" {
 			req.Header.Set("Authorization", "Bearer "+key)
 		}
-	} else if key := os.Getenv("OPENAI_API_KEY"); key != "" && cfg.Provider == "openai" {
-		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	if strings.EqualFold(cfg.Provider, "openrouter") {
+		req.Header.Set("HTTP-Referer", "https://memtwig.com")
+		req.Header.Set("X-Title", "memtwig")
 	}
 
 	resp, err := client.Do(req)
