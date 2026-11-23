@@ -30,11 +30,12 @@ import (
 	"github.com/vittoriocompagno/memtwig/internal/server"
 	msync "github.com/vittoriocompagno/memtwig/internal/sync"
 	"github.com/vittoriocompagno/memtwig/internal/tui"
+	"github.com/vittoriocompagno/memtwig/internal/ui"
 	"github.com/vittoriocompagno/memtwig/internal/vault"
 )
 
 var (
-	version    = "1.2.0"
+	version    = "1.3.0"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -69,6 +70,7 @@ func main() {
 		cmdProposal(),
 		cmdMCP(),
 		cmdServe(),
+		cmdUI(),
 		cmdTUI(),
 		cmdHook(),
 		cmdInstall(),
@@ -817,17 +819,58 @@ func cmdServe() *cobra.Command {
 				}
 			}
 			srv := &server.Server{
-				Cfg:     cfg,
-				Store:   st,
-				Audit:   audit.New(auditPath),
-				Version: version,
+				Cfg:      cfg,
+				Store:    st,
+				Audit:    audit.New(auditPath),
+				StaticUI: ui.FS(),
+				Version:  version,
 			}
-			fmt.Printf("memtwig %s listening on http://%s (mcp=/mcp, api=/api/v1/*, tokens=%d)\n",
+			fmt.Printf("memtwig %s listening on http://%s (ui=/, mcp=/mcp, api=/api/v1/*, tokens=%d)\n",
 				version, addr, len(cfg.Server.Tokens))
 			return server.ListenAndServe(context.Background(), addr, srv)
 		},
 	}
 	cmd.Flags().StringVar(&addr, "addr", "", "listen address (default from config [server].addr or 127.0.0.1:8787)")
+	return cmd
+}
+
+func cmdUI() *cobra.Command {
+	var addr string
+	cmd := &cobra.Command{
+		Use:   "ui",
+		Short: "Launch Memtwig Studio web UI locally (embedded in the binary)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(cfgPath)
+			if err != nil {
+				return err
+			}
+			if addr == "" {
+				addr = cfg.Server.Addr
+			}
+			st, err := index.Open(dbPath)
+			if err != nil {
+				return err
+			}
+			defer st.Close()
+			_, _ = st.EnsureFresh(context.Background(), cfg)
+			auditPath := config.ExpandHome(cfg.Server.AuditLogPath)
+			if auditPath == "" {
+				if cdir, err := config.DefaultCacheDir(); err == nil {
+					auditPath = filepath.Join(cdir, "audit.jsonl")
+				}
+			}
+			srv := &server.Server{
+				Cfg:      cfg,
+				Store:    st,
+				Audit:    audit.New(auditPath),
+				StaticUI: ui.FS(),
+				Version:  version,
+			}
+			fmt.Printf("memtwig Studio %s -> http://%s\n", version, addr)
+			return server.ListenAndServe(context.Background(), addr, srv)
+		},
+	}
+	cmd.Flags().StringVar(&addr, "addr", "", "listen address (default 127.0.0.1:8787)")
 	return cmd
 }
 

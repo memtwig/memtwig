@@ -15,6 +15,7 @@ import (
 	"github.com/vittoriocompagno/memtwig/internal/config"
 	"github.com/vittoriocompagno/memtwig/internal/index"
 	"github.com/vittoriocompagno/memtwig/internal/server"
+	"github.com/vittoriocompagno/memtwig/internal/ui"
 )
 
 func TestServerRBACMCPAndAudit(t *testing.T) {
@@ -150,5 +151,157 @@ func TestServerRBACMCPAndAudit(t *testing.T) {
 	resp.Body.Close()
 	if len(audResp.Events) < 4 {
 		t.Fatalf("expected >=4 audit events, got %d", len(audResp.Events))
+	}
+}
+
+func TestServerUIAndNoteEndpoints(t *testing.T) {
+	tmp := t.TempDir()
+	acmeDir := filepath.Join(tmp, "acme")
+	betaDir := filepath.Join(tmp, "beta")
+	for _, d := range []string{filepath.Join(acmeDir, "projects"), filepath.Join(betaDir, "projects")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = os.WriteFile(filepath.Join(acmeDir, "projects", "api.md"), []byte("---\nstatus: active\nupdated: 2026-11-23\n---\n# Acme API\nUses Postgres 17.\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(betaDir, "projects", "secret.md"), []byte("---\nstatus: active\nupdated: 2026-11-23\n---\n# Beta Secret\nConfidential.\n"), 0o644)
+
+	cfg := config.Default()
+	cfg.Vaults["acme"] = config.VaultConfig{Path: acmeDir, Kind: "org", DefaultWrite: "propose"}
+	cfg.Vaults["beta"] = config.VaultConfig{Path: betaDir, Kind: "org", DefaultWrite: "propose"}
+	cfg.Server.Tokens = []config.TokenPolicy{
+		{Name: "acme-reader", Token: "tok-read", Role: "reader", Vaults: []string{"acme"}},
+		{Name: "admin", Token: "tok-admin", Role: "admin", Vaults: []string{"*"}},
+	}
+
+	st, err := index.Open(filepath.Join(tmp, "index.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	if _, err := st.RebuildOrUpdate(context.Background(), cfg, true); err != nil {
+		t.Fatal(err)
+	}
+
+	uiFS := ui.FS()
+	srv := &server.Server{Cfg: cfg, Store: st, Audit: audit.New(filepath.Join(tmp, "audit.jsonl")), StaticUI: uiFS, Version: "1.3.0-test"}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	// 1. Embedded UI serves index.html at / and SPA fallback at /proposals
+	for _, p := range []string{"/", "/proposals"} {
+		resp, err := http.Get(ts.URL + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var buf bytes.Buffer
+		_, _ = buf.ReadFrom(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK || !strings.Contains(buf.String(), "<div id=\"root\">") {
+			t.Fatalf("expected embedded SPA HTML for %s, got %d", p, resp.StatusCode)
+		}
+	}
+
+	// 2. Unknown /api/* route returns 404 JSON, never HTML
+	resp, err := http.Get(ts.URL + "/api/v1/does-not-exist")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown /api route, got %d", resp.StatusCode)
+	}
+
+	// 3. GET /api/v1/notes respects vault RBAC
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/api/v1/notes", nil)
+	req.Header.Set("Authorization", "Bearer tok-read")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var notesResp struct {
+		Notes []struct {
+			Vault string `json:"vault"`
+			Path  string `json:"path"`
+		} `json:"notes"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&notesResp)
+	resp.Body.Close()
+	if len(notesResp.Notes) != 1 || notesResp.Notes[0].Vault != "acme" {
+		t.Fatalf("expected only acme note, got %+v", notesResp.Notes)
+	}
+
+	// 4. GET /api/v1/note returns raw note for allowed vault, denies forbidden vault & traversal
+	req, _ = http.NewRequest(http.MethodGet, ts.URL+"/api/v1/note?vault=acme&path=projects/api.md", nil)
+	req.Header.Set("Authorization", "Bearer tok-read")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var noteBody struct {
+		Raw string `json:"raw"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&noteBody)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(noteBody.Raw, "Postgres 17") {
+		t.Fatalf("expected raw note, got %d %q", resp.StatusCode, noteBody.Raw)
+	}
+
+	req, _ = http.NewRequest(http.MethodGet, ts.URL+"/api/v1/note?vault=beta&path=projects/secret.md", nil)
+	req.Header.Set("Authorization", "Bearer tok-read")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for beta vault, got %d", resp.StatusCode)
+	}
+
+	req, _ = http.NewRequest(http.MethodGet, ts.URL+"/api/v1/note?vault=acme&path=../beta/projects/secret.md", nil)
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for path traversal, got %d", resp.StatusCode)
+	}
+
+	// 5. Proposal includes diff field
+	req, _ = http.NewRequest(http.MethodPost, ts.URL+"/api/v1/proposals", strings.NewReader(`{"vault":"acme","path":"projects/api.md","kind":"append","content":"- Added Redis","reason":"check diff"}`))
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", resp.StatusCode)
+	}
+
+	req, _ = http.NewRequest(http.MethodGet, ts.URL+"/api/v1/proposals", nil)
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	var propsResp struct {
+		Proposals []struct {
+			Diff string `json:"diff"`
+		} `json:"proposals"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&propsResp)
+	resp.Body.Close()
+	if len(propsResp.Proposals) != 1 || !strings.Contains(propsResp.Proposals[0].Diff, "+ - Added Redis") && !strings.Contains(propsResp.Proposals[0].Diff, "+- Added Redis") {
+		t.Fatalf("expected non-empty diff with added line, got %+v", propsResp.Proposals)
+	}
+
+	// 6. POST /api/v1/reindex & /api/v1/curate enforce writer role
+	for _, ep := range []string{"/api/v1/reindex", "/api/v1/curate"} {
+		req, _ = http.NewRequest(http.MethodPost, ts.URL+ep, nil)
+		req.Header.Set("Authorization", "Bearer tok-read")
+		resp, _ = http.DefaultClient.Do(req)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusForbidden {
+			t.Fatalf("expected 403 for reader on %s, got %d", ep, resp.StatusCode)
+		}
+
+		req, _ = http.NewRequest(http.MethodPost, ts.URL+ep, nil)
+		req.Header.Set("Authorization", "Bearer tok-admin")
+		resp, _ = http.DefaultClient.Do(req)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200 for admin on %s, got %d", ep, resp.StatusCode)
+		}
 	}
 }

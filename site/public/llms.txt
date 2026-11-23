@@ -1,11 +1,11 @@
 # memtwig
 
-> Git-native, multi-org Markdown memory layer for AI agents. Single static Go binary (CGO_ENABLED=0, ~12 MB) with SQLite FTS5 + optional vector RRF retrieval, deterministic proposal governance, MCP (stdio and Streamable HTTP with RBAC + audit log), and per-turn hooks for Claude Code, Codex, Cursor, and Antigravity.
+> Git-native, multi-org Markdown memory layer for AI agents. Single static Go binary (CGO_ENABLED=0, ~14 MB) with SQLite FTS5 + optional 1024-dim vector RRF retrieval (Ollama, OpenRouter, DeepInfra, OpenAI, Cloudflare), embedded local Web UI (`memtwig ui`) and TUI (`memtwig tui`), deterministic proposal governance, MCP (stdio and Streamable HTTP with RBAC + audit log), and per-turn hooks for Claude Code, Codex, Cursor, and Antigravity.
 
 ## Key Facts
 - Website: https://memtwig.com
 - Repository: https://github.com/vittoriocompagno/memtwig
-- Latest Release: v1.0.0 (Apache 2.0) — https://github.com/vittoriocompagno/memtwig/releases/tag/v1.0.0
+- Latest Release: v1.3.0 (Apache 2.0) — https://github.com/vittoriocompagno/memtwig/releases/tag/v1.3.0
 - Author: Vittorio Compagno (https://vittoriocompagno.com, https://github.com/vittoriocompagno)
 - Language / Distribution: Pure Go static binary (Linux, macOS, Windows), zero CGO, zero external vector DB.
 - Performance: 109 Markdown notes / 1,078 chunks indexed in ~105 ms.

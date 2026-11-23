@@ -28,11 +28,11 @@ const pillars = [
   },
   {
     title: "Hybrid FTS5 + RRF",
-    body: "Local SQLite FTS5 BM25 fused with optional Ollama, OpenAI, or Cloudflare embeddings via Reciprocal Rank Fusion. Degrades cleanly to BM25 offline.",
+    body: "Local SQLite FTS5 BM25 fused with optional 1024-dim embeddings via Ollama, OpenRouter, DeepInfra, OpenAI, or Cloudflare. Degrades cleanly to BM25 offline.",
   },
   {
-    title: "Proposals + RBAC",
-    body: "Org vaults and owner-locked notes block direct agent writes. Agents queue deterministic proposals in .curator/proposals.json; rejected IDs never reopen.",
+    title: "Studio UI + RBAC",
+    body: "Includes an embedded local Web UI (memtwig ui) and TUI for reviewing diffs, vaults, and audit logs. Org vaults and owner-locked notes queue deterministic proposals.",
   },
 ];
 
@@ -88,7 +88,7 @@ const faqs = [
   },
   {
     q: "Does memtwig require a vector database or paid API key?",
-    a: "No. memtwig embeds pure-Go SQLite with FTS5 BM25 out of the box. Embeddings via Ollama, OpenAI, or Cloudflare and semantic curation (curate --llm) are optional and degrade cleanly to local BM25 when offline.",
+    a: "No. memtwig embeds pure-Go SQLite with FTS5 BM25 and the local Studio Web UI out of the box. Optional 1024-dim embeddings (Ollama, OpenRouter, DeepInfra, OpenAI, Cloudflare) and semantic curation (curate --llm via Groq, OpenRouter, OpenAI, Ollama) degrade cleanly to local BM25 offline.",
   },
 ];
 
@@ -110,12 +110,12 @@ const jsonLd = {
       url: `${siteUrl}/`,
       applicationCategory: "DeveloperApplication",
       operatingSystem: "Linux, macOS, Windows",
-      softwareVersion: "1.2.0",
+      softwareVersion: "1.3.0",
       datePublished: "2026-11-23",
       dateModified: "2026-11-23",
       license: "https://www.apache.org/licenses/LICENSE-2.0",
       codeRepository: repoUrl,
-      downloadUrl: `${releasesUrl}/tag/v1.2.0`,
+      downloadUrl: `${releasesUrl}/tag/v1.3.0`,
       description,
       offers: {
         "@type": "Offer",
@@ -218,7 +218,7 @@ const jsonLd = {
             Curated Markdown vaults routed by Git remote. One Go binary for every harness.
           </p>
           <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <a href="#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.2.0</a>
+            <a href="#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.3.0</a>
             <a
               href={repoUrl}
               target="_blank"

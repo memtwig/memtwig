@@ -7,26 +7,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/vittoriocompagno/memtwig/internal/audit"
 	"github.com/vittoriocompagno/memtwig/internal/config"
+	"github.com/vittoriocompagno/memtwig/internal/curator"
 	"github.com/vittoriocompagno/memtwig/internal/index"
 	"github.com/vittoriocompagno/memtwig/internal/mcp"
 	"github.com/vittoriocompagno/memtwig/internal/proposal"
 	"github.com/vittoriocompagno/memtwig/internal/scope"
 	"github.com/vittoriocompagno/memtwig/internal/search"
+	"github.com/vittoriocompagno/memtwig/internal/vault"
 )
 
 type Server struct {
-	Cfg     *config.Config
-	Store   *index.Store
-	Audit   *audit.Logger
-	Version string
+	Cfg      *config.Config
+	Store    *index.Store
+	Audit    *audit.Logger
+	StaticUI fs.FS
+	Version  string
 }
 
 type principal struct {
@@ -61,10 +66,39 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.HandleFunc("/mcp", s.withAuth("reader", s.handleMCP))
 	mux.HandleFunc("/api/v1/status", s.withAuth("reader", s.handleStatus))
+	mux.HandleFunc("/api/v1/notes", s.withAuth("reader", s.handleNotes))
+	mux.HandleFunc("/api/v1/note", s.withAuth("reader", s.handleNote))
 	mux.HandleFunc("/api/v1/search", s.withAuth("reader", s.handleSearch))
 	mux.HandleFunc("/api/v1/proposals", s.withAuth("reader", s.handleProposals))
 	mux.HandleFunc("/api/v1/proposals/", s.withAuth("writer", s.handleProposalAction))
+	mux.HandleFunc("/api/v1/reindex", s.withAuth("writer", s.handleReindex))
+	mux.HandleFunc("/api/v1/curate", s.withAuth("writer", s.handleCurate))
 	mux.HandleFunc("/api/v1/audit", s.withAuth("admin", s.handleAudit))
+	if s.StaticUI != nil {
+		fileSrv := http.FileServer(http.FS(s.StaticUI))
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+				return
+			}
+			clean := strings.TrimPrefix(filepath.Clean(r.URL.Path), "/")
+			if clean == "" || clean == "." {
+				clean = "index.html"
+			}
+			if _, err := fs.Stat(s.StaticUI, clean); err == nil {
+				fileSrv.ServeHTTP(w, r)
+				return
+			}
+			// SPA fallback to index.html
+			raw, err := fs.ReadFile(s.StaticUI, "index.html")
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(raw)
+		})
+	}
 	return mux
 }
 
@@ -163,6 +197,7 @@ func (s *Server) activeVaultsFor(p principal, vaultOverride string) []scope.Acti
 		}
 		out = append(out, av)
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
 
@@ -251,13 +286,15 @@ func (s *Server) handleProposals(w http.ResponseWriter, r *http.Request, p princ
 	case http.MethodGet:
 		type item struct {
 			Vault string `json:"vault"`
+			Diff  string `json:"diff"`
 			proposal.Proposal
 		}
 		var out []item
 		for _, av := range active {
-			props, _ := proposal.List(config.ExpandHome(av.Config.Path), includeClosed)
+			root := config.ExpandHome(av.Config.Path)
+			props, _ := proposal.List(root, includeClosed)
 			for _, pr := range props {
-				out = append(out, item{Vault: av.Name, Proposal: pr})
+				out = append(out, item{Vault: av.Name, Diff: proposal.FormatDiff(root, pr), Proposal: pr})
 			}
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"proposals": out})
@@ -359,6 +396,110 @@ func (s *Server) handleProposalAction(w http.ResponseWriter, r *http.Request, p 
 	default:
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unknown action: " + action})
 	}
+}
+
+func (s *Server) handleNotes(w http.ResponseWriter, r *http.Request, p principal) {
+	active := s.activeVaultsFor(p, r.URL.Query().Get("vault"))
+	type noteSummary struct {
+		Vault     string `json:"vault"`
+		Path      string `json:"path"`
+		Title     string `json:"title"`
+		Status    string `json:"status"`
+		Updated   string `json:"updated"`
+		Owner     string `json:"owner"`
+		SizeBytes int64  `json:"size_bytes"`
+	}
+	var out []noteSummary
+	for _, av := range active {
+		notes, err := vault.WalkNotes(av.Name, config.ExpandHome(av.Config.Path))
+		if err != nil {
+			continue
+		}
+		for _, n := range notes {
+			if !av.AllowsPath(n.RelPath) {
+				continue
+			}
+			out = append(out, noteSummary{
+				Vault:     av.Name,
+				Path:      n.RelPath,
+				Title:     n.Title,
+				Status:    n.Status,
+				Updated:   n.Updated,
+				Owner:     n.Owner,
+				SizeBytes: n.SizeBytes,
+			})
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"notes": out})
+}
+
+func (s *Server) handleNote(w http.ResponseWriter, r *http.Request, p principal) {
+	vName := r.URL.Query().Get("vault")
+	relPath := filepath.ToSlash(strings.TrimPrefix(r.URL.Query().Get("path"), "/"))
+	if vName == "" || relPath == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "vault and path are required"})
+		return
+	}
+	for _, av := range s.activeVaultsFor(p, vName) {
+		if av.Name != vName || !av.AllowsPath(relPath) {
+			continue
+		}
+		root := config.ExpandHome(av.Config.Path)
+		if _, err := safeJoin(root, relPath); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		n, err := vault.ParseNote(vName, root, relPath)
+		if err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"vault":      n.VaultName,
+			"path":       n.RelPath,
+			"title":      n.Title,
+			"status":     n.Status,
+			"updated":    n.Updated,
+			"owner":      n.Owner,
+			"size_bytes": n.SizeBytes,
+			"raw":        n.Raw,
+		})
+		return
+	}
+	writeJSON(w, http.StatusForbidden, map[string]string{"error": "access denied"})
+}
+
+func (s *Server) handleReindex(w http.ResponseWriter, r *http.Request, p principal) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST required"})
+		return
+	}
+	stats, err := s.Store.EnsureFresh(r.Context(), s.Cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "reindex", Outcome: "ok"})
+	writeJSON(w, http.StatusOK, stats)
+}
+
+func (s *Server) handleCurate(w http.ResponseWriter, r *http.Request, p principal) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST required"})
+		return
+	}
+	var reports []curator.CurateReport
+	for _, av := range s.activeVaultsFor(p, "") {
+		if !av.FullAccess {
+			continue
+		}
+		rep, err := curator.Curate(av.Name, config.ExpandHome(av.Config.Path), av.Config.MaxNoteBytes, 90)
+		if err == nil {
+			reports = append(reports, rep)
+		}
+	}
+	_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "curate", Outcome: "ok"})
+	writeJSON(w, http.StatusOK, map[string]any{"reports": reports})
 }
 
 func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request, p principal) {

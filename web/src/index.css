@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@import "@fontsource-variable/plus-jakarta-sans";
+
+:root {
+  --background: #f5faf9;
+  --foreground: #0f2423;
+  --card: rgba(255, 255, 255, 0.76);
+  --card-foreground: #0f2423;
+  --muted: rgba(214, 236, 232, 0.55);
+  --muted-foreground: #4c6664;
+  --primary: #1a7f78;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.82);
+  --secondary-foreground: #0f2423;
+  --destructive: #c23b3b;
+  --border: rgba(26, 127, 120, 0.14);
+  --ring: #1a7f78;
+  --radius: 0.875rem;
+}
+
+@theme inline {
+  --font-sans: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    font-family: var(--font-sans);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+  body {
+    background:
+      radial-gradient(55% 38% at 70% -5%, rgba(125, 211, 200, 0.28) 0%, rgba(245, 250, 249, 0) 100%),
+      radial-gradient(40% 30% at 10% 15%, rgba(186, 230, 238, 0.2) 0%, rgba(245, 250, 249, 0) 100%),
+      #f5faf9;
+  }
+}
