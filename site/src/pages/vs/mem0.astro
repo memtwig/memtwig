@@ -1,31 +1,43 @@
 ---
 import ArticleLayout from "@/layouts/ArticleLayout.astro";
+import VsDiagram from "@/components/VsDiagram.astro";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const rows = [
-  { dim: "Primary storage", memtwig: "Plain Markdown files in Git repos", mem0: "Vector DB + optional Graph DB" },
-  { dim: "Runtime dependencies", memtwig: "Single 14 MB static Go binary (SQLite FTS5 + Studio UI embedded)", mem0: "Python/Node SDK + vector store + LLM API key" },
-  { dim: "Offline operation", memtwig: "Full BM25 search & curation offline", mem0: "Requires LLM extraction & embedding APIs" },
-  { dim: "Multi-org isolation", memtwig: "Automatic cwd & git remote routing in SQL", mem0: "Manual user_id / org_id scoping in app code" },
-  { dim: "Write governance", memtwig: "owner-lock + deterministic proposal queue (.curator/proposals.json)", mem0: "Autonomous background fact extraction & overwrites" },
-  { dim: "Secret protection", memtwig: "Built-in secret scanner blocks sync", mem0: "Not built in" },
-  { dim: "Coding harness support", memtwig: "Native hooks (Claude Code, Codex, Antigravity) + stdio/HTTP MCP", mem0: "Primarily app-level SDK / API" },
-  { dim: "Best suited for", memtwig: "Developers, freelancers, and teams sharing curated knowledge across harnesses", mem0: "Consumer or SaaS apps storing per-user chat personalization" },
+  { dim: "Primary storage", memtwig: "Plain Markdown in Git", mem0: "Vector + Graph DB" },
+  { dim: "Runtime footprint", memtwig: "Single 14 MB Go binary", mem0: "SDK + DB + LLM API key" },
+  { dim: "Offline operation", memtwig: "Full search & UI offline", mem0: "Requires cloud APIs" },
+  { dim: "Client isolation", memtwig: "Automatic cwd & remote routing", mem0: "Manual tenant IDs" },
+  { dim: "Write safety", memtwig: "Locked notes + diff proposals", mem0: "Background overwrites" },
+  { dim: "Secret protection", memtwig: "Built-in scanner blocks sync", mem0: "Not built in" },
+  { dim: "Coding agents", memtwig: "Native hooks + MCP + Studio UI", mem0: "App-level SDK" },
+];
+
+const memtwigWins = [
+  "You switch between multiple client repos and need strict isolation.",
+  "You use Claude Code, Codex, and Cursor on one shared vault.",
+  "You want plain Git diffs instead of silent memory overwrites.",
+];
+
+const mem0Wins = [
+  "You are building a SaaS app that needs per-user chat memory.",
+  "You want automatic background fact extraction from chat logs.",
+  "Your product already runs managed vector infrastructure.",
 ];
 
 const faqs = [
   {
     q: "Is memtwig a drop-in replacement for Mem0?",
-    a: "They solve different layers. Mem0 is built as a runtime API for SaaS applications that extract per-user preferences from chat logs. memtwig is a git-native, curated Markdown memory layer for developers, freelancers, and engineering teams using coding agents across multiple repositories and organizations.",
+    a: "They target different layers: Mem0 is an app SDK for SaaS chat personalization, while memtwig is local Git-native memory for coding agents across repositories.",
   },
   {
     q: "Can memtwig use vector embeddings like Mem0?",
-    a: "Yes. memtwig fuses local SQLite FTS5 BM25 with optional Ollama, OpenRouter, DeepInfra, OpenAI, or Cloudflare embeddings via Reciprocal Rank Fusion (k=60), and degrades automatically to BM25 when offline.",
+    a: "Yes. You can enable Ollama, OpenRouter, DeepInfra, OpenAI, or Cloudflare embeddings anytime, while keeping local keyword search working offline.",
   },
   {
-    q: "Why store memory in Git instead of a vector database?",
-    a: "Git provides human readability, diffs, blame, rollbacks, and zero vendor lock-in. Humans and agents share the exact same Markdown source of truth while SQLite FTS5 acts purely as a rebuildable local index.",
+    q: "Why keep memory in Git instead of a vector database?",
+    a: "Git gives you readable diffs, rollbacks, and zero vendor lock-in while the local SQLite index stays completely rebuildable.",
   },
 ];
 ---
@@ -36,21 +48,30 @@ const faqs = [
   path="/vs/mem0"
   faqs={faqs}
 >
-  <header>
-    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.08]">
+  <header class="max-w-3xl">
+    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.06]">
       memtwig vs Mem0
     </h1>
-    <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-      Choose memtwig when you want human-readable Markdown in Git, automatic multi-org isolation by Git remote, and proposal-gated agent writes in one 14 MB Go binary. Choose Mem0 when you need an embedded SDK API for per-user chat memory inside a SaaS product.
+    <p class="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+      Local Git Markdown vaults with diff approval vs cloud vector extraction APIs.
     </p>
   </header>
 
+  <section class="mt-10">
+    <VsDiagram variant="mem0" />
+  </section>
+
   <section class="mt-10 overflow-x-auto rounded-lg border border-border bg-card">
-    <table class="w-full min-w-[580px] border-collapse text-left text-sm sm:text-base">
+    <table class="w-full min-w-[540px] border-collapse text-left text-sm sm:text-base">
       <thead>
         <tr class="border-b border-border bg-muted">
           <th class="px-5 py-3.5 font-medium text-muted-foreground">Dimension</th>
-          <th class="px-5 py-3.5 font-medium text-foreground">memtwig (v1.4.2)</th>
+          <th class="px-5 py-3.5 font-medium text-foreground">
+            <span class="inline-flex items-center gap-2">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+              memtwig
+            </span>
+          </th>
           <th class="px-5 py-3.5 font-medium text-muted-foreground">Mem0</th>
         </tr>
       </thead>
@@ -68,26 +89,41 @@ const faqs = [
 
   <section class="mt-10 grid gap-4 sm:grid-cols-2">
     <div class="rounded-lg border border-border bg-card p-6">
-      <h2 class="text-xl font-medium text-foreground">When memtwig wins</h2>
+      <h2 class="flex items-center gap-2 text-lg font-medium text-foreground">
+        <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+        Choose memtwig when
+      </h2>
       <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
-        <li>You switch between multiple client repos and need hard isolation across vaults.</li>
-        <li>You use Claude Code, Codex, and Cursor together and want one shared memory layer.</li>
-        <li>You refuse autonomous memory overwrites and want reviewable proposals with secret scanning.</li>
+        {memtwigWins.map((item) => (
+          <li class="flex items-start gap-2.5">
+            <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+            <span>{item}</span>
+          </li>
+        ))}
       </ul>
     </div>
     <div class="rounded-lg border border-border bg-card p-6">
-      <h2 class="text-xl font-medium text-foreground">When Mem0 wins</h2>
+      <h2 class="flex items-center gap-2 text-lg font-medium text-foreground">
+        <span class="h-2 w-2 rounded-full bg-zinc-600"></span>
+        Choose Mem0 when
+      </h2>
       <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
-        <li>You are building a multi-user consumer or B2B chat app that needs a drop-in cloud API.</li>
-        <li>You want automatic background fact extraction from conversational transcripts without Markdown files.</li>
-        <li>Your team prefers managed cloud infrastructure over Git-backed knowledge bases.</li>
+        {mem0Wins.map((item) => (
+          <li class="flex items-start gap-2.5">
+            <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-600"></span>
+            <span>{item}</span>
+          </li>
+        ))}
       </ul>
     </div>
   </section>
 
   <div class="mt-10 flex flex-wrap gap-3">
-    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.4.2</a>
-    <a href="https://github.com/memtwig/memtwig" target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
+    <a href="/vs/claude-md" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+      Compare vs CLAUDE.md
+    </a>
+    <a href="https://github.com/memtwig/memtwig" target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "ghost", size: "lg" }))}>
       View on GitHub
     </a>
   </div>

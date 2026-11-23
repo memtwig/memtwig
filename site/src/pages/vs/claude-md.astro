@@ -1,25 +1,37 @@
 ---
 import ArticleLayout from "@/layouts/ArticleLayout.astro";
+import VsDiagram from "@/components/VsDiagram.astro";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const rows = [
-  { dim: "Context window cost", memtwig: "Top-K relevant snippets via FTS5 + RRF (~400 chars each)", staticMd: "Entire file loaded into every prompt" },
-  { dim: "Cross-tool portability", memtwig: "Works identically across Claude Code, Codex, Cursor, Antigravity, MCP", staticMd: "Fragmented across CLAUDE.md, AGENTS.md, .cursorrules" },
-  { dim: "Multi-repo & multi-org", memtwig: "One vault per client org + shared personal preferences (always_include)", staticMd: "Duplicated manually in every repository" },
-  { dim: "Hygiene & staleness", memtwig: "8 KB cap, append-only invalidate archive, curate staleness alerts", staticMd: "Grows unbounded until rules contradict each other" },
-  { dim: "Agent edits", memtwig: "owner-lock & deterministic proposal queue", staticMd: "Unchecked edits or manual copy-paste" },
-  { dim: "Audit & secrets", memtwig: "Secret scanner blocks sync; HTTP mode logs audit.jsonl", staticMd: "None" },
+  { dim: "Context cost", memtwig: "Top-K snippets (~400 chars)", staticMd: "Full file in every prompt" },
+  { dim: "Tool portability", memtwig: "Shared across all coding agents", staticMd: "Split across tool filenames" },
+  { dim: "Multi-repo & clients", memtwig: "Per-org vaults + shared personal rules", staticMd: "Copied manually per repo" },
+  { dim: "Hygiene & size", memtwig: "8 KB soft cap + append-only archives", staticMd: "Grows until rules conflict" },
+  { dim: "Agent edits", memtwig: "Locked notes + diff proposals", staticMd: "Unchecked direct edits" },
+  { dim: "Secret safety", memtwig: "Scanner blocks sync", staticMd: "None" },
+];
+
+const keepLocal = [
+  "Repo-specific build, test, and lint commands.",
+  "Folder layout notes tied only to that single codebase.",
+];
+
+const moveToMemtwig = [
+  "Client infrastructure, deploy URLs, and server details.",
+  "Personal coding preferences shared across every tool.",
+  "Dated project decisions and architecture history.",
 ];
 
 const faqs = [
   {
     q: "Do I have to delete my existing CLAUDE.md or AGENTS.md files?",
-    a: "No. Keep repo-specific build commands in CLAUDE.md, and use memtwig for cross-repo facts, client infrastructure, architectural decisions, and personal style rules shared across harnesses.",
+    a: "No. Keep repo-local build commands in CLAUDE.md, and use memtwig for cross-repo facts, client vaults, and personal rules.",
   },
   {
-    q: "How fast is memtwig compared to reading Markdown files directly?",
-    a: "memtwig indexes 109 Markdown notes (1,078 chunks) into embedded SQLite FTS5 in roughly 105 ms and returns gated per-turn snippets in milliseconds, skipping courtesy prompts like 'ok thanks' automatically.",
+    q: "How fast is memtwig compared to loading raw Markdown files?",
+    a: "Indexing 109 notes takes roughly half a second locally, and per-turn hook search returns only matching snippets while skipping courtesy messages.",
   },
 ];
 ---
@@ -30,21 +42,30 @@ const faqs = [
   path="/vs/claude-md"
   faqs={faqs}
 >
-  <header>
-    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.08]">
+  <header class="max-w-3xl">
+    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.06]">
       memtwig vs CLAUDE.md
     </h1>
-    <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-      Static files like CLAUDE.md and .cursorrules work for a single repository and a single tool. memtwig turns curated Markdown folders into an indexed, scoped, cross-harness memory layer without bloating every prompt.
+    <p class="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+      Top-K snippets shared across every agent vs static rule files duplicated per repo.
     </p>
   </header>
 
+  <section class="mt-10">
+    <VsDiagram variant="claude-md" />
+  </section>
+
   <section class="mt-10 overflow-x-auto rounded-lg border border-border bg-card">
-    <table class="w-full min-w-[580px] border-collapse text-left text-sm sm:text-base">
+    <table class="w-full min-w-[540px] border-collapse text-left text-sm sm:text-base">
       <thead>
         <tr class="border-b border-border bg-muted">
           <th class="px-5 py-3.5 font-medium text-muted-foreground">Dimension</th>
-          <th class="px-5 py-3.5 font-medium text-foreground">memtwig</th>
+          <th class="px-5 py-3.5 font-medium text-foreground">
+            <span class="inline-flex items-center gap-2">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+              memtwig
+            </span>
+          </th>
           <th class="px-5 py-3.5 font-medium text-muted-foreground">CLAUDE.md / .cursorrules</th>
         </tr>
       </thead>
@@ -60,9 +81,43 @@ const faqs = [
     </table>
   </section>
 
-  <section class="mt-10 rounded-lg border border-border bg-card p-6 sm:p-8">
-    <h2 class="text-2xl font-medium text-foreground">Migrate existing notes in 30 seconds</h2>
-    <pre class="mt-4 overflow-x-auto text-sm leading-relaxed text-foreground"><code>{`memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
+  <section class="mt-10 grid gap-4 sm:grid-cols-2">
+    <div class="rounded-lg border border-border bg-card p-6">
+      <h2 class="flex items-center gap-2 text-lg font-medium text-foreground">
+        <span class="h-2 w-2 rounded-full bg-zinc-500"></span>
+        Keep CLAUDE.md for
+      </h2>
+      <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+        {keepLocal.map((item) => (
+          <li class="flex items-start gap-2.5">
+            <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-500"></span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+    <div class="rounded-lg border border-border bg-card p-6">
+      <h2 class="flex items-center gap-2 text-lg font-medium text-foreground">
+        <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+        Use memtwig for
+      </h2>
+      <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+        {moveToMemtwig.map((item) => (
+          <li class="flex items-start gap-2.5">
+            <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="mt-10 overflow-hidden rounded-lg border border-border bg-[#0b0b0e]">
+    <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3">
+      <span class="text-sm font-medium text-foreground">Migrate in 30 seconds</span>
+      <span class="text-xs text-muted-foreground">shell</span>
+    </div>
+    <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{`memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
 memtwig index
 memtwig install claude
 memtwig install cursor
@@ -70,7 +125,7 @@ memtwig install codex`}</code></pre>
   </section>
 
   <div class="mt-10 flex flex-wrap gap-3">
-    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.4.2</a>
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
     <a href="/mcp-memory" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
       Explore MCP Memory Server
     </a>

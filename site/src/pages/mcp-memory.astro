@@ -1,25 +1,26 @@
 ---
 import ArticleLayout from "@/layouts/ArticleLayout.astro";
+import VsDiagram from "@/components/VsDiagram.astro";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const tools = [
-  { name: "memory_search", desc: "Hybrid SQLite FTS5 BM25 + vector RRF search scoped to active vaults in cwd." },
-  { name: "memory_read", desc: "Read a specific Markdown note with path-traversal and scope enforcement." },
-  { name: "memory_write", desc: "Direct write allowed only on direct vaults and non-owner-locked notes." },
-  { name: "memory_propose", desc: "Queue deterministic create/update/append proposals into .curator/proposals.json." },
-  { name: "memory_decide", desc: "Log a dated decision in decisions/YYYY-MM.md and link/propose it on the project note." },
-  { name: "memory_status", desc: "Inspect resolved vaults, write modes, match reasons, and open proposal counts." },
+  { name: "memory_search", desc: "Scoped local keyword + optional vector search across active vaults." },
+  { name: "memory_read", desc: "Read a Markdown note with path-traversal and scope enforcement." },
+  { name: "memory_write", desc: "Direct write allowed only on unlocked direct vaults." },
+  { name: "memory_propose", desc: "Queue deterministic create, update, or append diff proposals." },
+  { name: "memory_decide", desc: "Log a dated decision and propose linking it on the target project note." },
+  { name: "memory_status", desc: "Inspect resolved vaults, write modes, and open proposal counts." },
 ];
 
 const faqs = [
   {
     q: "Does memtwig support both local stdio and remote HTTP MCP?",
-    a: "Yes. Run 'memtwig mcp' for local stdio clients (Claude Code, Cursor, Codex, Antigravity) or 'memtwig serve --addr 127.0.0.1:8787' for Streamable HTTP MCP (/mcp) plus REST API endpoints protected by Bearer token RBAC and append-only audit.jsonl.",
+    a: "Yes. Run 'memtwig mcp' for local stdio clients or 'memtwig serve' for Streamable HTTP MCP and REST endpoints with RBAC and audit logging.",
   },
   {
     q: "How does RBAC work on the HTTP MCP server?",
-    a: "Each token policy in config.toml defines a role (reader, proposer, writer, admin), allowed vaults, and optional path globs. A proposer token for client A cannot read client B or overwrite owner-locked files.",
+    a: "Each Bearer token policy defines a role (reader, proposer, writer, admin), allowed vaults, and optional path globs.",
   },
 ];
 ---
@@ -30,17 +31,21 @@ const faqs = [
   path="/mcp-memory"
   faqs={faqs}
 >
-  <header>
-    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.08]">
-      Open-source MCP memory server for multi-org teams.
+  <header class="max-w-3xl">
+    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.06]">
+      Open-source MCP memory server.
     </h1>
-    <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-      memtwig ships a zero-dependency Model Context Protocol server over stdio and Streamable HTTP. Every tool call enforces workspace vault isolation, owner-lock rules, and role-based access control.
+    <p class="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+      One Go binary speaking stdio MCP locally and Streamable HTTP with RBAC for teams.
     </p>
   </header>
 
+  <section class="mt-10">
+    <VsDiagram variant="mcp" />
+  </section>
+
   <section class="mt-10 overflow-x-auto rounded-lg border border-border bg-card">
-    <table class="w-full min-w-[540px] border-collapse text-left text-sm sm:text-base">
+    <table class="w-full min-w-[520px] border-collapse text-left text-sm sm:text-base">
       <thead>
         <tr class="border-b border-border bg-muted">
           <th class="px-5 py-3.5 font-medium text-foreground">MCP Tool</th>
@@ -50,7 +55,11 @@ const faqs = [
       <tbody class="divide-y divide-border">
         {tools.map((t) => (
           <tr>
-            <td class="px-5 py-3.5 font-medium text-foreground">{t.name}</td>
+            <td class="px-5 py-3.5">
+              <span class="rounded bg-muted px-2 py-0.5 text-xs font-medium text-emerald-400">
+                {t.name}
+              </span>
+            </td>
             <td class="px-5 py-3.5 text-muted-foreground">{t.desc}</td>
           </tr>
         ))}
@@ -59,9 +68,12 @@ const faqs = [
   </section>
 
   <section class="mt-10 grid gap-4 sm:grid-cols-2">
-    <div class="rounded-lg border border-border bg-card p-6">
-      <h2 class="text-xl font-medium text-foreground">Local stdio (Cursor / Claude / Codex)</h2>
-      <pre class="mt-4 overflow-x-auto text-sm leading-relaxed text-foreground"><code>{`{
+    <div class="overflow-hidden rounded-lg border border-border bg-[#0b0b0e]">
+      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3">
+        <span class="text-sm font-medium text-foreground">Local stdio</span>
+        <span class="text-xs text-muted-foreground">mcp.json</span>
+      </div>
+      <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{`{
   "mcpServers": {
     "memtwig": {
       "command": "memtwig",
@@ -71,11 +83,13 @@ const faqs = [
 }`}</code></pre>
     </div>
 
-    <div class="rounded-lg border border-border bg-card p-6">
-      <h2 class="text-xl font-medium text-foreground">Team HTTP MCP + RBAC</h2>
-      <pre class="mt-4 overflow-x-auto text-sm leading-relaxed text-foreground"><code>{`memtwig serve --addr 127.0.0.1:8787
+    <div class="overflow-hidden rounded-lg border border-border bg-[#0b0b0e]">
+      <div class="flex items-center justify-between border-b border-border bg-card px-5 py-3">
+        <span class="text-sm font-medium text-foreground">Team HTTP + RBAC</span>
+        <span class="text-xs text-muted-foreground">shell</span>
+      </div>
+      <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{`memtwig serve --addr 127.0.0.1:8787
 
-# Endpoints:
 # POST /mcp
 # GET  /api/v1/search?q=deploy
 # POST /api/v1/proposals
@@ -84,9 +98,9 @@ const faqs = [
   </section>
 
   <div class="mt-10 flex flex-wrap gap-3">
-    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install memtwig v1.4.2</a>
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
     <a href="/vs/mem0" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
-      Compare with Mem0
+      Compare vs Mem0
     </a>
   </div>
 </ArticleLayout>
