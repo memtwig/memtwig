@@ -1,0 +1,103 @@
+---
+import ArticleLayout from "@/layouts/ArticleLayout.astro";
+import IntegrationDiagram from "@/components/IntegrationDiagram.astro";
+import { integrations, type Integration } from "@/data/integrations";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export function getStaticPaths() {
+  return integrations.map((integration) => ({
+    params: { slug: integration.slug },
+    props: { integration },
+  }));
+}
+
+interface Props {
+  integration: Integration;
+}
+
+const { integration } = Astro.props;
+const others = integrations.filter((item) => item.slug !== integration.slug);
+---
+
+<ArticleLayout
+  title={`Use memtwig with ${integration.name}`}
+  description={integration.description}
+  path={`/integrations/${integration.slug}`}
+  faqs={integration.faqs}
+>
+  <div>
+    <a
+      href="/integrations"
+      class="inline-block text-sm text-muted-foreground transition-colors hover:text-foreground"
+    >
+      ← All integrations
+    </a>
+  </div>
+
+  <header class="mt-6 max-w-3xl">
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.06]">
+        Use memtwig with {integration.name}
+      </h1>
+      <span class="rounded bg-muted px-2.5 py-1 text-xs font-medium text-emerald-400">
+        {integration.transportLabel}
+      </span>
+    </div>
+    <p class="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+      {integration.tagline}
+    </p>
+  </header>
+
+  <section class="mt-10">
+    <IntegrationDiagram integration={integration} />
+  </section>
+
+  <section class="mt-10 grid gap-4 lg:grid-cols-2">
+    {integration.steps.map((step) => (
+      <div class="overflow-hidden rounded-lg border border-border bg-[#0b0b0e]">
+        <div class="flex items-center justify-between gap-3 border-b border-border bg-card px-5 py-3">
+          <span class="text-sm font-medium text-foreground">{step.title}</span>
+          <span class="shrink-0 text-xs text-muted-foreground">{step.lang}</span>
+        </div>
+        <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{step.code}</code></pre>
+      </div>
+    ))}
+  </section>
+
+  <section class="mt-10 rounded-lg border border-border bg-card p-6">
+    <h2 class="flex items-center gap-2 text-lg font-medium text-foreground">
+      <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+      Why pair memtwig with {integration.name}
+    </h2>
+    <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+      {integration.highlights.map((item) => (
+        <li class="flex items-start gap-2.5">
+          <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-emerald-400"></span>
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-sm font-medium text-muted-foreground">More integrations</h2>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {others.map((item) => (
+        <a
+          href={`/integrations/${item.slug}`}
+          class={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          {item.name}
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <div class="mt-10 flex flex-wrap gap-3">
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
+    <a href="/mcp-memory" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+      MCP Reference
+    </a>
+  </div>
+</ArticleLayout>

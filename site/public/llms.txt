@@ -15,6 +15,17 @@
 - [memtwig vs CLAUDE.md](https://memtwig.com/vs/claude-md): Scaling static rules files across repositories and AI harnesses.
 - [Open-Source MCP Memory Server](https://memtwig.com/mcp-memory): Stdio and Streamable HTTP MCP tools, RBAC tokens, and audit logs.
 
+## Integrations
+- [All Integrations](https://memtwig.com/integrations): Overview of supported AI agents and transports.
+- [Hermes Agent](https://memtwig.com/integrations/hermes): Stdio MCP + shared SOUL.md identity.
+- [Grok Bot & CLI](https://memtwig.com/integrations/grok-bot): Stdio MCP for CLI and RBAC HTTP MCP for 24/7 bots.
+- [OpenBot](https://memtwig.com/integrations/openbot): Streamable HTTP MCP with per-coworker RBAC tokens and audit log.
+- [T3 Code](https://memtwig.com/integrations/t3-code): Shared worktree-routed vaults across orchestrated providers.
+- [Claude Code](https://memtwig.com/integrations/claude-code): Native UserPromptSubmit, SessionStart, and stdio MCP.
+- [Cursor](https://memtwig.com/integrations/cursor): Stdio MCP integration via ~/.cursor/mcp.json.
+- [OpenAI Codex](https://memtwig.com/integrations/codex): Stdio MCP in ~/.codex/config.toml plus hook adapter.
+- [Antigravity](https://memtwig.com/integrations/antigravity): PreInvocation injectSteps hook + stdio MCP.
+
 ## Documentation
 - [Full Reference (Markdown)](https://memtwig.com/llms-full.txt): Consolidated single-file technical reference for LLMs.
 - [Architecture](https://github.com/memtwig/memtwig/blob/main/docs/architecture.md): Storage, scope routing, SQLite FTS5 + RRF engine, hook gating, MCP stdio/HTTP, RBAC, audit.

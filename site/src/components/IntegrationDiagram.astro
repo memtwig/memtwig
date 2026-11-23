@@ -1,0 +1,82 @@
+---
+import type { Integration } from "@/data/integrations";
+
+interface Props {
+  integration: Integration;
+}
+
+const { integration } = Astro.props;
+const patternId = `grid-int-${integration.slug}`;
+---
+
+<div class="overflow-hidden rounded-lg border border-border bg-[#0b0b0e]">
+  <svg
+    viewBox="0 0 880 230"
+    class="block w-full h-auto"
+    style='font-family: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, sans-serif;'
+    role="img"
+    aria-label={`Diagram showing ${integration.name} connected to memtwig via ${integration.diagramNodes.channelLabel} with isolated vaults`}
+  >
+    <defs>
+      <pattern id={patternId} width="20" height="20" patternUnits="userSpaceOnUse">
+        <circle cx="1" cy="1" r="0.7" fill="#1b1b21" />
+      </pattern>
+    </defs>
+    <rect width="880" height="230" fill={`url(#${patternId})`} />
+
+    <!-- Wire 1: Client -> memtwig -->
+    <line x1="228" y1="110" x2="328" y2="110" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.85" />
+    <circle cx="328" cy="110" r="2.5" fill="#34d399" />
+    <rect x="236" y="76" width="84" height="22" rx="4" fill="#121217" stroke="#2f2f38" stroke-width="1" />
+    <text x="278" y="91" text-anchor="middle" fill="#34d399" font-size="10.5" font-weight="500">
+      {integration.diagramNodes.channelLabel}
+    </text>
+
+    <!-- Diverging wires: memtwig -> vaults -->
+    <path d="M 544 102 C 588 102, 588 56, 632 56" fill="none" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.9" />
+    <circle cx="632" cy="56" r="2.5" fill="#34d399" />
+
+    <path d="M 544 114 C 588 114, 588 119, 632 119" fill="none" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.65" />
+    <circle cx="632" cy="119" r="2.5" fill="#34d399" />
+
+    <!-- Left box: Tool / Agent -->
+    <rect x="24" y="58" width="204" height="104" rx="6" fill="#121217" stroke="#2f2f38" stroke-width="1" />
+    <circle cx="40" cy="79" r="3" fill="#34d399" />
+    <text x="50" y="83" fill="#8a8a93" font-size="11">{integration.maker}</text>
+    <text x="39" y="111" fill="#f4f4f5" font-size="15" font-weight="600">{integration.name}</text>
+    <text x="39" y="138" fill="#8a8a93" font-size="11">{integration.diagramNodes.clientSub}</text>
+
+    <!-- Center hub: memtwig -->
+    <rect x="328" y="52" width="216" height="116" rx="6" fill="#141418" stroke="#3a3a44" stroke-width="1.2" />
+    <circle cx="345" cy="74" r="3" fill="#34d399" />
+    <text x="355" y="78" fill="#fafafa" font-size="14" font-weight="600">memtwig</text>
+    <text x="344" y="106" fill="#a1a1aa" font-size="11">{integration.diagramNodes.channelSub}</text>
+
+    <rect x="344" y="128" width="76" height="22" rx="4" fill="#0d0d11" stroke="#282830" stroke-width="1" />
+    <text x="382" y="143" text-anchor="middle" fill="#d4d4d8" font-size="10.5">Studio UI</text>
+
+    <rect x="428" y="128" width="84" height="22" rx="4" fill="#0d0d11" stroke="#282830" stroke-width="1" />
+    <text x="470" y="143" text-anchor="middle" fill="#d4d4d8" font-size="10.5">Diff queue</text>
+
+    <!-- Top-right: Active Vault -->
+    <rect x="632" y="28" width="224" height="56" rx="6" fill="#121217" stroke="#2f2f38" stroke-width="1" />
+    <text x="648" y="52" fill="#f4f4f5" font-size="12.5" font-weight="500">Active Vault</text>
+    <text x="648" y="70" fill="#34d399" font-size="11">{integration.diagramNodes.vaultSub}</text>
+    <circle cx="838" cy="56" r="3" fill="#34d399" />
+
+    <!-- Middle-right: Personal Rules -->
+    <rect x="632" y="94" width="224" height="50" rx="6" fill="#121217" stroke="#2f2f38" stroke-width="1" />
+    <text x="648" y="116" fill="#f4f4f5" font-size="12.5" font-weight="500">Personal Rules</text>
+    <text x="648" y="133" fill="#8a8a93" font-size="10.5">SOUL.md · persona/**</text>
+    <circle cx="838" cy="119" r="3" fill="#34d399" />
+
+    <!-- Bottom-right: Blocked Vault -->
+    <g opacity="0.45">
+      <rect x="632" y="154" width="224" height="48" rx="6" fill="#0d0d10" stroke="#2a2a30" stroke-width="1" stroke-dasharray="4 3" />
+      <text x="648" y="175" fill="#8a8a93" font-size="12.5" font-weight="500">Other Clients</text>
+      <text x="648" y="191" fill="#71717a" font-size="10.5">isolated · blocked</text>
+      <circle cx="838" cy="178" r="5" fill="none" stroke="#71717a" stroke-width="1.2" />
+      <line x1="834.5" y1="181.5" x2="841.5" y2="174.5" stroke="#71717a" stroke-width="1.2" />
+    </g>
+  </svg>
+</div>

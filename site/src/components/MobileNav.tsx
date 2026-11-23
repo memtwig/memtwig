@@ -7,6 +7,7 @@ const links = [
   { href: "/#studio", label: "Studio" },
   { href: "/#features", label: "How it works" },
   { href: "/#isolation", label: "Isolation" },
+  { href: "/integrations", label: "Integrations" },
   { href: "/#install", label: "Install" },
   { href: "https://github.com/memtwig/memtwig", label: "GitHub", external: true },
 ];

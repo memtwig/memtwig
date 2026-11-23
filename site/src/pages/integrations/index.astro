@@ -1,0 +1,53 @@
+---
+import ArticleLayout from "@/layouts/ArticleLayout.astro";
+import { integrations } from "@/data/integrations";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+---
+
+<ArticleLayout
+  title="Integrations — Use memtwig with your AI agents"
+  description="Connect memtwig to Hermes Agent, Grok Bot, OpenBot, T3 Code, Claude Code, Cursor, OpenAI Codex, and Antigravity using MCP and native per-turn hooks."
+  path="/integrations"
+>
+  <header class="max-w-3xl">
+    <h1 class="text-balance text-4xl font-normal tracking-tight text-foreground sm:text-5xl leading-[1.06]">
+      Use memtwig with any AI agent.
+    </h1>
+    <p class="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+      One curated Markdown vault layer shared across autonomous bots, orchestrators, and terminal coding tools.
+    </p>
+  </header>
+
+  <section class="mt-10 grid gap-4 sm:grid-cols-2">
+    {integrations.map((item) => (
+      <a
+        href={`/integrations/${item.slug}`}
+        class="group flex flex-col justify-between rounded-lg border border-border bg-card p-6 transition-colors hover:border-zinc-600"
+      >
+        <div>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-medium text-foreground">{item.name}</h2>
+              <span class="text-xs text-muted-foreground">{item.maker}</span>
+            </div>
+            <span class="shrink-0 rounded bg-muted px-2 py-0.5 text-xs font-medium text-emerald-400">
+              {item.transportLabel}
+            </span>
+          </div>
+          <p class="mt-4 text-sm leading-relaxed text-muted-foreground">{item.tagline}</p>
+        </div>
+        <div class="mt-5 text-sm font-medium text-zinc-300 transition-colors group-hover:text-foreground">
+          Setup guide →
+        </div>
+      </a>
+    ))}
+  </section>
+
+  <div class="mt-10 flex flex-wrap gap-3">
+    <a href="/#install" class={cn(buttonVariants({ size: "lg" }))}>Install v1.4.2</a>
+    <a href="/mcp-memory" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+      Explore MCP Memory Server
+    </a>
+  </div>
+</ArticleLayout>
