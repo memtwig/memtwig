@@ -7,7 +7,7 @@ Git-native, multi-org Markdown memory layer for AI agents — shipped as a singl
 - **Git is the database, Markdown is the format:** human-readable, diffable, auditable, zero vendor lock-in.
 - **Multi-org isolation:** route vaults automatically by `cwd` or `git remote`. Working in Client A's repo exposes your personal preferences (`always_include`) + Client A's vault, never Client B's.
 - **Active hygiene:** deterministic linter (`check`), secret scanner, soft 8 KB cap per note, append-only archiving (`invalidate`), dated decisions (`decide`), deterministic + optional LLM semantic curation (`curate --llm`), and an idempotent proposal queue (`.curator/proposals.json` + append-only `history.jsonl`).
-- **Cross-harness & team-ready:** single CLI, stdio MCP server (`memtwig mcp`), Streamable HTTP MCP + REST API server with RBAC & audit log (`memtwig serve`), and per-turn gated prefetch hooks (`memtwig install <claude|cursor|codex|antigravity>`).
+- **Cross-harness & team-ready:** single CLI, interactive terminal UI (`memtwig tui`), stdio MCP server (`memtwig mcp`), Streamable HTTP MCP + REST API server with RBAC & audit log (`memtwig serve`), and per-turn gated prefetch hooks (`memtwig install <claude|cursor|codex|antigravity>`).
 
 ## Install
 

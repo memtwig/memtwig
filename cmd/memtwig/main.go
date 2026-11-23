@@ -29,11 +29,12 @@ import (
 	"github.com/vittoriocompagno/memtwig/internal/search"
 	"github.com/vittoriocompagno/memtwig/internal/server"
 	msync "github.com/vittoriocompagno/memtwig/internal/sync"
+	"github.com/vittoriocompagno/memtwig/internal/tui"
 	"github.com/vittoriocompagno/memtwig/internal/vault"
 )
 
 var (
-	version    = "1.1.0"
+	version    = "1.2.0"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -68,6 +69,7 @@ func main() {
 		cmdProposal(),
 		cmdMCP(),
 		cmdServe(),
+		cmdTUI(),
 		cmdHook(),
 		cmdInstall(),
 	)
@@ -827,6 +829,31 @@ func cmdServe() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&addr, "addr", "", "listen address (default from config [server].addr or 127.0.0.1:8787)")
 	return cmd
+}
+
+func cmdTUI() *cobra.Command {
+	return &cobra.Command{
+		Use:   "tui",
+		Short: "Launch interactive terminal UI (search notes, review proposal diffs, inspect vaults & audit)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(cfgPath)
+			if err != nil {
+				return err
+			}
+			st, err := index.Open(dbPath)
+			if err != nil {
+				return err
+			}
+			defer st.Close()
+			auditPath := config.ExpandHome(cfg.Server.AuditLogPath)
+			if auditPath == "" {
+				if cdir, err := config.DefaultCacheDir(); err == nil {
+					auditPath = filepath.Join(cdir, "audit.jsonl")
+				}
+			}
+			return tui.Run(cfg, st, audit.New(auditPath), cwdFlag, vaultFlag, version)
+		},
+	}
 }
 
 func cmdSync() *cobra.Command {
