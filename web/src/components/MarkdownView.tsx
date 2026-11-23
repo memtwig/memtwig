@@ -1,22 +1,46 @@
 import * as React from "react";
 
-function stripFrontmatter(raw: string): string {
-  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+const META_HEADER_RE = /^(status|stato|updated|aggiornat[oa]|valid_from|valido\s+dal|owner|proprietario)\s*:/i;
+
+function stripTopHeader(raw: string, skipTitle: boolean): { body: string; strippedH1: boolean } {
+  let lines = raw.replace(/\r\n/g, "\n").split("\n");
   if (lines.length > 0 && lines[0].trim() === "---") {
     for (let i = 1; i < lines.length; i++) {
       if (lines[i].trim() === "---") {
-        return lines.slice(i + 1).join("\n").replace(/^\n+/, "");
+        lines = lines.slice(i + 1);
+        break;
       }
     }
   }
+
   let start = 0;
-  while (
-    start < Math.min(lines.length, 6) &&
-    /^(status|stato|updated|aggiornat[oa]|valid_from|valido\s+dal|owner|proprietario)\s*:/i.test(lines[start].trim())
-  ) {
-    start++;
+  let seenH1 = false;
+  let keptH1: string | null = null;
+  const maxScan = Math.min(lines.length, 14);
+  while (start < maxScan) {
+    const trimmed = lines[start].trim();
+    if (trimmed === "") {
+      start++;
+      continue;
+    }
+    if (META_HEADER_RE.test(trimmed)) {
+      start++;
+      continue;
+    }
+    if (!seenH1 && trimmed.startsWith("# ")) {
+      seenH1 = true;
+      if (!skipTitle) {
+        keptH1 = lines[start];
+      }
+      start++;
+      continue;
+    }
+    break;
   }
-  return lines.slice(start).join("\n").replace(/^\n+/, "");
+
+  const rest = lines.slice(start).join("\n").replace(/^\n+/, "");
+  const body = keptH1 ? `${keptH1}\n\n${rest}` : rest;
+  return { body, strippedH1: seenH1 && skipTitle };
 }
 
 function renderInline(text: string): React.ReactNode[] {
@@ -44,12 +68,12 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: boolean }) {
-  const body = stripFrontmatter(raw);
+  const { body, strippedH1 } = stripTopHeader(raw, Boolean(skipTitle));
   const lines = body.split("\n");
   const blocks: React.ReactNode[] = [];
 
   let i = 0;
-  let skippedFirstH1 = false;
+  let skippedFirstH1 = strippedH1;
   while (i < lines.length) {
     const line = lines[i];
     const trimmed = line.trim();

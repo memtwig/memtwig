@@ -88,11 +88,11 @@ func CheckVault(vaultName, root string, maxNoteBytes int) (Report, error) {
 			add("error", n.RelPath, "future_date", fmt.Sprintf("updated date %s is in the future", n.Updated))
 		}
 		// Size warning (soft cap)
-		if int(n.SizeBytes) > maxNoteBytes {
+		if int(n.SizeBytes) > maxNoteBytes && !vault.IsDecisionLog(n.RelPath) {
 			add("warning", n.RelPath, "oversize_note", fmt.Sprintf("size %d bytes exceeds %d bytes cap (consider archiving)", n.SizeBytes, maxNoteBytes))
 		}
 		// Missing metadata warning
-		if n.Updated == "" && !strings.HasPrefix(n.RelPath, "decisions/") && !strings.HasPrefix(n.RelPath, "decisioni/") {
+		if n.Updated == "" && !vault.IsDecisionLog(n.RelPath) {
 			add("warning", n.RelPath, "missing_updated", "missing updated/Aggiornato date in header")
 		}
 	}

@@ -46,16 +46,32 @@ func TestDecideInvalidateAndCurate(t *testing.T) {
 		t.Fatalf("expected archived line in %s", arch)
 	}
 
-	// 3. Curate must flag oversize + stale and generate proposals
+	// Also verify >8KB monthly decision logs are exempt from oversize_note / archive proposals
+	for _, decDir := range []string{"decisions", "decisioni"} {
+		if err := os.MkdirAll(filepath.Join(tmp, decDir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		bigDec := "# Decisions 2026-10\n\n" + strings.Repeat("- 2026-10-01 proj: entry\n", 500)
+		if err := os.WriteFile(filepath.Join(tmp, decDir, "2026-10.md"), []byte(bigDec), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// 3. Curate must flag oversize + stale and generate proposals (without flagging decision logs)
 	rep, err := curator.Curate("test", tmp, 8192, 90)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.OversizeNotes < 1 || rep.StaleNotes < 1 || rep.ProposalsCreated < 2 {
+	if rep.OversizeNotes != 1 || rep.StaleNotes < 1 || rep.ProposalsCreated < 2 {
 		t.Fatalf("unexpected curate report: %+v", rep)
 	}
 	props, err := proposal.List(tmp, false)
 	if err != nil || len(props) < 2 {
 		t.Fatalf("expected >=2 proposals, got %d", len(props))
+	}
+	for _, p := range props {
+		if p.Kind == "archive" && (strings.HasPrefix(p.Path, "decisions/") || strings.HasPrefix(p.Path, "decisioni/")) {
+			t.Fatalf("unexpected archive proposal for decision log: %+v", p)
+		}
 	}
 }

@@ -384,7 +384,8 @@ export function App() {
   // Health gauge score for the left atmospheric focus panel
   const gaugePct = React.useMemo(() => {
     if (notes.length === 0) return 100;
-    const healthy = notes.filter((n) => n.size_bytes <= 8192).length;
+    const isDecisionLog = (p: string) => p.startsWith("decisions/") || p.startsWith("decisioni/");
+    const healthy = notes.filter((n) => isDecisionLog(n.path) || n.size_bytes <= 8192).length;
     return Math.round((healthy / notes.length) * 100);
   }, [notes]);
 

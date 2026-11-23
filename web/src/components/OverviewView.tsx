@@ -80,20 +80,86 @@ export function OverviewView({
   const totalKB = notes.reduce((acc, n) => acc + n.size_bytes, 0) / 1024;
   const maxVaultNotes = Math.max(1, ...vaults.map((v) => notes.filter((n) => n.vault === v.name).length));
 
-  // Mini graph coordinates for the bottom-left visual card
+  // Mini graph coordinates for the bottom-left visual card: pick highest-degree hub + connected neighbors
   const miniGraph = React.useMemo(() => {
-    const noteNodes = nodes.filter((n) => n.kind === "note").slice(0, 12);
-    const idSet = new Set(noteNodes.map((n) => n.id));
-    const placed = noteNodes.map((n, i) => {
-      const cols = Math.max(2, Math.ceil(noteNodes.length / 2));
+    const allNoteNodes = nodes.filter((n) => n.kind === "note");
+    if (allNoteNodes.length === 0) {
+      return { placed: [], map: new Map(), links: [] as GraphEdge[] };
+    }
+    const nodeMap = new Map(allNoteNodes.map((n) => [n.id, n]));
+    const deg = new Map<string, number>();
+    const adj = new Map<string, Set<string>>();
+
+    for (const e of noteLinks) {
+      if (!nodeMap.has(e.source) || !nodeMap.has(e.target)) continue;
+      deg.set(e.source, (deg.get(e.source) ?? 0) + 1);
+      deg.set(e.target, (deg.get(e.target) ?? 0) + 1);
+      if (!adj.has(e.source)) adj.set(e.source, new Set());
+      if (!adj.has(e.target)) adj.set(e.target, new Set());
+      adj.get(e.source)!.add(e.target);
+      adj.get(e.target)!.add(e.source);
+    }
+
+    const byDegDesc = [...allNoteNodes].sort(
+      (a, b) => (deg.get(b.id) ?? 0) - (deg.get(a.id) ?? 0) || a.label.localeCompare(b.label),
+    );
+
+    const picked: GraphNode[] = [];
+    const pickedIds = new Set<string>();
+    const maxNodes = Math.min(10, byDegDesc.length);
+
+    if (byDegDesc.length > 0) {
+      const seed = byDegDesc[0];
+      picked.push(seed);
+      pickedIds.add(seed.id);
+
+      const queue: string[] = [seed.id];
+      while (queue.length > 0 && picked.length < maxNodes) {
+        const cur = queue.shift()!;
+        const neighbors = Array.from(adj.get(cur) ?? [])
+          .filter((id) => !pickedIds.has(id) && nodeMap.has(id))
+          .sort((a, b) => (deg.get(b) ?? 0) - (deg.get(a) ?? 0));
+        for (const nid of neighbors) {
+          if (picked.length >= maxNodes) break;
+          pickedIds.add(nid);
+          picked.push(nodeMap.get(nid)!);
+          queue.push(nid);
+        }
+      }
+      for (const n of byDegDesc) {
+        if (picked.length >= maxNodes) break;
+        if (!pickedIds.has(n.id)) {
+          pickedIds.add(n.id);
+          picked.push(n);
+        }
+      }
+    }
+
+    // Place highest-degree nodes near the center columns so edges fan cleanly
+    const orderedSlots: GraphNode[] = new Array(picked.length);
+    const mid = Math.floor((picked.length - 1) / 2);
+    for (let i = 0; i < picked.length; i++) {
+      const offset = Math.ceil(i / 2);
+      const slot = i % 2 === 0 ? mid - offset : mid + offset;
+      const clamped = Math.max(0, Math.min(picked.length - 1, slot));
+      if (!orderedSlots[clamped]) {
+        orderedSlots[clamped] = picked[i];
+      } else {
+        const empty = orderedSlots.findIndex((x) => !x);
+        if (empty >= 0) orderedSlots[empty] = picked[i];
+      }
+    }
+
+    const cols = Math.max(2, Math.ceil(orderedSlots.length / 2));
+    const placed = orderedSlots.map((n, i) => {
       const row = i % 2;
       const col = Math.floor(i / 2);
-      const x = 36 + (col * 280) / Math.max(1, cols - 1);
-      const y = row === 0 ? 44 + ((col % 2) * 14) : 112 - ((col % 2) * 14);
+      const x = 42 + (col * 276) / Math.max(1, cols - 1);
+      const y = row === 0 ? 38 + (col % 2) * 14 : 106 - (col % 2) * 14;
       return { ...n, x, y };
     });
     const map = new Map(placed.map((p) => [p.id, p]));
-    const links = noteLinks.filter((e) => idSet.has(e.source) && idSet.has(e.target));
+    const links = noteLinks.filter((e) => pickedIds.has(e.source) && pickedIds.has(e.target));
     return { placed, map, links };
   }, [nodes, noteLinks]);
 
@@ -125,7 +191,9 @@ export function OverviewView({
           <div>
             <h1 className="text-[28px] font-medium tracking-tight text-foreground">Workspace</h1>
             <p className="mt-1 text-[13px] text-muted-foreground">
-              {vaults.length} vaults · {totalNotes} notes · {noteLinks.length} links
+              {vaults.length} {vaults.length === 1 ? "vault" : "vaults"} · {totalNotes}{" "}
+              {totalNotes === 1 ? "note" : "notes"} · {noteLinks.length}{" "}
+              {noteLinks.length === 1 ? "link" : "links"}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -188,7 +256,9 @@ export function OverviewView({
                 <div className="text-3xl font-normal tracking-tight tabular-nums text-foreground">
                   {totalKB.toFixed(1)} <span className="text-sm text-muted-foreground">KB</span>
                 </div>
-                <div className="mt-0.5 text-[11px] text-muted-foreground">{totalNotes} active notes</div>
+                <div className="mt-0.5 text-[11px] text-muted-foreground">
+                  {totalNotes} active {totalNotes === 1 ? "note" : "notes"}
+                </div>
               </div>
               <svg viewBox="0 0 180 48" className="h-12 w-full">
                 {dotCols.map((h, ci) =>
@@ -227,7 +297,7 @@ export function OverviewView({
                   {proposals.length}
                 </div>
                 <div className="mt-0.5 text-[11px] text-muted-foreground">
-                  {auditEvents.length} audit events
+                  {auditEvents.length} audit {auditEvents.length === 1 ? "event" : "events"}
                 </div>
               </div>
               <svg viewBox="0 0 180 48" className="h-12 w-full">

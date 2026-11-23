@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	version    = "1.4.1"
+	version    = "1.4.2"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string

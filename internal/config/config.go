@@ -128,6 +128,9 @@ func DefaultConfigPath() (string, error) {
 	if env := os.Getenv("MEMTWIG_CONFIG"); env != "" {
 		return ExpandHome(env), nil
 	}
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(ExpandHome(xdg), "memtwig", "config.toml"), nil
+	}
 	h, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -139,16 +142,19 @@ func DefaultDBPath() (string, error) {
 	if env := os.Getenv("MEMTWIG_DB"); env != "" {
 		return ExpandHome(env), nil
 	}
-	h, err := os.UserHomeDir()
+	cacheDir, err := DefaultCacheDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(h, DefaultDBRelPath), nil
+	return filepath.Join(cacheDir, "index.db"), nil
 }
 
 func DefaultCacheDir() (string, error) {
 	if env := os.Getenv("MEMTWIG_CACHE_DIR"); env != "" {
 		return ExpandHome(env), nil
+	}
+	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
+		return filepath.Join(ExpandHome(xdg), "memtwig"), nil
 	}
 	h, err := os.UserHomeDir()
 	if err != nil {

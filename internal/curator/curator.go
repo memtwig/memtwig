@@ -189,7 +189,7 @@ func Curate(vaultName, vaultRoot string, maxNoteBytes int, staleDays int) (Curat
 
 	for _, n := range notes {
 		noteByPath[n.RelPath] = n
-		if int(n.SizeBytes) > maxNoteBytes {
+		if int(n.SizeBytes) > maxNoteBytes && !vault.IsDecisionLog(n.RelPath) {
 			rep.OversizeNotes++
 			_, created, _ := proposal.Add(vaultRoot, proposal.Proposal{
 				Kind:    "archive",

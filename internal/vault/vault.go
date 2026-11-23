@@ -49,6 +49,12 @@ var (
 	reOwner     = regexp.MustCompile(`(?i)^(?:owner|proprietario)\s*:\s*(\S+)`)
 )
 
+// IsDecisionLog reports whether relPath is an append-only monthly decision log (decisions/ or decisioni/).
+func IsDecisionLog(relPath string) bool {
+	rel := filepath.ToSlash(strings.TrimPrefix(relPath, "/"))
+	return strings.HasPrefix(rel, "decisions/") || strings.HasPrefix(rel, "decisioni/")
+}
+
 // InitOptions customizes vault scaffolding.
 type InitOptions struct {
 	NoScaffold bool

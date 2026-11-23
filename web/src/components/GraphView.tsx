@@ -67,6 +67,7 @@ export function GraphView({
   const [zoom, setZoom] = React.useState(1);
   const [pan, setPan] = React.useState({ x: 0, y: 0 });
   const dragRef = React.useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const didDragRef = React.useRef(false);
 
   const filteredNodes = React.useMemo(
     () => (vaultFilter === "all" ? nodes : nodes.filter((n) => n.vault === vaultFilter)),
@@ -78,7 +79,17 @@ export function GraphView({
     [edges, visibleIds],
   );
 
-  const { positioned, clusters, viewW, viewH } = React.useMemo(() => {
+  const degreeById = React.useMemo(() => {
+    const deg = new Map<string, number>();
+    for (const e of filteredEdges) {
+      if (e.kind === "contains") continue;
+      deg.set(e.source, (deg.get(e.source) ?? 0) + 1);
+      deg.set(e.target, (deg.get(e.target) ?? 0) + 1);
+    }
+    return deg;
+  }, [filteredEdges]);
+
+  const { positioned, clusters, vaultNoteCounts, viewW, viewH } = React.useMemo(() => {
     const vaultNodes = filteredNodes
       .filter((n) => n.kind === "vault")
       .sort((a, b) => a.vault.localeCompare(b.vault));
@@ -93,19 +104,60 @@ export function GraphView({
 
     const pos: PositionedNode[] = [];
     const boxes: ClusterBox[] = [];
+    const counts = new Map<string, number>();
     const colGap = 40;
     const padX = 36;
     const padY = 44;
     let cursorX = padX;
     let maxH = 440;
 
+    const placeRing = (ringNotes: GraphNode[], cx: number, cy: number, r: number, angleOffset = 0) => {
+      ringNotes.forEach((nn, ni) => {
+        const angle = (2 * Math.PI * ni) / Math.max(1, ringNotes.length) - Math.PI / 2 + angleOffset;
+        pos.push({
+          ...nn,
+          x: cx + Math.cos(angle) * r,
+          y: cy + Math.sin(angle) * r,
+        });
+      });
+    };
+
     vaultNodes.forEach((vn) => {
-      const vNotes = (notesByVault.get(vn.vault) ?? []).sort((a, b) =>
-        (a.path ?? "").localeCompare(b.path ?? ""),
+      const vNotes = (notesByVault.get(vn.vault) ?? []).sort(
+        (a, b) => (a.folder ?? "").localeCompare(b.folder ?? "") || (a.path ?? "").localeCompare(b.path ?? ""),
       );
-      const radius = Math.max(120, Math.min(200, 92 + vNotes.length * 18));
-      const boxW = radius * 2 + 190;
-      const boxH = radius * 2 + 128;
+      counts.set(vn.vault, vNotes.length);
+
+      if (vNotes.length <= 20) {
+        const radius = Math.max(120, Math.min(200, 92 + vNotes.length * 18));
+        const boxW = radius * 2 + 190;
+        const boxH = radius * 2 + 128;
+        const cx = cursorX + boxW / 2;
+        const cy = padY + boxH / 2 + 12;
+
+        boxes.push({
+          vault: vn.vault,
+          vaultKind: vn.vault_kind,
+          defaultWrite: vn.default_write ?? "propose",
+          x: cursorX,
+          y: padY,
+          w: boxW,
+          h: boxH,
+        });
+        pos.push({ ...vn, x: cx, y: cy });
+        placeRing(vNotes, cx, cy, vNotes.length === 1 ? radius * 0.72 : radius);
+
+        cursorX += boxW + colGap;
+        if (boxH + padY * 2 > maxH) maxH = boxH + padY * 2;
+        return;
+      }
+
+      // Dense vault (>20 notes): pull hub notes to inner ring and stagger remaining notes across mid & outer rings
+      const rInner = 115;
+      const rMid = 225;
+      const rOuter = 320;
+      const boxW = rOuter * 2 + 200;
+      const boxH = rOuter * 2 + 140;
       const cx = cursorX + boxW / 2;
       const cy = padY + boxH / 2 + 12;
 
@@ -118,18 +170,27 @@ export function GraphView({
         w: boxW,
         h: boxH,
       });
-
       pos.push({ ...vn, x: cx, y: cy });
 
-      vNotes.forEach((nn, ni) => {
-        const angle = (2 * Math.PI * ni) / Math.max(1, vNotes.length) - Math.PI / 2;
-        const r = vNotes.length === 1 ? radius * 0.72 : radius;
-        pos.push({
-          ...nn,
-          x: cx + Math.cos(angle) * r,
-          y: cy + Math.sin(angle) * r,
-        });
-      });
+      const hubs = vNotes
+        .filter((n) => (degreeById.get(n.id) ?? 0) >= 4)
+        .sort((a, b) => (degreeById.get(b.id) ?? 0) - (degreeById.get(a.id) ?? 0) || (a.path ?? "").localeCompare(b.path ?? ""))
+        .slice(0, 10);
+      const hubSet = new Set(hubs.map((n) => n.id));
+      const remaining = vNotes.filter((n) => !hubSet.has(n.id));
+      const midCount = Math.round(remaining.length * 0.4);
+      const midNotes = remaining.slice(0, midCount);
+      const outerNotes = remaining.slice(midCount);
+
+      if (hubs.length > 0) {
+        placeRing(hubs, cx, cy, rInner);
+      }
+      if (midNotes.length > 0) {
+        placeRing(midNotes, cx, cy, rMid, Math.PI / Math.max(1, midNotes.length));
+      }
+      if (outerNotes.length > 0) {
+        placeRing(outerNotes, cx, cy, rOuter);
+      }
 
       cursorX += boxW + colGap;
       if (boxH + padY * 2 > maxH) maxH = boxH + padY * 2;
@@ -138,10 +199,11 @@ export function GraphView({
     return {
       positioned: pos,
       clusters: boxes,
+      vaultNoteCounts: counts,
       viewW: Math.max(920, cursorX + padX - colGap),
       viewH: Math.max(540, maxH),
     };
-  }, [filteredNodes]);
+  }, [filteredNodes, degreeById]);
 
   const byId = React.useMemo(() => {
     const m = new Map<string, PositionedNode>();
@@ -149,7 +211,47 @@ export function GraphView({
     return m;
   }, [positioned]);
 
+  const noteCount = positioned.filter((n) => n.kind === "note").length;
+  const linkCount = filteredEdges.filter((e) => e.kind !== "contains").length;
+  const isDenseGraph = noteCount > 20;
+
+  const topHubIds = React.useMemo(() => {
+    const s = new Set<string>();
+    const byVault = new Map<string, PositionedNode[]>();
+    for (const n of positioned) {
+      if (n.kind !== "note") continue;
+      if ((degreeById.get(n.id) ?? 0) < 2) continue;
+      const list = byVault.get(n.vault) ?? [];
+      list.push(n);
+      byVault.set(n.vault, list);
+    }
+    for (const list of byVault.values()) {
+      list
+        .sort((a, b) => (degreeById.get(b.id) ?? 0) - (degreeById.get(a.id) ?? 0) || a.label.localeCompare(b.label))
+        .slice(0, 8)
+        .forEach((n) => s.add(n.id));
+    }
+    return s;
+  }, [positioned, degreeById]);
+
   const activeFocus = hoveredId ?? selectedId;
+
+  const focusedNeighborLabels = React.useMemo(() => {
+    const s = new Set<string>();
+    if (!activeFocus) return s;
+    const neighborIds: string[] = [];
+    for (const e of filteredEdges) {
+      if (e.kind === "contains") continue;
+      if (e.source === activeFocus) neighborIds.push(e.target);
+      else if (e.target === activeFocus) neighborIds.push(e.source);
+    }
+    neighborIds
+      .sort((a, b) => (degreeById.get(b) ?? 0) - (degreeById.get(a) ?? 0))
+      .slice(0, 12)
+      .forEach((id) => s.add(id));
+    return s;
+  }, [activeFocus, filteredEdges, degreeById]);
+
   const connectedSet = React.useMemo(() => {
     const s = new Set<string>();
     if (!activeFocus) return s;
@@ -161,8 +263,23 @@ export function GraphView({
     return s;
   }, [activeFocus, filteredEdges]);
 
-  const selectedNode =
-    selectedId ? byId.get(selectedId) ?? null : positioned.find((n) => n.kind === "note") ?? null;
+  const defaultInspectorNode = React.useMemo(() => {
+    const noteNodes = positioned.filter((n) => n.kind === "note");
+    if (noteNodes.length === 0) return null;
+    let best = noteNodes[0];
+    let bestDeg = degreeById.get(best.id) ?? 0;
+    for (const n of noteNodes) {
+      const d = degreeById.get(n.id) ?? 0;
+      if (d > bestDeg) {
+        best = n;
+        bestDeg = d;
+      }
+    }
+    return best;
+  }, [positioned, degreeById]);
+
+  const selectedNode = selectedId ? byId.get(selectedId) ?? null : defaultInspectorNode;
+
   const selectedLinks = React.useMemo(() => {
     if (!selectedNode) return [];
     return filteredEdges
@@ -175,9 +292,6 @@ export function GraphView({
       .filter((x) => Boolean(x.other));
   }, [selectedNode, filteredEdges, byId]);
 
-  const noteCount = positioned.filter((n) => n.kind === "note").length;
-  const linkCount = filteredEdges.filter((e) => e.kind !== "contains").length;
-
   return (
     <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-background">
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -185,7 +299,8 @@ export function GraphView({
           <div className="flex min-w-0 items-center gap-3 text-[13px]">
             <span className="shrink-0 font-medium text-foreground">Graph</span>
             <span className="truncate text-xs text-muted-foreground tabular-nums">
-              {clusters.length} vaults · {noteCount} notes · {linkCount} links
+              {clusters.length} {clusters.length === 1 ? "vault" : "vaults"} · {noteCount}{" "}
+              {noteCount === 1 ? "note" : "notes"} · {linkCount} {linkCount === 1 ? "link" : "links"}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -222,13 +337,19 @@ export function GraphView({
         <div
           className="relative flex-1 cursor-grab overflow-hidden active:cursor-grabbing"
           onMouseDown={(e) => {
+            didDragRef.current = false;
             dragRef.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
           }}
           onMouseMove={(e) => {
             if (!dragRef.current) return;
+            const dx = e.clientX - dragRef.current.x;
+            const dy = e.clientY - dragRef.current.y;
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+              didDragRef.current = true;
+            }
             setPan({
-              x: dragRef.current.px + (e.clientX - dragRef.current.x),
-              y: dragRef.current.py + (e.clientY - dragRef.current.y),
+              x: dragRef.current.px + dx,
+              y: dragRef.current.py + dy,
             });
           }}
           onMouseUp={() => {
@@ -242,13 +363,19 @@ export function GraphView({
             setZoom((z) => Math.min(2, Math.max(0.55, +(z + delta).toFixed(2))));
           }}
         >
-          <svg className="h-full w-full" viewBox={`0 0 ${viewW} ${viewH}`}>
+          <svg
+            className="h-full w-full"
+            viewBox={`0 0 ${viewW} ${viewH}`}
+            onClick={() => {
+              if (!didDragRef.current) setSelectedId(null);
+            }}
+          >
             <defs>
               <pattern id="mt-grid" width="24" height="24" patternUnits="userSpaceOnUse">
                 <circle cx="1" cy="1" r="0.7" fill="#1e1e23" />
               </pattern>
               <marker id="arrow-link" viewBox="0 0 10 10" refX="16" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#d4d4d8" />
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#5eead4" />
               </marker>
               <marker id="arrow-decision" viewBox="0 0 10 10" refX="16" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#a1a1aa" />
@@ -284,10 +411,10 @@ export function GraphView({
                 const s = byId.get(e.source);
                 const t = byId.get(e.target);
                 if (!s || !t) return null;
-                const isSemantic = e.kind !== "contains";
-                const highlighted =
-                  !activeFocus || (connectedSet.has(e.source) && connectedSet.has(e.target));
-                if (!isSemantic) {
+                if (e.kind === "contains") {
+                  if ((vaultNoteCounts.get(s.vault) ?? 0) > 20) return null;
+                  const highlighted =
+                    !activeFocus || (connectedSet.has(e.source) && connectedSet.has(e.target));
                   return (
                     <line
                       key={idx}
@@ -301,32 +428,63 @@ export function GraphView({
                     />
                   );
                 }
+
+                const isFocused = Boolean(activeFocus && (e.source === activeFocus || e.target === activeFocus));
                 const mx = (s.x + t.x) / 2;
                 const my = (s.y + t.y) / 2;
                 const dx = t.x - s.x;
                 const dy = t.y - s.y;
                 const cx = mx - dy * 0.16;
                 const cy = my + dx * 0.16;
+
+                let stroke = e.kind === "decision" ? "#a1a1aa" : "#d4d4d8";
+                let strokeWidth = 1.6;
+                let strokeOpacity = !activeFocus || isFocused ? 0.85 : 0.12;
+                let markerEnd: string | undefined =
+                  e.kind === "decision" ? "url(#arrow-decision)" : "url(#arrow-link)";
+
+                if (isDenseGraph) {
+                  if (!activeFocus) {
+                    strokeOpacity = 0.14;
+                    strokeWidth = 1;
+                    markerEnd = undefined;
+                  } else if (isFocused) {
+                    stroke = e.kind === "decision" ? "#a1a1aa" : "#5eead4";
+                    strokeOpacity = 0.9;
+                    strokeWidth = 1.6;
+                  } else {
+                    strokeOpacity = 0.04;
+                    strokeWidth = 1;
+                    markerEnd = undefined;
+                  }
+                }
+
                 return (
                   <path
                     key={idx}
                     d={`M ${s.x} ${s.y} Q ${cx} ${cy} ${t.x} ${t.y}`}
                     fill="none"
-                    stroke={e.kind === "decision" ? "#a1a1aa" : "#d4d4d8"}
-                    strokeWidth={1.6}
+                    stroke={stroke}
+                    strokeWidth={strokeWidth}
                     strokeDasharray={e.kind === "decision" ? "4 3" : undefined}
-                    strokeOpacity={highlighted ? 0.85 : 0.12}
-                    markerEnd={e.kind === "decision" ? "url(#arrow-decision)" : "url(#arrow-link)"}
+                    strokeOpacity={strokeOpacity}
+                    markerEnd={markerEnd}
                   />
                 );
               })}
 
               {positioned.map((n) => {
                 const isVault = n.kind === "vault";
-                const isSelected = selectedNode?.id === n.id;
+                const isSelected = selectedId === n.id || (!selectedId && selectedNode?.id === n.id);
                 const dimmed = Boolean(activeFocus && !connectedSet.has(n.id));
                 const hasProps = (n.open_proposals ?? 0) > 0;
-                const r = isVault ? 11 : isSelected ? 8 : 6.5;
+                const deg = degreeById.get(n.id) ?? 0;
+                const r = isVault ? 11 : isSelected ? 8 : isDenseGraph ? (deg >= 4 ? 6.5 : 4.5) : 6.5;
+                const showLabel =
+                  !isDenseGraph ||
+                  isVault ||
+                  n.id === activeFocus ||
+                  (activeFocus ? focusedNeighborLabels.has(n.id) : topHubIds.has(n.id));
 
                 return (
                   <g
@@ -369,20 +527,25 @@ export function GraphView({
                       <circle
                         r={r}
                         fill={isSelected ? "#fafafa" : "#18181c"}
-                        stroke={isSelected ? "#fafafa" : "#a1a1aa"}
+                        stroke={isSelected ? "#fafafa" : deg >= 4 ? "#d4d4d8" : "#71717a"}
                         strokeWidth={1.5}
                       />
                     )}
                     {!isVault && hasProps && <circle cx={r + 2} cy={-r + 1} r={3} fill="#22c55e" />}
-                    <text
-                      y={r + 16}
-                      textAnchor="middle"
-                      fill={isSelected ? "#ffffff" : isVault ? "#a1a1aa" : "#d4d4d8"}
-                      fontSize={11}
-                      fontWeight={isSelected || isVault ? 500 : 400}
-                    >
-                      {truncateLabel(n.label, 20)}
-                    </text>
+                    {showLabel && (
+                      <text
+                        y={r + 15}
+                        textAnchor="middle"
+                        fill={isSelected ? "#ffffff" : isVault ? "#a1a1aa" : "#d4d4d8"}
+                        fontSize={11}
+                        fontWeight={isSelected || isVault ? 500 : 400}
+                        paintOrder="stroke"
+                        stroke="#0d0d10"
+                        strokeWidth={3}
+                      >
+                        {truncateLabel(n.label, 20)}
+                      </text>
+                    )}
                   </g>
                 );
               })}

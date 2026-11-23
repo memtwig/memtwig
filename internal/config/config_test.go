@@ -172,3 +172,59 @@ func TestSaveAndLoadRoundtrip(t *testing.T) {
 		t.Errorf("org vault defaults mismatch: %+v", org)
 	}
 }
+
+func TestXDGAndEnvPrecedence(t *testing.T) {
+	fakeHome := t.TempDir()
+	xdgCfg := filepath.Join(fakeHome, "xdg-cfg")
+	xdgCache := filepath.Join(fakeHome, "xdg-cache")
+
+	t.Setenv("HOME", fakeHome)
+	t.Setenv("MEMTWIG_CONFIG", "")
+	t.Setenv("MEMTWIG_CACHE_DIR", "")
+	t.Setenv("MEMTWIG_DB", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("XDG_CACHE_HOME", "")
+
+	// Default fallback without XDG or MEMTWIG_*
+	if got, err := DefaultConfigPath(); err != nil || got != filepath.Join(fakeHome, DefaultConfigRelPath) {
+		t.Fatalf("fallback DefaultConfigPath = (%q, %v), want %q", got, err, filepath.Join(fakeHome, DefaultConfigRelPath))
+	}
+	if got, err := DefaultCacheDir(); err != nil || got != filepath.Join(fakeHome, DefaultCacheRelDir) {
+		t.Fatalf("fallback DefaultCacheDir = (%q, %v), want %q", got, err, filepath.Join(fakeHome, DefaultCacheRelDir))
+	}
+	if got, err := DefaultDBPath(); err != nil || got != filepath.Join(fakeHome, DefaultDBRelPath) {
+		t.Fatalf("fallback DefaultDBPath = (%q, %v), want %q", got, err, filepath.Join(fakeHome, DefaultDBRelPath))
+	}
+
+	// XDG_CONFIG_HOME and XDG_CACHE_HOME honored
+	t.Setenv("XDG_CONFIG_HOME", xdgCfg)
+	t.Setenv("XDG_CACHE_HOME", xdgCache)
+	if got, err := DefaultConfigPath(); err != nil || got != filepath.Join(xdgCfg, "memtwig", "config.toml") {
+		t.Fatalf("XDG DefaultConfigPath = (%q, %v)", got, err)
+	}
+	if got, err := DefaultCacheDir(); err != nil || got != filepath.Join(xdgCache, "memtwig") {
+		t.Fatalf("XDG DefaultCacheDir = (%q, %v)", got, err)
+	}
+	if got, err := DefaultDBPath(); err != nil || got != filepath.Join(xdgCache, "memtwig", "index.db") {
+		t.Fatalf("XDG DefaultDBPath = (%q, %v)", got, err)
+	}
+
+	// MEMTWIG_* overrides XDG_*
+	t.Setenv("MEMTWIG_CONFIG", "~/override/config.toml")
+	t.Setenv("MEMTWIG_CACHE_DIR", "~/override/cache")
+	if got, err := DefaultConfigPath(); err != nil || got != filepath.Join(fakeHome, "override", "config.toml") {
+		t.Fatalf("MEMTWIG_CONFIG override = (%q, %v)", got, err)
+	}
+	if got, err := DefaultCacheDir(); err != nil || got != filepath.Join(fakeHome, "override", "cache") {
+		t.Fatalf("MEMTWIG_CACHE_DIR override = (%q, %v)", got, err)
+	}
+	if got, err := DefaultDBPath(); err != nil || got != filepath.Join(fakeHome, "override", "cache", "index.db") {
+		t.Fatalf("MEMTWIG_CACHE_DIR -> DefaultDBPath = (%q, %v)", got, err)
+	}
+
+	// MEMTWIG_DB overrides MEMTWIG_CACHE_DIR
+	t.Setenv("MEMTWIG_DB", "~/custom/index.db")
+	if got, err := DefaultDBPath(); err != nil || got != filepath.Join(fakeHome, "custom", "index.db") {
+		t.Fatalf("MEMTWIG_DB override = (%q, %v)", got, err)
+	}
+}
