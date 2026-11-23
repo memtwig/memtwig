@@ -1,0 +1,99 @@
+# memtwig configuration (~/.config/memtwig/config.toml)
+# Override path via --config or MEMTWIG_CONFIG.
+
+version = 1
+
+[identity]
+soul_file = "~/.config/memtwig/SOUL.md"
+inject_on_session_start = true
+
+# ---------------------------------------------------------------------------
+# Hybrid vector embeddings (optional).
+# Set provider = "none" for pure BM25 FTS5 without external calls.
+# ---------------------------------------------------------------------------
+[embeddings]
+provider = "ollama" # none | ollama | openai | cloudflare
+model = "bge-m3"
+endpoint = "http://127.0.0.1:11434/api/embeddings"
+timeout_ms = 3000
+cosine_threshold = 0.45
+
+# Example: OpenAI embeddings
+# [embeddings]
+# provider = "openai"
+# model = "text-embedding-3-small"
+# endpoint = "https://api.openai.com/v1/embeddings"
+# api_key_env = "OPENAI_API_KEY"
+# timeout_ms = 5000
+# cosine_threshold = 0.45
+
+# Example: Cloudflare Workers AI embeddings
+# [embeddings]
+# provider = "cloudflare"
+# model = "@cf/baai/bge-m3"
+# account_id = "your-cloudflare-account-id"
+# api_key_env = "CLOUDFLARE_API_TOKEN"
+# timeout_ms = 5000
+# cosine_threshold = 0.45
+
+[retrieval]
+default_top_k = 5
+max_snippet_chars = 400
+rrf_k = 60
+
+# ---------------------------------------------------------------------------
+# Optional LLM semantic curator (never edits live notes; opens proposals).
+# ---------------------------------------------------------------------------
+[llm]
+provider = "none" # none | openai | ollama
+model = "gpt-4o-mini"
+endpoint = "https://api.openai.com/v1/chat/completions"
+api_key_env = "OPENAI_API_KEY"
+timeout_ms = 15000
+
+# ---------------------------------------------------------------------------
+# Team HTTP server, RBAC tokens & JSONL audit log.
+# ---------------------------------------------------------------------------
+[server]
+addr = "127.0.0.1:8787"
+audit_log_path = "~/.cache/memtwig/audit.jsonl"
+
+[[server.tokens]]
+name = "ci-reader"
+token_env = "MEMTWIG_CI_TOKEN"
+role = "reader" # reader | proposer | writer | admin
+vaults = ["acme"]
+path_globs = ["projects/**", "decisions/**"]
+
+[[server.tokens]]
+name = "agent-acme"
+token_env = "MEMTWIG_ACME_AGENT_TOKEN"
+role = "proposer"
+vaults = ["acme"]
+path_globs = ["**"]
+
+# ---------------------------------------------------------------------------
+# Vaults: personal + 2 isolated client vaults.
+# ---------------------------------------------------------------------------
+[vaults.personal]
+path = "~/notes"
+kind = "personal"
+default_write = "direct"
+always_include = ["persona/**"]
+max_note_bytes = 8192
+
+[vaults.acme]
+path = "~/work/acme/notes"
+kind = "org"
+default_write = "propose"
+match_paths = ["~/work/acme/**"]
+match_git_remotes = ["github.com/acme-corp/*"]
+max_note_bytes = 8192
+
+[vaults.globex]
+path = "~/work/globex/notes"
+kind = "org"
+default_write = "propose"
+match_paths = ["~/work/globex/**"]
+match_git_remotes = ["github.com/globex/*"]
+max_note_bytes = 8192

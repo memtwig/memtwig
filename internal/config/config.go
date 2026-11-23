@@ -22,7 +22,32 @@ type Config struct {
 	Identity   IdentityConfig         `toml:"identity"`
 	Embeddings EmbeddingsConfig       `toml:"embeddings"`
 	Retrieval  RetrievalConfig        `toml:"retrieval"`
+	LLM        LLMConfig              `toml:"llm"`
+	Server     ServerConfig           `toml:"server"`
 	Vaults     map[string]VaultConfig `toml:"vaults"`
+}
+
+type LLMConfig struct {
+	Provider  string `toml:"provider"` // none | openai | ollama
+	Model     string `toml:"model"`
+	Endpoint  string `toml:"endpoint"`
+	APIKeyEnv string `toml:"api_key_env"`
+	TimeoutMS int    `toml:"timeout_ms"`
+}
+
+type ServerConfig struct {
+	Addr         string        `toml:"addr"`
+	AuditLogPath string        `toml:"audit_log_path"`
+	Tokens       []TokenPolicy `toml:"tokens"`
+}
+
+type TokenPolicy struct {
+	Name      string   `toml:"name"`
+	TokenEnv  string   `toml:"token_env"`
+	Token     string   `toml:"token,omitempty"`
+	Role      string   `toml:"role"` // reader | proposer | writer | admin
+	Vaults    []string `toml:"vaults"`
+	PathGlobs []string `toml:"path_globs"`
 }
 
 type IdentityConfig struct {
@@ -177,6 +202,15 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.Embeddings.CosineThreshold <= 0 {
 		cfg.Embeddings.CosineThreshold = 0.45
+	}
+	if cfg.LLM.Provider == "" {
+		cfg.LLM.Provider = "none"
+	}
+	if cfg.LLM.TimeoutMS <= 0 {
+		cfg.LLM.TimeoutMS = 15000
+	}
+	if cfg.Server.Addr == "" {
+		cfg.Server.Addr = "127.0.0.1:8787"
 	}
 	for name, v := range cfg.Vaults {
 		if v.Kind == "" {

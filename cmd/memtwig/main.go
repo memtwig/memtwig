@@ -11,22 +11,26 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/vittoriocompagno/memtwig/internal/audit"
 	"github.com/vittoriocompagno/memtwig/internal/config"
 	"github.com/vittoriocompagno/memtwig/internal/curator"
+	"github.com/vittoriocompagno/memtwig/internal/doctor"
 	"github.com/vittoriocompagno/memtwig/internal/hook"
 	"github.com/vittoriocompagno/memtwig/internal/index"
 	"github.com/vittoriocompagno/memtwig/internal/install"
 	"github.com/vittoriocompagno/memtwig/internal/lint"
 	"github.com/vittoriocompagno/memtwig/internal/mcp"
+	"github.com/vittoriocompagno/memtwig/internal/migrate"
 	"github.com/vittoriocompagno/memtwig/internal/proposal"
 	"github.com/vittoriocompagno/memtwig/internal/scope"
 	"github.com/vittoriocompagno/memtwig/internal/search"
+	"github.com/vittoriocompagno/memtwig/internal/server"
 	msync "github.com/vittoriocompagno/memtwig/internal/sync"
 	"github.com/vittoriocompagno/memtwig/internal/vault"
 )
 
 var (
-	version    = "0.1.0"
+	version    = "1.0.0"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -48,6 +52,8 @@ func main() {
 		cmdInit(),
 		cmdVault(),
 		cmdStatus(),
+		cmdDoctor(),
+		cmdMigrate(),
 		cmdIndex(),
 		cmdSearch(),
 		cmdCheck(),
@@ -57,6 +63,7 @@ func main() {
 		cmdSync(),
 		cmdProposal(),
 		cmdMCP(),
+		cmdServe(),
 		cmdHook(),
 		cmdInstall(),
 	)
@@ -472,7 +479,33 @@ func cmdProposal() *cobra.Command {
 		},
 	}
 
-	pc.AddCommand(listCmd, okCmd, noCmd)
+	showCmd := &cobra.Command{
+		Use:   "show <id>",
+		Short: "Inspect full details and proposed content of a proposal",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(cfgPath)
+			if err != nil {
+				return err
+			}
+			vName, vRoot, err := resolveOneVault(cfg)
+			if err != nil {
+				return err
+			}
+			p, ok, err := proposal.Get(vRoot, args[0])
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return fmt.Errorf("proposal %s not found in vault %s", args[0], vName)
+			}
+			fmt.Printf("ID:      %s\nVault:   %s\nStatus:  %s\nKind:    %s\nPath:    %s\nAuthor:  %s\nCreated: %s\nReason:  %s\n\n--- Proposed Content ---\n%s\n",
+				p.ID, vName, p.Status, p.Kind, p.Path, p.Author, p.CreatedAt, p.Reason, p.Content)
+			return nil
+		},
+	}
+
+	pc.AddCommand(listCmd, showCmd, okCmd, noCmd)
 	return pc
 }
 
@@ -616,9 +649,11 @@ func cmdInvalidate() *cobra.Command {
 
 func cmdCurate() *cobra.Command {
 	var staleDays int
+	var useLLM bool
+	var maxPairs int
 	cmd := &cobra.Command{
 		Use:   "curate",
-		Short: "Run deterministic curation pass (oversize, stale notes, unsynced decisions, index)",
+		Short: "Run deterministic curation pass (and optional --llm semantic contradiction check)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)
 			if err != nil {
@@ -629,17 +664,125 @@ func cmdCurate() *cobra.Command {
 				if !av.FullAccess {
 					continue
 				}
-				rep, err := curator.Curate(av.Name, config.ExpandHome(av.Config.Path), av.Config.MaxNoteBytes, staleDays)
+				root := config.ExpandHome(av.Config.Path)
+				rep, err := curator.Curate(av.Name, root, av.Config.MaxNoteBytes, staleDays)
 				if err != nil {
 					return err
 				}
 				fmt.Printf("[%s] notes=%d oversize=%d stale=%d unsynced_decisions=%d proposals_created=%d\n",
 					rep.VaultName, rep.IndexNotes, rep.OversizeNotes, rep.StaleNotes, rep.UnsyncedDecisions, rep.ProposalsCreated)
+				if useLLM {
+					srep, err := curator.CurateSemantic(context.Background(), av.Name, root, cfg.LLM, maxPairs)
+					if err != nil {
+						return err
+					}
+					fmt.Printf("[%s/llm] pairs=%d findings=%d proposals_created=%d\n",
+						srep.VaultName, srep.PairsExamined, len(srep.Findings), srep.ProposalsCreated)
+				}
 			}
 			return nil
 		},
 	}
 	cmd.Flags().IntVar(&staleDays, "stale-days", 90, "flag active notes not updated in N days")
+	cmd.Flags().BoolVar(&useLLM, "llm", false, "also run semantic contradiction check using configured [llm] provider")
+	cmd.Flags().IntVar(&maxPairs, "max-pairs", 6, "max note pairs to inspect in --llm mode")
+	return cmd
+}
+
+func cmdDoctor() *cobra.Command {
+	var asJSON bool
+	cmd := &cobra.Command{
+		Use:   "doctor",
+		Short: "Run environment, vault, SQLite FTS5, and embeddings diagnostics",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			checks := doctor.Run(context.Background(), cfgPath, dbPath)
+			if asJSON {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				return enc.Encode(checks)
+			}
+			failed := 0
+			for _, c := range checks {
+				fmt.Printf("%-6s %-18s %s\n", strings.ToUpper(c.Status), c.Name, c.Detail)
+				if c.Status == "fail" {
+					failed++
+				}
+			}
+			if failed > 0 {
+				return fmt.Errorf("%d diagnostic check(s) failed", failed)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "JSON output")
+	return cmd
+}
+
+func cmdMigrate() *cobra.Command {
+	var kind, defaultWrite string
+	var alwaysInclude []string
+	var dryRun bool
+	cmd := &cobra.Command{
+		Use:   "migrate <name> <dir>",
+		Short: "Import an existing Markdown/Obsidian/notes directory without modifying files",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rep, err := migrate.ImportExisting(cfgPath, args[0], args[1], kind, defaultWrite, alwaysInclude, dryRun)
+			if err != nil {
+				return err
+			}
+			mode := "registered"
+			if rep.DryRun {
+				mode = "dry-run"
+			}
+			fmt.Printf("[%s] %s (%s): notes=%d errors=%d warnings=%d\n",
+				rep.VaultName, rep.Root, mode, rep.Notes, rep.Errors, rep.Warnings)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&kind, "kind", "personal", "personal | org")
+	cmd.Flags().StringVar(&defaultWrite, "write", "", "direct | propose | readonly")
+	cmd.Flags().StringSliceVar(&alwaysInclude, "always-include", nil, "globs always included in org scopes")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "inspect directory without saving config")
+	return cmd
+}
+
+func cmdServe() *cobra.Command {
+	var addr string
+	cmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Start Streamable HTTP MCP + REST API server with RBAC and audit log",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(cfgPath)
+			if err != nil {
+				return err
+			}
+			if addr == "" {
+				addr = cfg.Server.Addr
+			}
+			st, err := index.Open(dbPath)
+			if err != nil {
+				return err
+			}
+			defer st.Close()
+			auditPath := config.ExpandHome(cfg.Server.AuditLogPath)
+			if auditPath == "" {
+				if cdir, err := config.DefaultCacheDir(); err == nil {
+					auditPath = filepath.Join(cdir, "audit.jsonl")
+				}
+			}
+			srv := &server.Server{
+				Cfg:     cfg,
+				Store:   st,
+				Audit:   audit.New(auditPath),
+				Version: version,
+			}
+			fmt.Printf("memtwig %s listening on http://%s (mcp=/mcp, api=/api/v1/*, tokens=%d)\n",
+				version, addr, len(cfg.Server.Tokens))
+			return server.ListenAndServe(context.Background(), addr, srv)
+		},
+	}
+	cmd.Flags().StringVar(&addr, "addr", "", "listen address (default from config [server].addr or 127.0.0.1:8787)")
 	return cmd
 }
 

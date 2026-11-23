@@ -203,6 +203,16 @@ func Approve(vaultRoot, id string) (Proposal, error) {
 	return p, nil
 }
 
+// Get returns a single proposal by ID.
+func Get(vaultRoot, id string) (Proposal, bool, error) {
+	all, err := LoadAll(vaultRoot)
+	if err != nil {
+		return Proposal{}, false, err
+	}
+	p, ok := all[id]
+	return p, ok, nil
+}
+
 // Reject marks a proposal rejected and writes it to append-only history so it never reopens.
 func Reject(vaultRoot, id, reason string) (Proposal, error) {
 	all, err := LoadAll(vaultRoot)

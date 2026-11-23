@@ -1,38 +1,60 @@
 # memtwig
 
-Git-native, multi-org Markdown memory layer for AI agents — shipped as a single static Go binary (zero CGO, zero external vector DB).
+Git-native, multi-org Markdown memory layer for AI agents — shipped as a single static Go binary (`CGO_ENABLED=0`, zero external vector DB).
 
 ## Why memtwig
 
-- **Git is the database, Markdown is the format:** human-readable, diffable, auditable.
+- **Git is the database, Markdown is the format:** human-readable, diffable, auditable, zero vendor lock-in.
 - **Multi-org isolation:** route vaults automatically by `cwd` or `git remote`. Working in Client A's repo exposes your personal preferences (`always_include`) + Client A's vault, never Client B's.
-- **Active hygiene:** deterministic linter (`check`), secret scanner, soft 8 KB cap per note, append-only archiving (`invalidate`), dated decisions (`decide`), and an idempotent proposal queue (`.curator/proposals.json` + append-only `history.jsonl`).
-- **Cross-harness:** single CLI, stdio MCP server (`memtwig mcp`), and per-turn gated prefetch hooks for Claude Code, Codex, and Antigravity (`memtwig install <harness>`).
+- **Active hygiene:** deterministic linter (`check`), secret scanner, soft 8 KB cap per note, append-only archiving (`invalidate`), dated decisions (`decide`), deterministic + optional LLM semantic curation (`curate --llm`), and an idempotent proposal queue (`.curator/proposals.json` + append-only `history.jsonl`).
+- **Cross-harness & team-ready:** single CLI, stdio MCP server (`memtwig mcp`), Streamable HTTP MCP + REST API server with RBAC & audit log (`memtwig serve`), and per-turn gated prefetch hooks (`memtwig install <claude|cursor|codex|antigravity>`).
+
+## Install
+
+```bash
+go install github.com/vittoriocompagno/memtwig/cmd/memtwig@latest
+# or build locally
+make build
+```
 
 ## Quick start
 
 ```bash
-make build
+# 1. Initialize a vault or import an existing Obsidian / ~/notes folder
+memtwig init ~/notes-acme --name acme --kind org
+memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
 
-# Initialize a new vault or register an existing folder (e.g. ~/notes)
-./bin/memtwig init ~/notes-acme --name acme --kind org
-./bin/memtwig vault add personal ~/notes --kind personal --always-include "persona/**"
+# 2. Check environment & build local SQLite FTS5 (+ optional embeddings) index
+memtwig doctor
+memtwig index
 
-# Build local SQLite FTS5 (+ optional Ollama/OpenAI/Cloudflare embeddings) index
-./bin/memtwig index
+# 3. Search within the active workspace scope
+memtwig search "deploy"
 
-# Search within active workspace scope
-./bin/memtwig search "deploy"
+# 4. Curate, record decisions, archive stale lines, lint & sync
+memtwig decide "Moved API to Fly.io" --project acme --note projects/infra.md
+memtwig invalidate projects/infra.md --match "old-heroku" --reason "migrated"
+memtwig curate             # add --llm for semantic contradiction check
+memtwig proposal list
+memtwig proposal show <id>
+memtwig check
+memtwig sync
 
-# Log a decision, archive outdated lines, run curation, lint & sync
-./bin/memtwig decide "Moved API to Fly.io" --project acme --note projects/infra.md
-./bin/memtwig invalidate projects/infra.md --match "old-heroku" --reason "migrated"
-./bin/memtwig curate
-./bin/memtwig check
-./bin/memtwig sync
-
-# Wire up your AI harness (supports --dry-run)
-./bin/memtwig install claude --dry-run
-./bin/memtwig install cursor --dry-run
-./bin/memtwig install codex --dry-run
+# 5. Connect your AI harness or run the team HTTP MCP server
+memtwig install claude --dry-run
+memtwig install cursor --dry-run
+memtwig install codex --dry-run
+memtwig serve --addr 127.0.0.1:8787
 ```
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Multi-Org & Freelance Setup](docs/multi-org.md)
+- [AI Harness Integration](docs/harnesses.md)
+- [Governance, Proposals & RBAC](docs/governance.md)
+- [Example Configuration](examples/config.toml)
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
