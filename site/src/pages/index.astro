@@ -11,7 +11,7 @@ import { AgentPromptBox } from "@/components/AgentPromptBox";
 import { QuickstartTabs } from "@/components/QuickstartTabs";
 import { DetailsDialog } from "@/components/DetailsDialog";
 import { StudioDialog } from "@/components/StudioDialog";
-import { CloudDialog } from "@/components/CloudDialog";
+import { CloudDeck } from "@/components/CloudDeck";
 
 const siteUrl = "https://memtwig.com";
 const repoUrl = "https://github.com/memtwig/memtwig";
@@ -249,16 +249,9 @@ const jsonLd = {
         </div>
       </section>
 
-      <!-- Cloud -->
-      <section id="cloud" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-24 sm:px-8 sm:py-32">
-        <div class="rounded-[40px] border border-white/[0.07] bg-[radial-gradient(ellipse_at_top,rgba(107,181,255,0.09),transparent_60%),#161618] px-6 py-16 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-12 sm:py-24">
-          <h2 class="text-4xl font-medium tracking-[-0.04em] text-white sm:text-6xl">Memtwig Cloud</h2>
-          <p class="mx-auto mt-5 max-w-xl text-lg text-zinc-400 sm:text-xl">Managed curator, hosted MCP and synced embeddings for teams. Still your Git.</p>
-          <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <a href="/cloud" class={cn(buttonVariants({ variant: "default", size: "lg" }))}>Join the waitlist</a>
-            <CloudDialog client:load />
-          </div>
-        </div>
+      <!-- Memtwig Cloud Interactive Deck -->
+      <section id="cloud" class="mx-auto max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 sm:py-28">
+        <CloudDeck client:load showHeader={true} />
       </section>
 
       <!-- Agent prompts -->
