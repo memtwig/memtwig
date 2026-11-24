@@ -56,7 +56,10 @@ func Run(ctx context.Context, cfgPath, dbPath string) []Check {
 			out = append(out, Check{Name: "vault:" + name, Status: "fail", Detail: "path missing: " + root})
 			continue
 		}
-		rep, err := lint.CheckVault(name, root, vc.MaxNoteBytes)
+		rep, err := lint.CheckVaultWithOptions(name, root, lint.CheckOptions{
+			MaxNoteBytes: vc.MaxNoteBytes,
+			ScanEnvFiles: cfg.EffectiveScanEnvFiles(),
+		})
 		if err != nil {
 			out = append(out, Check{Name: "vault:" + name, Status: "fail", Detail: err.Error()})
 			continue

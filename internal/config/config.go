@@ -19,12 +19,36 @@ const (
 
 type Config struct {
 	Version    int                    `toml:"version"`
+	EnvFiles   []string               `toml:"env_files,omitempty" json:"env_files,omitempty"`
+	Security   SecurityConfig         `toml:"security,omitempty" json:"security,omitempty"`
 	Identity   IdentityConfig         `toml:"identity"`
 	Embeddings EmbeddingsConfig       `toml:"embeddings"`
 	Retrieval  RetrievalConfig        `toml:"retrieval"`
 	LLM        LLMConfig              `toml:"llm"`
 	Server     ServerConfig           `toml:"server"`
 	Vaults     map[string]VaultConfig `toml:"vaults"`
+}
+
+type SecurityConfig struct {
+	ScanEnvFiles []string `toml:"scan_env_files,omitempty" json:"scan_env_files,omitempty"`
+}
+
+// EffectiveScanEnvFiles merges and expands unique paths from env_files and security.scan_env_files.
+func (c *Config) EffectiveScanEnvFiles() []string {
+	if c == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, raw := range append(append([]string{}, c.EnvFiles...), c.Security.ScanEnvFiles...) {
+		p := ExpandHome(strings.TrimSpace(raw))
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+	return out
 }
 
 type LLMConfig struct {
@@ -186,6 +210,7 @@ func Load(path string) (*Config, error) {
 		cfg.Vaults = map[string]VaultConfig{}
 	}
 	applyDefaults(cfg)
+	LoadEnvFiles(cfg.EnvFiles)
 	return cfg, nil
 }
 

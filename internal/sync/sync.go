@@ -13,8 +13,9 @@ import (
 )
 
 type Options struct {
-	Push    bool
-	Message string
+	Push         bool
+	Message      string
+	ScanEnvFiles []string
 }
 
 type Result struct {
@@ -24,12 +25,35 @@ type Result struct {
 	Summary   string
 }
 
-// SyncVault runs lint (blocks on errors/secrets), regenerates index.md if memtwig-managed,
-// commits dirty git changes, and optionally pulls/pushes if push=true.
+// SyncVault locks the git repo (if any), pulls remote updates before committing when push=true,
+// runs lint (blocking on secrets, literal env secrets, or merge-conflict markers), regenerates
+// index.md if memtwig-managed, commits dirty changes, and pushes.
 func SyncVault(vaultName, root string, maxNoteBytes int, opts Options) (Result, error) {
 	res := Result{VaultName: vaultName}
 
-	rep, err := lint.CheckVault(vaultName, root, maxNoteBytes)
+	hasGit := false
+	if _, err := os.Stat(filepath.Join(root, ".git")); err == nil {
+		hasGit = true
+		unlock, err := acquireRepoLock(root)
+		if err != nil {
+			return res, err
+		}
+		defer unlock()
+
+		if opts.Push {
+			if remote, _ := gitRun(root, "remote"); strings.TrimSpace(remote) != "" {
+				if _, err := gitRun(root, "pull", "--rebase", "--autostash"); err != nil {
+					_, _ = gitRun(root, "rebase", "--abort")
+					return res, fmt.Errorf("git pull --rebase: %w", err)
+				}
+			}
+		}
+	}
+
+	rep, err := lint.CheckVaultWithOptions(vaultName, root, lint.CheckOptions{
+		MaxNoteBytes: maxNoteBytes,
+		ScanEnvFiles: opts.ScanEnvFiles,
+	})
 	if err != nil {
 		return res, err
 	}
@@ -41,7 +65,7 @@ func SyncVault(vaultName, root string, maxNoteBytes int, opts Options) (Result, 
 		_, _ = vault.GenerateIndex(root)
 	}
 
-	if _, err := os.Stat(filepath.Join(root, ".git")); err != nil {
+	if !hasGit {
 		res.Summary = "checked (not a git repo)"
 		return res, nil
 	}
@@ -66,9 +90,6 @@ func SyncVault(vaultName, root string, maxNoteBytes int, opts Options) (Result, 
 
 	if opts.Push {
 		if remote, _ := gitRun(root, "remote"); strings.TrimSpace(remote) != "" {
-			if _, err := gitRun(root, "pull", "--rebase", "--autostash"); err != nil {
-				return res, fmt.Errorf("git pull --rebase: %w", err)
-			}
 			if _, err := gitRun(root, "push"); err != nil {
 				return res, fmt.Errorf("git push: %w", err)
 			}

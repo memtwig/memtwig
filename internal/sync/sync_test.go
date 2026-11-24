@@ -119,3 +119,29 @@ func TestSyncVaultPushesToBareRemote(t *testing.T) {
 		t.Errorf("bare remote head message = %q, want %q", remoteMsg, "push synced note")
 	}
 }
+
+func TestSyncVaultAbortsOnConflictMarkerAndLiteralSecret(t *testing.T) {
+	root := t.TempDir()
+	setupGitVault(t, root)
+
+	conflictNote := filepath.Join(root, "projects", "conflict.md")
+	if err := os.WriteFile(conflictNote, []byte("status: active\nupdated: 2026-11-24\n<<<<<<< HEAD\nx\n=======\ny\n>>>>>>> main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SyncVault("personal", root, 8192, Options{}); err == nil || !strings.Contains(err.Error(), "sync aborted") {
+		t.Fatalf("expected abort on merge conflict, got %v", err)
+	}
+	_ = os.Remove(conflictNote)
+
+	envFile := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(envFile, []byte("CUSTOM_TOKEN=super-secret-env-literal-999\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	litNote := filepath.Join(root, "projects", "lit.md")
+	if err := os.WriteFile(litNote, []byte("status: active\nupdated: 2026-11-24\nsuper-secret-env-literal-999\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SyncVault("personal", root, 8192, Options{ScanEnvFiles: []string{envFile}}); err == nil || !strings.Contains(err.Error(), "sync aborted") {
+		t.Fatalf("expected abort on literal env secret, got %v", err)
+	}
+}

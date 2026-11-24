@@ -228,3 +228,75 @@ func TestXDGAndEnvPrecedence(t *testing.T) {
 		t.Fatalf("MEMTWIG_DB override = (%q, %v)", got, err)
 	}
 }
+
+func TestLoadEnvFilesAndExtractSecretLiterals(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	envPath := filepath.Join(dir, ".test.env")
+	tomlPath := filepath.Join(dir, ".modal.toml")
+	envContent := `# comment
+export MEMTWIG_TEST_TOKEN="env-secret-value-123456"
+MEMTWIG_PRESET_KEY='from-env-file'
+SHORT_TOKEN=tiny
+ENABLED=true
+NORMAL_VAR=publicvalue12345
+`
+	tomlContent := `[profile]
+token_id = "ak-modal-secret-987654" # trailing comment
+token_secret = "as-modal-secret-654321"
+`
+	if err := os.WriteFile(envPath, []byte(envContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Explicit process env must NOT be overwritten
+	t.Setenv("MEMTWIG_PRESET_KEY", "explicit-process-value")
+	t.Setenv("MEMTWIG_TEST_TOKEN", "")
+	os.Unsetenv("MEMTWIG_TEST_TOKEN")
+
+	cfgFile := filepath.Join(dir, "config.toml")
+	cfgTOML := `version = 1
+env_files = ["~/.test.env"]
+
+[security]
+  scan_env_files = ["~/.test.env", "~/.modal.toml"]
+`
+	if err := os.WriteFile(cfgFile, []byte(cfgTOML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(cfgFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := os.Getenv("MEMTWIG_TEST_TOKEN"); got != "env-secret-value-123456" {
+		t.Fatalf("MEMTWIG_TEST_TOKEN = %q, want %q", got, "env-secret-value-123456")
+	}
+	if got := os.Getenv("MEMTWIG_PRESET_KEY"); got != "explicit-process-value" {
+		t.Fatalf("explicit env overwritten: got %q", got)
+	}
+
+	eff := cfg.EffectiveScanEnvFiles()
+	if len(eff) != 2 {
+		t.Fatalf("EffectiveScanEnvFiles len = %d, want 2: %v", len(eff), eff)
+	}
+
+	lits := ExtractSecretLiterals(eff)
+	want := map[string]bool{
+		"env-secret-value-123456": true,
+		"from-env-file":           true,
+		"ak-modal-secret-987654":  true,
+		"as-modal-secret-654321":  true,
+	}
+	if len(lits) != len(want) {
+		t.Fatalf("ExtractSecretLiterals = %v, want keys %v", lits, want)
+	}
+	for _, l := range lits {
+		if !want[l] {
+			t.Fatalf("unexpected literal extracted: %q", l)
+		}
+	}
+}

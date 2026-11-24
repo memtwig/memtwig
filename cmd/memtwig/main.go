@@ -578,8 +578,12 @@ func cmdCheck() *cobra.Command {
 			}
 			var reports []lint.Report
 			totalErrors := 0
+			scanFiles := cfg.EffectiveScanEnvFiles()
 			for _, av := range targets {
-				rep, err := lint.CheckVault(av.Name, config.ExpandHome(av.Config.Path), av.Config.MaxNoteBytes)
+				rep, err := lint.CheckVaultWithOptions(av.Name, config.ExpandHome(av.Config.Path), lint.CheckOptions{
+					MaxNoteBytes: av.Config.MaxNoteBytes,
+					ScanEnvFiles: scanFiles,
+				})
 				if err != nil {
 					return err
 				}
@@ -1272,8 +1276,9 @@ func cmdSync() *cobra.Command {
 					continue
 				}
 				res, err := msync.SyncVault(av.Name, config.ExpandHome(av.Config.Path), av.Config.MaxNoteBytes, msync.Options{
-					Push:    push,
-					Message: message,
+					Push:         push,
+					Message:      message,
+					ScanEnvFiles: cfg.EffectiveScanEnvFiles(),
 				})
 				if err != nil {
 					return err

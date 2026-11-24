@@ -2,6 +2,7 @@ package lint
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/memtwig/memtwig/internal/config"
 	"github.com/memtwig/memtwig/internal/vault"
 )
 
@@ -28,25 +30,43 @@ type Report struct {
 	Issues    []Issue `json:"issues"`
 }
 
+type CheckOptions struct {
+	MaxNoteBytes int
+	ScanEnvFiles []string
+}
+
 var (
 	secretPatterns = []struct {
 		name string
 		re   *regexp.Regexp
 	}{
-		{"openai_key", regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{20,}\b`)},
+		{"openai_key", regexp.MustCompile(`\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}\b`)},
 		{"anthropic_key", regexp.MustCompile(`\bsk-ant-[A-Za-z0-9_-]{20,}\b`)},
-		{"github_token", regexp.MustCompile(`\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{25,}\b`)},
+		{"github_token", regexp.MustCompile(`\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b`)},
 		{"github_pat", regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{25,}\b`)},
-		{"aws_access_key", regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)},
-		{"slack_token", regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}\b`)},
+		{"aws_access_key", regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`)},
+		{"slack_token", regexp.MustCompile(`\bxox[abprs]-[A-Za-z0-9-]{10,}\b`)},
+		{"stripe_key", regexp.MustCompile(`\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{10,}\b`)},
+		{"google_key", regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{35}\b`)},
+		{"jwt", regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b`)},
+		{"bearer_token", regexp.MustCompile(`(?i)\bbearer\s+[A-Za-z0-9_\-\.=]{24,}`)},
+		{"secret_assignment", regexp.MustCompile(`(?i)\b(?:password|passwd|secret|token|api[_-]?key)\b\s*[:=]\s*["']?[A-Za-z0-9_\-/+=]{12,}`)},
+		{"url_with_creds", regexp.MustCompile(`https?://[^/\s:@]+:[^/\s@]+@`)},
 		{"private_key", regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY-----`)},
 	}
 
-	reIndexLink = regexp.MustCompile(`\]\(([^)]+\.md)\)`)
+	reConflictMarker = regexp.MustCompile(`(?m)^(?:<<<<<<< |>>>>>>> |=======\r?$)`)
+	reIndexLink      = regexp.MustCompile(`\]\(([^)]+\.md)\)`)
 )
 
 // CheckVault runs deterministic hygiene and secret checks on a vault.
 func CheckVault(vaultName, root string, maxNoteBytes int) (Report, error) {
+	return CheckVaultWithOptions(vaultName, root, CheckOptions{MaxNoteBytes: maxNoteBytes})
+}
+
+// CheckVaultWithOptions runs hygiene, secret regex, env literal secret, and merge-conflict checks on a vault.
+func CheckVaultWithOptions(vaultName, root string, opts CheckOptions) (Report, error) {
+	maxNoteBytes := opts.MaxNoteBytes
 	if maxNoteBytes <= 0 {
 		maxNoteBytes = 8192
 	}
@@ -55,6 +75,7 @@ func CheckVault(vaultName, root string, maxNoteBytes int) (Report, error) {
 	if err != nil {
 		return rep, err
 	}
+	literals := config.ExtractSecretLiterals(opts.ScanEnvFiles)
 	today := time.Now().Format("2006-01-02")
 
 	add := func(sev, rel, code, msg string) {
@@ -72,30 +93,69 @@ func CheckVault(vaultName, root string, maxNoteBytes int) (Report, error) {
 		}
 	}
 
-	for _, n := range notes {
-		rep.Checked++
-		if !utf8.ValidString(n.Raw) {
-			add("error", n.RelPath, "invalid_utf8", "file is not valid UTF-8")
+	scanSecretsAndConflicts := func(rel, raw string) {
+		if !utf8.ValidString(raw) {
+			add("error", rel, "invalid_utf8", "file is not valid UTF-8")
 		}
-		// Secret scan
 		for _, sp := range secretPatterns {
-			if sp.re.MatchString(n.Raw) {
-				add("error", n.RelPath, "secret_detected", fmt.Sprintf("potential secret matched (%s)", sp.name))
+			if sp.re.MatchString(raw) {
+				add("error", rel, "secret_detected", fmt.Sprintf("potential secret matched (%s)", sp.name))
 			}
 		}
-		// Future date check
+		for _, lit := range literals {
+			if strings.Contains(raw, lit) {
+				add("error", rel, "secret_literal", "literal secret value from configured env file detected (value hidden)")
+				break
+			}
+		}
+		if reConflictMarker.MatchString(raw) {
+			add("error", rel, "merge_conflict", "unresolved git merge conflict marker found")
+		}
+	}
+
+	for _, n := range notes {
+		rep.Checked++
+		scanSecretsAndConflicts(n.RelPath, n.Raw)
 		if n.Updated != "" && n.Updated > today {
 			add("error", n.RelPath, "future_date", fmt.Sprintf("updated date %s is in the future", n.Updated))
 		}
-		// Size warning (soft cap)
 		if int(n.SizeBytes) > maxNoteBytes && !vault.IsDecisionLog(n.RelPath) {
 			add("warning", n.RelPath, "oversize_note", fmt.Sprintf("size %d bytes exceeds %d bytes cap (consider archiving)", n.SizeBytes, maxNoteBytes))
 		}
-		// Missing metadata warning
 		if n.Updated == "" && !vault.IsDecisionLog(n.RelPath) {
 			add("warning", n.RelPath, "missing_updated", "missing updated/Aggiornato date in header")
 		}
 	}
+
+	// Scan archived Markdown files for secrets and conflict markers without emitting oversize/date warnings.
+	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return nil
+		}
+		name := d.Name()
+		if d.IsDir() {
+			if name == ".git" || name == ".curator" || name == "private" || name == "bin" || name == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(strings.ToLower(name), ".md") {
+			return nil
+		}
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return nil
+		}
+		rel = filepath.ToSlash(rel)
+		wrapped := "/" + rel
+		if !strings.Contains(wrapped, "/archive/") && !strings.Contains(wrapped, "/archivio/") {
+			return nil
+		}
+		if raw, err := os.ReadFile(p); err == nil {
+			scanSecretsAndConflicts(rel, string(raw))
+		}
+		return nil
+	})
 
 	// Check broken links in index.md if present
 	indexPath := filepath.Join(root, "index.md")

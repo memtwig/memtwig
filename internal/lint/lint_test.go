@@ -61,3 +61,49 @@ func TestLintExemptsDecisionLogsFromOversizeWarning(t *testing.T) {
 		t.Fatalf("expected only projects/big.md oversize_note, got %v (all issues: %+v)", oversize, rep.Issues)
 	}
 }
+
+func TestLintDetectsLiteralEnvSecretsConflictsAndArchiveLeaks(t *testing.T) {
+	tmp := t.TempDir()
+	for _, dir := range []string{"projects", "projects/archive"} {
+		if err := os.MkdirAll(filepath.Join(tmp, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	const secretVal = "cf-secret-literal-value-xyz987654"
+	envFile := filepath.Join(tmp, ".env")
+	if err := os.WriteFile(envFile, []byte("CLOUDFLARE_API_TOKEN="+secretVal+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(tmp, "projects", "leak.md"), []byte("status: active\nupdated: 2026-11-24\n# Leak\nvalue="+secretVal+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmp, "projects", "conflict.md"), []byte("status: active\nupdated: 2026-11-24\n# Conflict\n<<<<<<< HEAD\na\n=======\nb\n>>>>>>> main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmp, "projects/archive", "old.md"), []byte("# Old Archive\n"+secretVal+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	rep, err := lint.CheckVaultWithOptions("test", tmp, lint.CheckOptions{
+		MaxNoteBytes: 8192,
+		ScanEnvFiles: []string{envFile},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Errors != 3 {
+		t.Fatalf("expected 3 errors (live literal, conflict, archive literal), got %+v", rep.Issues)
+	}
+	codes := map[string]int{}
+	for _, iss := range rep.Issues {
+		if strings.Contains(iss.Message, secretVal) {
+			t.Fatalf("error message leaked secret literal: %s", iss.Message)
+		}
+		codes[iss.Code]++
+	}
+	if codes["secret_literal"] != 2 || codes["merge_conflict"] != 1 {
+		t.Fatalf("unexpected issue codes: %+v", codes)
+	}
+}
