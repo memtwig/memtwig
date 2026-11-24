@@ -258,6 +258,16 @@ func (s *Store) EnsureFresh(ctx context.Context, cfg *config.Config) (Stats, err
 	return s.RebuildOrUpdate(ctx, cfg, false)
 }
 
+// DeleteDocument removes a single note (and its cascaded chunks + FTS5 entries) from the SQLite index.
+func (s *Store) DeleteDocument(vaultID, relPath string) error {
+	if s == nil || s.DB == nil {
+		return nil
+	}
+	rel := filepath.ToSlash(strings.TrimPrefix(relPath, "/"))
+	_, err := s.DB.Exec(`DELETE FROM documents WHERE vault_id = ? AND rel_path = ?`, vaultID, rel)
+	return err
+}
+
 // Watch periodically checks configured vaults for modified or deleted Markdown notes and refreshes the index.
 func (s *Store) Watch(ctx context.Context, cfg *config.Config, interval time.Duration, onChange func(Stats)) error {
 	if interval <= 0 {

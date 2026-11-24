@@ -334,6 +334,12 @@ func (s *Server) handleProposals(w http.ResponseWriter, r *http.Request, p princ
 			return
 		}
 		root := config.ExpandHome(vc.Path)
+		if req.Kind == "delete" {
+			if err := vault.ValidateDeletableNotePath(req.Path); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+		}
 		if _, err := safeJoin(root, req.Path); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
@@ -647,6 +653,79 @@ func (s *Server) handleNote(w http.ResponseWriter, r *http.Request, p principal)
 			_, _ = s.Store.EnsureFresh(r.Context(), s.Cfg)
 			_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "note_write", Vault: req.Vault, Path: relPath, Outcome: "ok"})
 			writeJSON(w, http.StatusOK, map[string]any{"saved": true, "vault": req.Vault, "path": relPath})
+			return
+		}
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "access denied"})
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		if !p.allowsRole("writer") {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "requires writer role"})
+			return
+		}
+		vName := r.URL.Query().Get("vault")
+		rawPath := r.URL.Query().Get("path")
+		if vName == "" || rawPath == "" {
+			var req struct {
+				Vault string `json:"vault"`
+				Path  string `json:"path"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			if vName == "" {
+				vName = req.Vault
+			}
+			if rawPath == "" {
+				rawPath = req.Path
+			}
+		}
+		relPath := filepath.ToSlash(strings.TrimPrefix(rawPath, "/"))
+		if vName == "" || relPath == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "vault and path are required"})
+			return
+		}
+		for _, av := range s.activeVaultsFor(p, vName) {
+			if av.Name != vName || !av.AllowsPath(relPath) {
+				continue
+			}
+			if err := vault.ValidateDeletableNotePath(relPath); err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			if av.Config.DefaultWrite != "direct" {
+				writeJSON(w, http.StatusConflict, map[string]string{"error": "vault requires proposals; use POST /api/v1/proposals with kind=delete"})
+				return
+			}
+			root := config.ExpandHome(av.Config.Path)
+			target, err := safeJoin(root, relPath)
+			if err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+				return
+			}
+			info, err := os.Stat(target)
+			if err != nil {
+				if os.IsNotExist(err) {
+					writeJSON(w, http.StatusNotFound, map[string]string{"error": "note not found"})
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
+			}
+			if info.IsDir() {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "cannot delete directory"})
+				return
+			}
+			if existing, err := vault.ParseNote(vName, root, relPath); err == nil && existing.Owner != "" {
+				writeJSON(w, http.StatusConflict, map[string]string{"error": "note is owner-locked (" + existing.Owner + "); use POST /api/v1/proposals with kind=delete"})
+				return
+			}
+			if err := os.Remove(target); err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
+			}
+			_ = s.Store.DeleteDocument(vName, relPath)
+			_ = s.Audit.Log(audit.Event{Actor: p.Name, Role: p.Role, Action: "note_delete", Vault: vName, Path: relPath, Outcome: "ok"})
+			writeJSON(w, http.StatusOK, map[string]any{"deleted": true, "vault": vName, "path": relPath})
 			return
 		}
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "access denied"})

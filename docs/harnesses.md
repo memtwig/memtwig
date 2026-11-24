@@ -3,7 +3,7 @@
 `memtwig` integrates with AI coding harnesses through two mechanisms:
 
 1. **Per-turn hook (`memtwig hook <harness>`)** — automatically injects relevant memory snippets and correction nudges on each prompt, gated against noise.
-2. **MCP server (`memtwig mcp`)** — exposes `memory_search`, `memory_read`, `memory_write`, `memory_propose`, `memory_decide`, and `memory_status` over stdio JSON-RPC 2.0.
+2. **MCP server (`memtwig mcp`)** — exposes `memory_search`, `memory_read`, `memory_write`, `memory_delete`, `memory_propose`, `memory_decide`, and `memory_status` over stdio JSON-RPC 2.0.
 
 All `memtwig install` commands create a `.bak` backup before modifying an existing config file and support `--dry-run` and `--bin <path>`.
 

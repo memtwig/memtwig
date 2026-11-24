@@ -6,9 +6,9 @@
 
 Each vault in `config.toml` sets `default_write`:
 
-| Mode | Default for | `memory_write` | `memory_propose` / `memory_decide` |
+| Mode | Default for | `memory_write` / `memory_delete` | `memory_propose` / `memory_decide` |
 | --- | --- | --- | --- |
-| `direct` | `kind = "personal"` | Allowed (unless owner-locked) | Allowed |
+| `direct` | `kind = "personal"` | Allowed (unless owner-locked or protected) | Allowed |
 | `propose` | `kind = "org"` | Rejected (must use `memory_propose`) | Queued in `.curator/proposals.json` |
 | `readonly` | — | Rejected | Rejected |
 
@@ -68,6 +68,7 @@ memtwig proposal no <id> "duplicate of infra/redis.md"
 
 - **`memtwig decide <summary> [--project <name>] [--note <rel-path>]`**: prepends a dated bullet to `decisions/YYYY-MM.md` (newest at top) and either appends to `--note` (if `direct` and not owner-locked) or creates a proposal.
 - **`memtwig invalidate <rel-path> --match <substring> [--reason <text>]`**: moves matching lines out of a live note into `<dir>/archive/<file>` (append-only) and leaves a dated pointer in the live note.
+- **`memtwig delete <rel-path> [--propose] [--reason <text>] [--force]`**: removes a live Markdown note from disk and the local SQLite index (respecting owner-locks, `propose` mode, and protected paths/archives/decision logs).
 - **`memtwig curate [--stale-days 90]`**: regenerates `index.md` and creates proposals for oversize notes, stale active notes, and unsynced decisions. When `[llm]` is configured (`openai` or `ollama`), semantic curation compares related note pairs and creates `review` proposals for contradictions or overlaps without editing live notes.
 - **`memtwig sync [--push] [-m <msg>]`**: runs `check`, commits dirty vault changes, optionally runs `git pull --rebase && git push`, and refreshes the SQLite index.
 

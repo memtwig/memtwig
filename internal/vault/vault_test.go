@@ -201,3 +201,38 @@ func TestGenerateIndex(t *testing.T) {
 		t.Errorf("index.md missing expected root entry:\n%s", idx)
 	}
 }
+
+func TestValidateDeletableNotePath(t *testing.T) {
+	allowed := []string{
+		"test.md",
+		"projects/tmp.md",
+		"persona/draft.md",
+		"/progetti/bozza.md",
+	}
+	for _, p := range allowed {
+		if err := ValidateDeletableNotePath(p); err != nil {
+			t.Errorf("expected %q to be deletable, got error: %v", p, err)
+		}
+	}
+
+	rejected := []string{
+		"",
+		".",
+		"../outside.md",
+		"memtwig.toml",
+		"index.md",
+		"README.md",
+		".git/HEAD.md",
+		".curator/proposals.md",
+		"private/secret.md",
+		"projects/archive/old.md",
+		"progetti/archivio/old.md",
+		"decisions/2026-11.md",
+		"decisioni/2026-11.md",
+	}
+	for _, p := range rejected {
+		if err := ValidateDeletableNotePath(p); err == nil {
+			t.Errorf("expected %q to be rejected for deletion", p)
+		}
+	}
+}

@@ -72,12 +72,13 @@ The local index lives at `~/.cache/memtwig/index.db` (overridable via `--db` or 
 
 ## 5. MCP Server (`internal/mcp`)
 
-`memtwig mcp` runs a line-delimited JSON-RPC 2.0 server over stdio (`protocolVersion: 2024-11-05`) exposing six scoped tools:
+`memtwig mcp` runs a line-delimited JSON-RPC 2.0 server over stdio (`protocolVersion: 2024-11-05`) exposing seven scoped tools:
 
 - `memory_search` — hybrid BM25 + vector search across active vaults
 - `memory_read` — read a note by `(vault, path)` with path-traversal protection (`safeJoin`)
 - `memory_write` — direct write when `default_write = "direct"` and the note is not owner-locked
-- `memory_propose` — queue a `create`, `update`, or `append` proposal in `.curator/proposals.json`
+- `memory_delete` — direct delete of a live Markdown note when `default_write = "direct"`, not owner-locked, and not a protected file/archive/decision log (removes file and index entry)
+- `memory_propose` — queue a `create`, `update`, `append`, or `delete` proposal in `.curator/proposals.json`
 - `memory_decide` — record a dated decision in `decisions/YYYY-MM.md` and update or propose on a target note
 - `memory_status` — list active vaults, `default_write` modes, match reasons, and open proposal counts
 

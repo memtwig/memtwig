@@ -84,6 +84,7 @@ func main() {
 		withGroup("govern", cmdProposal()),
 		withGroup("govern", cmdDecide()),
 		withGroup("govern", cmdInvalidate()),
+		withGroup("govern", cmdDelete()),
 		withGroup("govern", cmdCurate()),
 		withGroup("govern", cmdCheck()),
 		withGroup("govern", cmdSync()),
@@ -685,13 +686,19 @@ func cmdProposal() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, vRoot, err := resolveOneVault(cfg)
+			vName, vRoot, err := resolveOneVault(cfg)
 			if err != nil {
 				return err
 			}
 			p, err := proposal.Approve(vRoot, args[0])
 			if err != nil {
 				return err
+			}
+			if p.Kind == "delete" {
+				if st, err := index.Open(dbPath); err == nil {
+					_ = st.DeleteDocument(vName, p.Path)
+					_ = st.Close()
+				}
 			}
 			fmt.Printf("approved %s -> %s\n", p.ID, p.Path)
 			return nil
@@ -777,10 +784,15 @@ func cmdProposal() *cobra.Command {
 					content = string(raw)
 				}
 			}
-			if strings.TrimSpace(content) == "" {
+			if addKind != "delete" && strings.TrimSpace(content) == "" {
 				return fmt.Errorf("--content, --content-file, or stdin content is required")
 			}
 			relPath := filepath.ToSlash(strings.TrimPrefix(args[0], "/"))
+			if addKind == "delete" {
+				if err := vault.ValidateDeletableNotePath(relPath); err != nil {
+					return err
+				}
+			}
 			p, created, err := proposal.Add(vRoot, proposal.Proposal{
 				Kind:    addKind,
 				Path:    relPath,
@@ -799,7 +811,7 @@ func cmdProposal() *cobra.Command {
 			return nil
 		},
 	}
-	addCmd.Flags().StringVar(&addKind, "kind", "append", "proposal kind: append | replace | create")
+	addCmd.Flags().StringVar(&addKind, "kind", "append", "proposal kind: append | update | create | delete")
 	addCmd.Flags().StringVar(&addContent, "content", "", "proposed Markdown content")
 	addCmd.Flags().StringVar(&addContentFile, "content-file", "", "read proposed Markdown content from file")
 	addCmd.Flags().StringVar(&addReason, "reason", "", "why this change is proposed")
@@ -951,6 +963,93 @@ func cmdInvalidate() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&matchStr, "match", "", "substring matching lines to archive")
 	cmd.Flags().StringVar(&reason, "reason", "superseded", "reason for invalidation")
+	return cmd
+}
+
+func cmdDelete() *cobra.Command {
+	var force bool
+	var asProposal bool
+	var reason string
+	cmd := &cobra.Command{
+		Use:     "delete <rel-path>",
+		Aliases: []string{"rm", "del"},
+		Short:   "Delete a Markdown note from a vault and remove it from the search index",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			relPath := filepath.ToSlash(strings.TrimPrefix(args[0], "/"))
+			if err := vault.ValidateDeletableNotePath(relPath); err != nil {
+				return err
+			}
+			cfg, err := config.Load(cfgPath)
+			if err != nil {
+				return err
+			}
+			av, err := resolvePrimaryVault(cfg)
+			if err != nil {
+				return err
+			}
+			if !av.AllowsPath(relPath) {
+				return fmt.Errorf("access denied to %s:%s in current scope", av.Name, relPath)
+			}
+			if av.Config.DefaultWrite == "readonly" {
+				return fmt.Errorf("vault %q is readonly", av.Name)
+			}
+			root := config.ExpandHome(av.Config.Path)
+			target, err := vault.SafeJoin(root, relPath)
+			if err != nil {
+				return err
+			}
+			info, err := os.Stat(target)
+			if err != nil {
+				if os.IsNotExist(err) {
+					return fmt.Errorf("note %s:%s not found", av.Name, relPath)
+				}
+				return err
+			}
+			if info.IsDir() {
+				return fmt.Errorf("cannot delete directory: %s:%s", av.Name, relPath)
+			}
+
+			existing, _ := vault.ParseNote(av.Name, root, relPath)
+			needsProposal := av.Config.DefaultWrite != "direct" || existing.Owner != ""
+			if asProposal {
+				p, created, err := proposal.Add(root, proposal.Proposal{
+					Kind:   "delete",
+					Path:   relPath,
+					Reason: reason,
+					Author: "cli",
+				})
+				if err != nil {
+					return err
+				}
+				state := "existing"
+				if created {
+					state = "queued"
+				}
+				fmt.Printf("%s delete proposal %s on %s:%s\n", state, p.ID, av.Name, relPath)
+				return nil
+			}
+			if needsProposal && !force {
+				if existing.Owner != "" {
+					return fmt.Errorf("note %s:%s is owner-locked (owner: %s): use --propose or --force", av.Name, relPath, existing.Owner)
+				}
+				return fmt.Errorf("vault %q has default_write=%q: use --propose or --force", av.Name, av.Config.DefaultWrite)
+			}
+
+			if err := os.Remove(target); err != nil {
+				return err
+			}
+			if st, err := index.Open(dbPath); err == nil {
+				_ = st.DeleteDocument(av.Name, relPath)
+				_ = st.Close()
+			}
+			fmt.Printf("deleted %s:%s\n", av.Name, relPath)
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&force, "force", false, "override owner-lock or propose-mode guard (not readonly or protected paths)")
+	cmd.Flags().BoolVar(&asProposal, "propose", false, "queue a delete proposal for review instead of deleting directly")
+	cmd.Flags().StringVar(&reason, "reason", "", "reason recorded when --propose is set")
 	return cmd
 }
 

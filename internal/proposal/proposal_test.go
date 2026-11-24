@@ -144,3 +144,37 @@ func TestRejectAndHistoryIdempotency(t *testing.T) {
 		t.Fatalf("rejected proposal should never reopen")
 	}
 }
+
+func TestDeleteProposalApproveAndDiff(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "projects", "obsolete.md")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("# Obsolete\nLine two\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	p, added, err := Add(root, Proposal{
+		Kind:   "delete",
+		Path:   "projects/obsolete.md",
+		Reason: "temporary note no longer needed",
+		Author: "agent",
+	})
+	if err != nil || !added {
+		t.Fatalf("Add delete proposal failed: added=%v err=%v", added, err)
+	}
+
+	diff := FormatDiff(root, p)
+	if !strings.Contains(diff, "+++ /dev/null") || !strings.Contains(diff, "- # Obsolete") {
+		t.Fatalf("unexpected delete diff:\n%s", diff)
+	}
+
+	approved, err := Approve(root, p.ID)
+	if err != nil || approved.Status != "approved" {
+		t.Fatalf("Approve delete failed: %+v err=%v", approved, err)
+	}
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		t.Fatalf("expected file to be deleted after Approve, stat err=%v", err)
+	}
+}

@@ -55,6 +55,48 @@ func IsDecisionLog(relPath string) bool {
 	return strings.HasPrefix(rel, "decisions/") || strings.HasPrefix(rel, "decisioni/")
 }
 
+// SafeJoin resolves rel inside root and rejects any path traversal outside root.
+func SafeJoin(root, rel string) (string, error) {
+	cleanRoot, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	target, err := filepath.Abs(filepath.Join(cleanRoot, filepath.FromSlash(rel)))
+	if err != nil {
+		return "", err
+	}
+	if target != cleanRoot && !strings.HasPrefix(target, cleanRoot+string(os.PathSeparator)) {
+		return "", fmt.Errorf("path traversal rejected: %s", rel)
+	}
+	return target, nil
+}
+
+// ValidateDeletableNotePath checks that relPath targets a regular live Markdown note
+// rather than a protected directory, generated index, archive, or append-only decision log.
+func ValidateDeletableNotePath(relPath string) error {
+	rel := filepath.ToSlash(strings.TrimPrefix(strings.TrimSpace(relPath), "/"))
+	clean := filepath.ToSlash(filepath.Clean(rel))
+	if rel == "" || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return fmt.Errorf("invalid note path: %q", relPath)
+	}
+	if !strings.HasSuffix(strings.ToLower(clean), ".md") {
+		return fmt.Errorf("only Markdown (.md) notes can be deleted: %s", relPath)
+	}
+	if strings.EqualFold(clean, "index.md") || strings.EqualFold(clean, "README.md") {
+		return fmt.Errorf("protected file cannot be deleted: %s", clean)
+	}
+	if IsDecisionLog(clean) {
+		return fmt.Errorf("append-only decision log cannot be deleted: %s", clean)
+	}
+	for _, seg := range strings.Split(clean, "/") {
+		switch strings.ToLower(seg) {
+		case ".git", ".curator", "private", "archive", "archivio", "bin", "node_modules":
+			return fmt.Errorf("protected path cannot be deleted: %s", clean)
+		}
+	}
+	return nil
+}
+
 // InitOptions customizes vault scaffolding.
 type InitOptions struct {
 	NoScaffold bool

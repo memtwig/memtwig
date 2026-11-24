@@ -82,9 +82,9 @@ Follow these rules whenever reading, writing, or curating notes:
 1. Read before assuming: call memory_search (and memory_read for full details) before guessing project/client facts, infra topology, or user preferences.
 2. Check active scope first: call memory_status when unsure which vaults are active and their write mode (direct, propose, or readonly).
 3. Separate facts from preferences: keep project, client, and infra facts in workspace/project vaults (projects/, clients/, infra/); keep personal preferences, identity, and style rules strictly in persona/ — never mix them.
-4. Respect governance and owner locks: on propose/org vaults or any note with an owner:/proprietario: header, NEVER overwrite directly; always use memory_propose.
+4. Respect governance and owner locks: on propose/org vaults or any note with an owner:/proprietario: header, NEVER overwrite or delete directly; always use memory_propose (kind="delete" for removals).
 5. Record decisions properly: use memory_decide for confirmed user decisions so both decisions/YYYY-MM.md and the linked project note stay aligned.
-6. Format and hygiene: start new bullets with [YYYY-MM-DD · source], keep live notes under ~8 KB by moving stale history to <dir>/archive/<file>.md (append-only, never delete), and NEVER store secrets, tokens, passwords, or raw chat transcripts.
+6. Format and hygiene: start new bullets with [YYYY-MM-DD · source], keep live notes under ~8 KB by moving stale history to <dir>/archive/<file>.md (append-only), use memory_delete only for unwanted or temporary notes on direct vaults, and NEVER store secrets, tokens, passwords, or raw chat transcripts.
 7. Nightly curation (zero extra LLM API key): run memtwig curate --candidates --json, evaluate dated updates chronologically (newer dated corrections supersede older lines), open proposals via memory_propose for real contradictions, and mark reviewed pairs with memtwig curate --mark-pair "noteA.md,noteB.md".`
 
 func (s *Server) handle(ctx context.Context, req rpcRequest) rpcResponse {
@@ -244,14 +244,54 @@ func (s *Server) callTool(ctx context.Context, name string, args map[string]any)
 		}
 		return fmt.Sprintf("written %s:%s (%d bytes)", vName, relPath, len(content)), false
 
+	case "memory_delete":
+		vName := strArg("vault")
+		relPath := filepath.ToSlash(strings.TrimPrefix(strArg("path"), "/"))
+		if vName == "" || relPath == "" {
+			return "vault and path are required", true
+		}
+		av, ok := findAllowedVault(s.activeVaults(""), vName)
+		if !ok || !av.AllowsPath(relPath) {
+			return fmt.Sprintf("access denied to %s:%s in current scope", vName, relPath), true
+		}
+		if err := vault.ValidateDeletableNotePath(relPath); err != nil {
+			return err.Error(), true
+		}
+		if av.Config.DefaultWrite != "direct" {
+			return fmt.Sprintf("vault %q has default_write=%q: use memory_propose (kind=\"delete\") instead", vName, av.Config.DefaultWrite), true
+		}
+		root := config.ExpandHome(av.Config.Path)
+		abs, err := safeJoin(root, relPath)
+		if err != nil {
+			return err.Error(), true
+		}
+		info, err := os.Stat(abs)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Sprintf("note %s:%s not found", vName, relPath), true
+			}
+			return err.Error(), true
+		}
+		if info.IsDir() {
+			return fmt.Sprintf("cannot delete directory: %s:%s", vName, relPath), true
+		}
+		if existing, err := vault.ParseNote(vName, root, relPath); err == nil && existing.Owner != "" {
+			return fmt.Sprintf("note %s:%s is owner-locked (owner: %s): use memory_propose (kind=\"delete\") instead", vName, relPath, existing.Owner), true
+		}
+		if err := os.Remove(abs); err != nil {
+			return err.Error(), true
+		}
+		_ = s.Store.DeleteDocument(vName, relPath)
+		return fmt.Sprintf("deleted %s:%s", vName, relPath), false
+
 	case "memory_propose":
 		vName := strArg("vault")
 		relPath := filepath.ToSlash(strings.TrimPrefix(strArg("path"), "/"))
 		content := strArg("content")
 		kind := strArg("kind")
 		reason := strArg("reason")
-		if vName == "" || relPath == "" || content == "" {
-			return "vault, path, and content are required", true
+		if vName == "" || relPath == "" || (kind != "delete" && content == "") {
+			return "vault, path, and content are required (content may be omitted for kind=\"delete\")", true
 		}
 		av, ok := findAllowedVault(s.activeVaults(""), vName)
 		if !ok {
@@ -259,6 +299,11 @@ func (s *Server) callTool(ctx context.Context, name string, args map[string]any)
 		}
 		if av.Config.DefaultWrite == "readonly" {
 			return fmt.Sprintf("vault %q is readonly", vName), true
+		}
+		if kind == "delete" {
+			if err := vault.ValidateDeletableNotePath(relPath); err != nil {
+				return err.Error(), true
+			}
 		}
 		root := config.ExpandHome(av.Config.Path)
 		if _, err := safeJoin(root, relPath); err != nil {
@@ -379,18 +424,30 @@ func toolDefinitions() []map[string]any {
 			},
 		},
 		{
+			"name":        "memory_delete",
+			"description": "Delete a Markdown note directly ONLY when the vault allows direct writes, the note has no owner:/proprietario: header, and it is not a protected file, archive, or append-only decision log. Removes the file from disk and the local search index. Use memory_propose (kind=\"delete\") instead for org/propose vaults or owner-locked notes.",
+			"inputSchema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"vault": map[string]any{"type": "string"},
+					"path":  map[string]any{"type": "string", "description": "Relative path inside vault"},
+				},
+				"required": []string{"vault", "path"},
+			},
+		},
+		{
 			"name":        "memory_propose",
-			"description": "Queue a note create, append, or update proposal for human diff review (required on org/propose vaults and owner:/proprietario: locked notes). Provide a concise reason and dated Markdown content; never store secrets or raw chat transcripts.",
+			"description": "Queue a note create, append, update, or delete proposal for human diff review (required on org/propose vaults and owner:/proprietario: locked notes). Provide a concise reason and dated Markdown content (content may be omitted for kind=\"delete\"); never store secrets or raw chat transcripts.",
 			"inputSchema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"vault":   map[string]any{"type": "string"},
 					"path":    map[string]any{"type": "string"},
-					"kind":    map[string]any{"type": "string", "enum": []string{"append", "update", "create"}},
-					"content": map[string]any{"type": "string"},
+					"kind":    map[string]any{"type": "string", "enum": []string{"append", "update", "create", "delete"}},
+					"content": map[string]any{"type": "string", "description": "Proposed Markdown content (required for append/update/create; omit for delete)"},
 					"reason":  map[string]any{"type": "string"},
 				},
-				"required": []string{"vault", "path", "content"},
+				"required": []string{"vault", "path"},
 			},
 		},
 		{

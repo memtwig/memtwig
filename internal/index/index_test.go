@@ -147,3 +147,38 @@ func TestEncodeDecodeFloat32s(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteDocument(t *testing.T) {
+	tmp := t.TempDir()
+	vaultDir := filepath.Join(tmp, "vault")
+	if err := os.MkdirAll(filepath.Join(vaultDir, "projects"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(vaultDir, "projects", "temp.md"), []byte("# Temp Note\n\nTemporary unique token zzz999.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := config.Default()
+	cfg.Vaults["personal"] = config.VaultConfig{Path: vaultDir, Kind: "personal"}
+
+	st, err := Open(filepath.Join(tmp, "index.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	if _, err := st.RebuildOrUpdate(context.Background(), cfg, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.DeleteDocument("personal", "projects/temp.md"); err != nil {
+		t.Fatalf("DeleteDocument failed: %v", err)
+	}
+
+	var docs, chunks, fts int
+	_ = st.DB.QueryRow(`SELECT COUNT(*) FROM documents`).Scan(&docs)
+	_ = st.DB.QueryRow(`SELECT COUNT(*) FROM chunks`).Scan(&chunks)
+	_ = st.DB.QueryRow(`SELECT COUNT(*) FROM chunks_fts WHERE chunks_fts MATCH 'zzz999'`).Scan(&fts)
+	if docs != 0 || chunks != 0 || fts != 0 {
+		t.Fatalf("expected all rows removed after DeleteDocument, got docs=%d chunks=%d fts=%d", docs, chunks, fts)
+	}
+}

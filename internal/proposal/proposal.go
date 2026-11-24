@@ -16,7 +16,7 @@ import (
 
 type Proposal struct {
 	ID        string `json:"id"`
-	Kind      string `json:"kind"`      // update | create | append | archive
+	Kind      string `json:"kind"`      // update | create | append | delete | archive
 	Path      string `json:"path"`      // relative path inside vault
 	Content   string `json:"content"`   // proposed content or section
 	Reason    string `json:"reason"`    // why the agent proposed this
@@ -170,15 +170,18 @@ func Approve(vaultRoot, id string) (Proposal, error) {
 	}
 
 	target := filepath.Join(vaultRoot, filepath.FromSlash(p.Path))
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		return p, err
-	}
 	switch p.Kind {
 	case "create", "update":
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return p, err
+		}
 		if err := os.WriteFile(target, []byte(p.Content), 0o644); err != nil {
 			return p, err
 		}
 	case "append":
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return p, err
+		}
 		f, err := os.OpenFile(target, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 		if err != nil {
 			return p, err
@@ -187,6 +190,10 @@ func Approve(vaultRoot, id string) (Proposal, error) {
 		f.Close()
 		if werr != nil {
 			return p, werr
+		}
+	case "delete":
+		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return p, err
 		}
 	default:
 		return p, fmt.Errorf("unsupported proposal kind %q for automatic apply", p.Kind)
@@ -218,6 +225,19 @@ func FormatDiff(vaultRoot string, p Proposal) string {
 	target := filepath.Join(vaultRoot, filepath.FromSlash(p.Path))
 	existingBytes, err := os.ReadFile(target)
 	var sb strings.Builder
+	if p.Kind == "delete" {
+		sb.WriteString(fmt.Sprintf("--- a/%s\n+++ /dev/null\n", p.Path))
+		if err != nil {
+			sb.WriteString("@@ file already missing @@\n")
+			return sb.String()
+		}
+		existing := strings.Split(strings.TrimRight(string(existingBytes), "\n"), "\n")
+		sb.WriteString(fmt.Sprintf("@@ -1,%d +0,0 @@\n", len(existing)))
+		for _, l := range existing {
+			sb.WriteString("- " + l + "\n")
+		}
+		return sb.String()
+	}
 	sb.WriteString(fmt.Sprintf("--- a/%s\n+++ b/%s\n", p.Path, p.Path))
 	if err != nil {
 		sb.WriteString("@@ new file @@\n")

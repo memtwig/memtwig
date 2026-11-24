@@ -383,4 +383,53 @@ func TestServerUIAndNoteEndpoints(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 on DELETE /api/v1/vaults/gamma, got %d", resp.StatusCode)
 	}
+
+	// 10. DELETE /api/v1/note enforces role, default_write=direct, owner-lock, and deletes cleanly on direct vaults
+	directDir := filepath.Join(tmp, "direct")
+	if err := os.MkdirAll(filepath.Join(directDir, "projects"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(directDir, "projects", "scratch.md"), []byte("# Scratch\nTemp.\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(directDir, "projects", "owned.md"), []byte("owner: vittorio\n# Owned\nKeep.\n"), 0o644)
+	cfg.Vaults["direct"] = config.VaultConfig{Path: directDir, Kind: "personal", DefaultWrite: "direct"}
+	_, _ = st.RebuildOrUpdate(context.Background(), cfg, false)
+
+	// Reader forbidden
+	req, _ = http.NewRequest(http.MethodDelete, ts.URL+"/api/v1/note?vault=acme&path=projects/api.md", nil)
+	req.Header.Set("Authorization", "Bearer tok-read")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for reader on DELETE /api/v1/note, got %d", resp.StatusCode)
+	}
+
+	// Propose vault rejected with 409
+	req, _ = http.NewRequest(http.MethodDelete, ts.URL+"/api/v1/note?vault=acme&path=projects/api.md", nil)
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 for propose vault on DELETE /api/v1/note, got %d", resp.StatusCode)
+	}
+
+	// Owner-locked rejected with 409
+	req, _ = http.NewRequest(http.MethodDelete, ts.URL+"/api/v1/note?vault=direct&path=projects/owned.md", nil)
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 for owner-locked note on DELETE /api/v1/note, got %d", resp.StatusCode)
+	}
+
+	// Direct unlocked note deleted with 200
+	req, _ = http.NewRequest(http.MethodDelete, ts.URL+"/api/v1/note?vault=direct&path=projects/scratch.md", nil)
+	req.Header.Set("Authorization", "Bearer tok-admin")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 on DELETE /api/v1/note, got %d", resp.StatusCode)
+	}
+	if _, err := os.Stat(filepath.Join(directDir, "projects", "scratch.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected scratch.md to be removed from disk")
+	}
 }
