@@ -1,4 +1,4 @@
-# memtwig — Complete Technical Reference (v1.4.3)
+# memtwig — Complete Technical Reference (v1.5.0)
 
 memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory layer for AI coding agents and assistants, distributed as a single static Go binary (`CGO_ENABLED=0`, ~14 MB, Linux/macOS/Windows) with an embedded dark local Studio Web UI (`memtwig ui`, featuring Notes reader/editor, Knowledge Graph, Proposals diff reviewer, Audit log, and self-service Settings for providers, vaults, and harnesses) and interactive TUI (`memtwig tui`).
 
@@ -9,7 +9,7 @@ brew install memtwig/tap/memtwig
 curl -fsSL https://memtwig.com/install.sh | sh
 # Ensure ~/.local/bin is in PATH:
 export PATH="$HOME/.local/bin:$PATH"
-memtwig --version   # memtwig version 1.4.3
+memtwig --version   # memtwig version 1.5.0
 ```
 Or with Go:
 ```bash
@@ -53,21 +53,29 @@ memtwig proposal no <id> "outdated" --vault acme
 
 # 6. Lint all vaults, curate, open local Studio Web UI or TUI
 memtwig check --all
-memtwig curate             # add --llm for semantic contradiction check
-memtwig ui                 # embedded local Web UI at http://127.0.0.1:8787
-memtwig tui                # interactive terminal UI
+memtwig curate                      # deterministic hygiene
+memtwig curate --candidates --json  # top vector-matched candidate pairs for agent review
+memtwig curate --print-routine      # copyable nightly routine prompt for your agent scheduler
+memtwig ui                          # embedded local Web UI at http://127.0.0.1:8787
+memtwig tui                         # interactive terminal UI
 
 # 7. Connect AI harnesses
-memtwig install claude --dry-run
-memtwig install cursor --dry-run
-memtwig install codex --dry-run
-memtwig mcp                # stdio MCP server
-memtwig serve --addr 127.0.0.1:8787   # Streamable HTTP MCP + REST API + RBAC + Studio UI
+memtwig install all                 # auto-detect & wire Claude, Cursor, Codex, Antigravity, Hermes
+memtwig install antigravity --dry-run
+memtwig install hermes --dry-run
+memtwig mcp                         # stdio MCP server (emits initialize.instructions to clients)
+memtwig serve --addr 127.0.0.1:8787 # Streamable HTTP MCP + REST API + RBAC + Studio UI
 ```
 
 ## Complete `config.toml` Schema (`~/.config/memtwig/config.toml`)
 ```toml
 version = 1
+# Optional .env files autoloaded into process env (explicit env vars still win)
+env_files = ["~/.hermes/.env"]
+
+[security]
+# Literal secret values (>= 10 chars) from these .env/.toml files are blocked from notes
+scan_env_files = ["~/.hermes/.env", "~/.modal.toml"]
 
 [identity]
 soul_file = "~/.config/memtwig/SOUL.md"   # optional identity file injected by `hook --event session-start`
@@ -143,10 +151,11 @@ owner: vittorio
 - **Owner lock**: Notes with `owner:` (or `proprietario:`) block direct agent writes even inside `direct` vaults; edits are routed to `.curator/proposals.json`.
 - **Decisions**: `memtwig decide "..." --note <path>` logs to `decisions/YYYY-MM.md`; in `org` vaults (`default_write = "propose"`) or owner-locked notes, the update to `--note` is queued as a review proposal.
 - **Deterministic proposals**: SHA1 IDs + append-only `.curator/history.jsonl` ensure rejected proposals never reopen.
-- **Secret scanner**: `memtwig check --all` detects leaked API keys/tokens/private keys and blocks `memtwig sync`.
+- **Secret scanner & sync guard**: `memtwig check --all` detects regex token patterns, literal secret values loaded from `security.scan_env_files` / `env_files`, and unresolved git merge conflict markers (`<<<<<<<`/`=======`/`>>>>>>>`), and `memtwig sync` acquires a repo lock + runs `pull --rebase` before committing.
 
 ## MCP & HTTP API Reference
-- **Stdio MCP (`memtwig mcp`)**: exposes `memory_search`, `memory_read`, `memory_write`, `memory_propose`, `memory_decide`, `memory_status`.
+- **Stdio MCP (`memtwig mcp`)**: emits prescriptive `instructions` in `initialize` (read-first, fact-vs-persona separation, `owner:` locks, `[YYYY-MM-DD · source]`, 8 KB soft cap, zero secrets, `curate --candidates` flow) and exposes `memory_search`, `memory_read`, `memory_write`, `memory_propose`, `memory_decide`, `memory_status`.
+- **`SessionStart` fallback**: `memtwig hook <harness> --event session-start` injects `identity.soul_file` if present, otherwise falls back to a built-in concise memory protocol.
 - **HTTP Server (`memtwig serve` / `memtwig ui`)**:
   - `GET /health`
   - `POST /mcp` (Streamable HTTP MCP with Bearer RBAC)

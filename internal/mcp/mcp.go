@@ -77,6 +77,16 @@ func (s *Server) ServeStdio(ctx context.Context, r io.Reader, w io.Writer) error
 	return sc.Err()
 }
 
+const ServerInstructions = `memtwig is the persistent, workspace-scoped Markdown memory layer for this project.
+Follow these rules whenever reading, writing, or curating notes:
+1. Read before assuming: call memory_search (and memory_read for full details) before guessing project/client facts, infra topology, or user preferences.
+2. Check active scope first: call memory_status when unsure which vaults are active and their write mode (direct, propose, or readonly).
+3. Separate facts from preferences: keep project, client, and infra facts in workspace/project vaults (projects/, clients/, infra/); keep personal preferences, identity, and style rules strictly in persona/ — never mix them.
+4. Respect governance and owner locks: on propose/org vaults or any note with an owner:/proprietario: header, NEVER overwrite directly; always use memory_propose.
+5. Record decisions properly: use memory_decide for confirmed user decisions so both decisions/YYYY-MM.md and the linked project note stay aligned.
+6. Format and hygiene: start new bullets with [YYYY-MM-DD · source], keep live notes under ~8 KB by moving stale history to <dir>/archive/<file>.md (append-only, never delete), and NEVER store secrets, tokens, passwords, or raw chat transcripts.
+7. Nightly curation (zero extra LLM API key): run memtwig curate --candidates --json, evaluate dated updates chronologically (newer dated corrections supersede older lines), open proposals via memory_propose for real contradictions, and mark reviewed pairs with memtwig curate --mark-pair "noteA.md,noteB.md".`
+
 func (s *Server) handle(ctx context.Context, req rpcRequest) rpcResponse {
 	resp := rpcResponse{JSONRPC: "2.0", ID: req.ID}
 	switch req.Method {
@@ -90,6 +100,7 @@ func (s *Server) handle(ctx context.Context, req rpcRequest) rpcResponse {
 				"name":    "memtwig",
 				"version": s.Version,
 			},
+			"instructions": ServerInstructions,
 		}
 	case "ping":
 		resp.Result = map[string]any{}
@@ -331,7 +342,7 @@ func toolDefinitions() []map[string]any {
 	return []map[string]any{
 		{
 			"name":        "memory_search",
-			"description": "Hybrid BM25 + vector search across active memtwig vaults in the current workspace scope.",
+			"description": "Hybrid BM25 + vector search across active memtwig vaults in workspace scope. Call BEFORE assuming project facts, client state, infra topology, or user preferences.",
 			"inputSchema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -344,7 +355,7 @@ func toolDefinitions() []map[string]any {
 		},
 		{
 			"name":        "memory_read",
-			"description": "Read a specific Markdown note from an active vault.",
+			"description": "Read the full Markdown content and top-of-file headers (including owner:/proprietario: lock) of a note in an active vault. Read before proposing edits.",
 			"inputSchema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -356,7 +367,7 @@ func toolDefinitions() []map[string]any {
 		},
 		{
 			"name":        "memory_write",
-			"description": "Write a note directly when vault allows direct writes and note is not owner-locked.",
+			"description": "Create or replace a Markdown note directly ONLY when the vault allows direct writes and the note has no owner:/proprietario: header. Use dated bullets [YYYY-MM-DD · source], keep notes under ~8 KB, separate facts from persona/, and NEVER store secrets or tokens. Use memory_propose instead for org/propose vaults or owner-locked notes.",
 			"inputSchema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -369,7 +380,7 @@ func toolDefinitions() []map[string]any {
 		},
 		{
 			"name":        "memory_propose",
-			"description": "Propose a note create/update/append for human review (required for org/propose vaults and owner-locked notes).",
+			"description": "Queue a note create, append, or update proposal for human diff review (required on org/propose vaults and owner:/proprietario: locked notes). Provide a concise reason and dated Markdown content; never store secrets or raw chat transcripts.",
 			"inputSchema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -384,7 +395,7 @@ func toolDefinitions() []map[string]any {
 		},
 		{
 			"name":        "memory_decide",
-			"description": "Log a dated decision in decisions/YYYY-MM.md and append/propose it on the related project note.",
+			"description": "Log a confirmed user decision at the top of decisions/YYYY-MM.md and append or propose a matching dated line on the linked project note. Only record decisions explicitly approved or confirmed by the user.",
 			"inputSchema": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -398,7 +409,7 @@ func toolDefinitions() []map[string]any {
 		},
 		{
 			"name":        "memory_status",
-			"description": "List active vaults in current scope, write permissions, and open proposal counts.",
+			"description": "List active vaults in current workspace scope, write permissions (direct, propose, readonly), and open proposal counts. Call when unsure where facts or proposals belong.",
 			"inputSchema": map[string]any{
 				"type":       "object",
 				"properties": map[string]any{},

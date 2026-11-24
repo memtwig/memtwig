@@ -48,3 +48,34 @@ func TestRunSessionStartInjectsSoulFile(t *testing.T) {
 		t.Fatalf("expected antigravity injectSteps.systemMessage.systemMessage, got %s", outAG.String())
 	}
 }
+
+func TestRunSessionStartFallbackAndDisabled(t *testing.T) {
+	cfg := config.Default()
+	cfg.Identity.SoulFile = filepath.Join(t.TempDir(), "missing-SOUL.md")
+	cfg.Identity.InjectOnSessionStart = true
+
+	var outClaude bytes.Buffer
+	if err := hook.RunSessionStart("claude", cfg, &outClaude); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(outClaude.String(), "Memtwig Memory Protocol") || !strings.Contains(outClaude.String(), "memory_propose") {
+		t.Fatalf("expected fallback protocol for claude, got %s", outClaude.String())
+	}
+
+	var outAG bytes.Buffer
+	if err := hook.RunSessionStart("antigravity", cfg, &outAG); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(outAG.String(), "Memtwig Memory Protocol") {
+		t.Fatalf("expected fallback protocol for antigravity, got %s", outAG.String())
+	}
+
+	cfg.Identity.InjectOnSessionStart = false
+	var outDisabled bytes.Buffer
+	if err := hook.RunSessionStart("antigravity", cfg, &outDisabled); err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(outDisabled.String()) != "{}" {
+		t.Fatalf("expected empty JSON when disabled, got %s", outDisabled.String())
+	}
+}

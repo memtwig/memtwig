@@ -9,6 +9,7 @@ import { StudioShowcase } from "@/components/StudioShowcase";
 import { ProductBento } from "@/components/ProductBento";
 import { ZeroShowcase } from "@/components/ZeroShowcase";
 import { CloudDeck } from "@/components/CloudDeck";
+import { AgentPromptBox } from "@/components/AgentPromptBox";
 import { QuickstartTabs } from "@/components/QuickstartTabs";
 import { InstallGrid } from "@/components/InstallGrid";
 
@@ -66,12 +67,12 @@ const jsonLd = {
       url: `${siteUrl}/`,
       applicationCategory: "DeveloperApplication",
       operatingSystem: "Linux, macOS, Windows",
-      softwareVersion: "1.4.3",
+      softwareVersion: "1.5.0",
       datePublished: "2026-11-24",
       dateModified: "2026-11-24",
       license: "https://www.apache.org/licenses/LICENSE-2.0",
       codeRepository: repoUrl,
-      downloadUrl: `${releasesUrl}/tag/v1.4.3`,
+      downloadUrl: `${releasesUrl}/tag/v1.5.0`,
       description,
       offers: {
         "@type": "Offer",
@@ -84,7 +85,7 @@ const jsonLd = {
         url: "https://vittoriocompagno.com",
         sameAs: [
           "https://github.com/vittoriocompagno",
-          "https://x.com/itstorio_",
+          "https://x.com/toriodev",
           "https://www.linkedin.com/in/vittorio-compagno",
         ],
       },
@@ -126,7 +127,7 @@ const jsonLd = {
     <meta property="og:image:height" content="630" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:creator" content="@itstorio_" />
+    <meta name="twitter:creator" content="@toriodev" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={`${siteUrl}/og-image.png`} />
@@ -152,7 +153,7 @@ const jsonLd = {
           </p>
           <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
             <a href="#install" class={cn(buttonVariants({ variant: "default", size: "lg" }))}>
-              Install v1.4.3
+              Install v1.5.0
             </a>
             <a href="/cloud" class={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
               Memtwig Cloud
@@ -216,6 +217,10 @@ const jsonLd = {
         </div>
 
         <div class="mt-10">
+          <AgentPromptBox client:load />
+        </div>
+
+        <div class="mt-6">
           <QuickstartTabs client:load />
         </div>
 

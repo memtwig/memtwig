@@ -60,6 +60,21 @@ func TestMCPGovernanceAndProposals(t *testing.T) {
 		t.Fatalf("expected 3 responses, got %d: %s", len(lines), out.String())
 	}
 
+	// Response 1: initialize must include prescriptive instructions
+	var resp1 struct {
+		Result struct {
+			Instructions string `json:"instructions"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal([]byte(lines[0]), &resp1); err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{"memory_search", "memory_propose", "owner", "secrets"} {
+		if !strings.Contains(strings.ToLower(resp1.Result.Instructions), needle) {
+			t.Fatalf("initialize instructions missing %q: %s", needle, resp1.Result.Instructions)
+		}
+	}
+
 	// Response 2: memory_write must be blocked because owner: vittorio
 	var resp2 struct {
 		Result struct {

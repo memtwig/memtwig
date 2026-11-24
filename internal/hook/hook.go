@@ -24,17 +24,28 @@ var (
 	reRuntime = regexp.MustCompile(`(?is)<runtime_info>.*?</runtime_info>`)
 )
 
-// RunSessionStart injects the configured identity/SOUL.md file at session start when enabled.
+const defaultSessionProtocol = `## Memtwig Memory Protocol
+- Search first with memory_search (and read full notes with memory_read) before assuming workspace facts or user preferences.
+- Keep project/client/infra facts in workspace vaults and user preferences in persona/; never mix them.
+- Use memory_propose on propose/org vaults or any note with an owner:/proprietario: header; use memory_decide for confirmed decisions.
+- Write dated entries ([YYYY-MM-DD · source]), keep live notes under ~8 KB (archive stale facts append-only), and never write secrets or tokens.`
+
+// RunSessionStart injects the configured identity/SOUL.md file at session start when enabled,
+// falling back to defaultSessionProtocol when SOUL.md is absent so fresh installs still teach the LLM.
 func RunSessionStart(harness string, cfg *config.Config, w io.Writer) error {
-	if !cfg.Identity.InjectOnSessionStart || strings.TrimSpace(cfg.Identity.SoulFile) == "" {
+	if !cfg.Identity.InjectOnSessionStart {
 		return writeEmpty(harness, w)
 	}
-	soulPath := config.ExpandHome(cfg.Identity.SoulFile)
-	raw, err := os.ReadFile(soulPath)
-	if err != nil || len(strings.TrimSpace(string(raw))) == 0 {
-		return writeEmpty(harness, w)
+	var content string
+	if strings.TrimSpace(cfg.Identity.SoulFile) != "" {
+		soulPath := config.ExpandHome(cfg.Identity.SoulFile)
+		if raw, err := os.ReadFile(soulPath); err == nil && len(strings.TrimSpace(string(raw))) > 0 {
+			content = fmt.Sprintf("## Identity & Rules (%s)\n%s", cfg.Identity.SoulFile, strings.TrimSpace(string(raw)))
+		}
 	}
-	content := fmt.Sprintf("## Identity & Rules (%s)\n%s", cfg.Identity.SoulFile, strings.TrimSpace(string(raw)))
+	if content == "" {
+		content = defaultSessionProtocol
+	}
 	switch harness {
 	case "antigravity":
 		return writeInjected("antigravity", content, w)

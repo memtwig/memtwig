@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	version    = "1.4.3"
+	version    = "1.5.0"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -154,47 +154,58 @@ func cmdSetup() *cobra.Command {
 
 			home, _ := os.UserHomeDir()
 			type candidate struct {
-				id, label, marker string
+				id, label string
+				present   bool
+			}
+			t3Ag, _ := filepath.Glob(filepath.Join(home, ".t3", "userdata", "providers", "antigravity", "*", "config"))
+			hasDir := func(p string) bool {
+				info, err := os.Stat(p)
+				return err == nil && info.IsDir()
+			}
+			hasFile := func(p string) bool {
+				info, err := os.Stat(p)
+				return err == nil && !info.IsDir()
 			}
 			candidates := []candidate{
-				{"claude", "Claude Code", filepath.Join(home, ".claude")},
-				{"cursor", "Cursor", filepath.Join(home, ".cursor")},
-				{"codex", "Codex", filepath.Join(home, ".codex")},
-				{"antigravity", "Antigravity", filepath.Join(home, ".gemini")},
+				{"claude", "Claude Code", hasDir(filepath.Join(home, ".claude"))},
+				{"cursor", "Cursor", hasDir(filepath.Join(home, ".cursor"))},
+				{"codex", "Codex", hasDir(filepath.Join(home, ".codex"))},
+				{"antigravity", "Antigravity", len(t3Ag) > 0 || hasDir(filepath.Join(home, ".gemini", "antigravity"))},
+				{"hermes", "Hermes", hasFile(filepath.Join(home, ".hermes", "config.yaml"))},
 			}
 			var found []candidate
 			for _, c := range candidates {
-				if _, err := os.Stat(c.marker); err == nil {
+				if c.present {
 					found = append(found, c)
 				}
 			}
 			if len(found) == 0 {
-				fmt.Println("3. No AI harness config folders detected yet (run `memtwig install <claude|cursor|codex|antigravity>` anytime)")
+				fmt.Println("3. No AI harness config folders detected yet (run `memtwig install <claude|cursor|codex|antigravity|hermes|all>` anytime)")
 			} else if applyInstall {
 				fmt.Println("3. Connecting detected AI harnesses:")
-				for _, c := range found {
-					res, err := install.Install(c.id, "", "", false)
-					if err != nil {
-						fmt.Printf("   - %s: error (%v)\n", c.label, err)
-					} else {
-						state := "updated"
-						if !res.Changed {
-							state = "already configured"
-						}
-						fmt.Printf("   - %s: %s (%s)\n", c.label, res.ConfigPath, state)
+				results, err := install.InstallAll("", "", false)
+				if err != nil {
+					fmt.Printf("   - error (%v)\n", err)
+				}
+				for _, res := range results {
+					state := "updated"
+					if !res.Changed {
+						state = "already configured"
 					}
+					fmt.Printf("   - %s: %s (%s)\n", res.Harness, res.ConfigPath, state)
 				}
 			} else {
-				fmt.Println("3. Detected AI harnesses (pass `--install` or run individually):")
+				fmt.Println("3. Detected AI harnesses (pass `--install` or run `memtwig install all`):")
 				for _, c := range found {
 					fmt.Printf("   - %s -> memtwig install %s\n", c.label, c.id)
 				}
 			}
 
 			fmt.Println("\nNext:")
-			fmt.Println("  memtwig ui                  # open local Studio Web UI")
-			fmt.Println("  memtwig tui                 # open terminal UI")
-			fmt.Println("  memtwig search \"query\"      # search active vaults")
+			fmt.Println("  memtwig ui                      # open local Studio Web UI")
+			fmt.Println("  memtwig tui                     # open terminal UI")
+			fmt.Println("  memtwig curate --print-routine  # copyable nightly routine for your agent")
+			fmt.Println("  memtwig search \"query\"          # search active vaults")
 			return nil
 		},
 	}
@@ -952,11 +963,16 @@ func cmdCurate() *cobra.Command {
 	var minCosine float64
 	var allPairs bool
 	var markJudged bool
+	var printRoutine bool
 	var markPairs []string
 	cmd := &cobra.Command{
 		Use:   "curate",
 		Short: "Run deterministic curation, output --candidates for agent review, or run --llm",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if printRoutine {
+				fmt.Println(curator.NightlyRoutinePrompt())
+				return nil
+			}
 			cfg, err := config.Load(cfgPath)
 			if err != nil {
 				return err
@@ -1091,6 +1107,7 @@ func cmdCurate() *cobra.Command {
 	cmd.Flags().BoolVar(&allPairs, "all-pairs", false, "ignore .curator/judged_pairs.json rotation state")
 	cmd.Flags().BoolVar(&markJudged, "mark-judged", false, "with --candidates, record returned pairs in .curator/judged_pairs.json")
 	cmd.Flags().StringSliceVar(&markPairs, "mark-pair", nil, "mark note pair \"noteA.md,noteB.md\" as judged without running curation")
+	cmd.Flags().BoolVar(&printRoutine, "print-routine", false, "print a copyable nightly curation prompt for agent schedulers")
 	return cmd
 }
 
@@ -1307,10 +1324,30 @@ func cmdInstall() *cobra.Command {
 	var dryRun bool
 	var binPath string
 	cmd := &cobra.Command{
-		Use:   "install <claude|cursor|codex|antigravity>",
-		Short: "Configure an AI harness to use memtwig hooks and MCP",
+		Use:   "install <claude|cursor|codex|antigravity|hermes|all>",
+		Short: "Configure AI harnesses to use memtwig hooks and MCP",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if strings.EqualFold(strings.TrimSpace(args[0]), "all") {
+				results, err := install.InstallAll(binPath, "", dryRun)
+				if err != nil {
+					return err
+				}
+				if len(results) == 0 {
+					fmt.Println("No supported AI harness config folders detected.")
+					return nil
+				}
+				for _, res := range results {
+					state := "updated"
+					if res.DryRun {
+						state = "dry-run"
+					} else if !res.Changed {
+						state = "already configured"
+					}
+					fmt.Printf("[%s] %s (%s)\n", res.Harness, res.ConfigPath, state)
+				}
+				return nil
+			}
 			res, err := install.Install(args[0], binPath, "", dryRun)
 			if err != nil {
 				return err
@@ -1322,7 +1359,7 @@ func cmdInstall() *cobra.Command {
 				mode = "already configured"
 			}
 			fmt.Printf("[%s] %s (%s)\n", res.Harness, res.ConfigPath, mode)
-			if res.DryRun || res.Harness == "antigravity" {
+			if res.DryRun {
 				fmt.Println(res.Preview)
 			}
 			return nil

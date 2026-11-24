@@ -18,7 +18,7 @@ const snippets: Snippet[] = [
 # or: curl -fsSL https://memtwig.com/install.sh | sh
 # or: go install github.com/memtwig/memtwig/cmd/memtwig@latest
 
-memtwig setup
+memtwig setup --install
 memtwig ui`,
   },
   {
@@ -34,23 +34,22 @@ memtwig status --cwd ~/work/acme/api`,
   {
     id: "harnesses",
     label: "Harnesses",
-    code: `memtwig install claude --dry-run
-memtwig install cursor --dry-run
-memtwig install codex --dry-run
+    code: `# Auto-connect Claude, Cursor, Codex, Antigravity & Hermes
+memtwig install all
 
-# Or run the stdio MCP server directly
+# Or inspect/run per harness, then verify MCP tools + instructions
+memtwig install antigravity --dry-run
 memtwig mcp`,
   },
   {
     id: "team",
-    label: "Team HTTP",
-    code: `# Streamable HTTP MCP + REST API with RBAC tokens and audit.jsonl
-memtwig serve --addr 127.0.0.1:8787
+    label: "Curator & HTTP",
+    code: `# Vector candidate pairs for your agent (no extra LLM key) or HTTP RBAC server
+memtwig curate --candidates --max-pairs 6 --json
+memtwig curate --print-routine
 
-# Review agent proposals from any terminal
-memtwig proposal list
-memtwig proposal show <id>
-memtwig proposal ok <id>`,
+# Or run Streamable HTTP MCP + REST API + Studio UI
+memtwig serve --addr 127.0.0.1:8787`,
   },
 ];
 
