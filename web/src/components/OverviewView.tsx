@@ -40,7 +40,7 @@ type AuditEvent = {
   outcome: string;
 };
 
-const BAR_COLORS = ["#e4e4e7", "#94a3b8", "#5eead4", "#a1a1aa"];
+const BAR_COLORS = ["#e4e4e7", "#94a3b8", "#58cc7d", "#a1a1aa"];
 
 export function OverviewView({
   vaults,
@@ -84,7 +84,7 @@ export function OverviewView({
   const miniGraph = React.useMemo(() => {
     const allNoteNodes = nodes.filter((n) => n.kind === "note");
     if (allNoteNodes.length === 0) {
-      return { placed: [], map: new Map(), links: [] as GraphEdge[] };
+      return { placed: [], map: new Map(), links: [] as GraphEdge[], hubId: "", vault: "" };
     }
     const nodeMap = new Map(allNoteNodes.map((n) => [n.id, n]));
     const deg = new Map<string, number>();
@@ -112,12 +112,13 @@ export function OverviewView({
       const seed = byDegDesc[0];
       picked.push(seed);
       pickedIds.add(seed.id);
-
+      // Stay inside the hub's vault: the card shows one isolated cluster, never a cross-vault mix.
+      const sameVault = (id: string) => nodeMap.get(id)?.vault === seed.vault;
       const queue: string[] = [seed.id];
       while (queue.length > 0 && picked.length < maxNodes) {
         const cur = queue.shift()!;
         const neighbors = Array.from(adj.get(cur) ?? [])
-          .filter((id) => !pickedIds.has(id) && nodeMap.has(id))
+          .filter((id) => !pickedIds.has(id) && nodeMap.has(id) && sameVault(id))
           .sort((a, b) => (deg.get(b) ?? 0) - (deg.get(a) ?? 0));
         for (const nid of neighbors) {
           if (picked.length >= maxNodes) break;
@@ -126,41 +127,26 @@ export function OverviewView({
           queue.push(nid);
         }
       }
-      for (const n of byDegDesc) {
-        if (picked.length >= maxNodes) break;
-        if (!pickedIds.has(n.id)) {
-          pickedIds.add(n.id);
-          picked.push(n);
-        }
-      }
     }
 
-    // Place highest-degree nodes near the center columns so edges fan cleanly
-    const orderedSlots: GraphNode[] = new Array(picked.length);
-    const mid = Math.floor((picked.length - 1) / 2);
-    for (let i = 0; i < picked.length; i++) {
-      const offset = Math.ceil(i / 2);
-      const slot = i % 2 === 0 ? mid - offset : mid + offset;
-      const clamped = Math.max(0, Math.min(picked.length - 1, slot));
-      if (!orderedSlots[clamped]) {
-        orderedSlots[clamped] = picked[i];
-      } else {
-        const empty = orderedSlots.findIndex((x) => !x);
-        if (empty >= 0) orderedSlots[empty] = picked[i];
-      }
-    }
-
-    const cols = Math.max(2, Math.ceil(orderedSlots.length / 2));
-    const placed = orderedSlots.map((n, i) => {
-      const row = i % 2;
-      const col = Math.floor(i / 2);
-      const x = 42 + (col * 276) / Math.max(1, cols - 1);
-      const y = row === 0 ? 38 + (col % 2) * 14 : 106 - (col % 2) * 14;
-      return { ...n, x, y };
-    });
+    // Fan layout: hub on the left, its cluster in one column on the right. Labels sit to the
+    // right of every node, edges stay in the gap between hub and column, so nothing overlaps.
+    const hub = picked[0];
+    const column = picked.slice(1, 7);
+    const HX = 140;
+    const CX = 228;
+    const top = 16;
+    const bottom = 128;
+    const step = column.length > 1 ? Math.min(26, (bottom - top) / (column.length - 1)) : 0;
+    const startY = 72 - (step * (column.length - 1)) / 2;
+    const placed = [
+      ...(hub ? [{ ...hub, x: HX, y: 72, anchor: "end" as const }] : []),
+      ...column.map((n, i) => ({ ...n, x: CX, y: startY + i * step, anchor: "start" as const })),
+    ];
     const map = new Map(placed.map((p) => [p.id, p]));
-    const links = noteLinks.filter((e) => pickedIds.has(e.source) && pickedIds.has(e.target));
-    return { placed, map, links };
+    const placedIds = new Set(placed.map((p) => p.id));
+    const links = noteLinks.filter((e) => placedIds.has(e.source) && placedIds.has(e.target));
+    return { placed, map, links, hubId: hub?.id ?? "", vault: hub?.vault ?? "" };
   }, [nodes, noteLinks]);
 
   // Dot-matrix heights derived from note sizes (deterministic, real data)
@@ -312,7 +298,7 @@ export function OverviewView({
                       width={2.5}
                       height={h}
                       rx={1}
-                      fill={highlight ? "#5eead4" : "#2a2b33"}
+                      fill={highlight ? "#58cc7d" : "#2a2b33"}
                     />
                   );
                 })}
@@ -342,36 +328,76 @@ export function OverviewView({
               <span className="text-4xl font-light tracking-tight tabular-nums text-foreground">
                 {noteLinks.length}
               </span>
-              <span className="text-xs text-muted-foreground">Isolated by vault</span>
+              <span className="text-xs text-muted-foreground">
+                {noteLinks.length === 1 ? "link" : "links"} · {vaults.length} isolated{" "}
+                {vaults.length === 1 ? "vault" : "vaults"}
+              </span>
             </div>
 
-            <svg viewBox="0 0 360 145" className="mt-4 h-36 w-full">
+            <svg viewBox="0 0 360 145" className="mt-4 h-36 w-full" role="img" aria-label="Most connected notes">
               {miniGraph.links.map((e, i) => {
                 const s = miniGraph.map.get(e.source);
                 const t = miniGraph.map.get(e.target);
                 if (!s || !t) return null;
-                const mx = (s.x + t.x) / 2;
-                const my = (s.y + t.y) / 2 - 14;
+                const decision = e.kind === "decision";
+                const stroke = decision ? "#8a8b94" : "#58cc7d";
+                if (s.x === t.x) {
+                  // column-to-column: arc bulging toward the hub, away from the labels
+                  const bulge = 14 + Math.abs(t.y - s.y) * 0.35;
+                  return (
+                    <path
+                      key={i}
+                      d={`M ${s.x} ${s.y} C ${s.x - bulge} ${s.y}, ${t.x - bulge} ${t.y}, ${t.x} ${t.y}`}
+                      fill="none"
+                      stroke={stroke}
+                      strokeOpacity={0.4}
+                      strokeWidth={1}
+                      strokeDasharray={decision ? "3 3" : undefined}
+                    />
+                  );
+                }
+                const [a, b] = s.x < t.x ? [s, t] : [t, s];
+                const mx = (a.x + b.x) / 2;
                 return (
                   <path
                     key={i}
-                    d={`M ${s.x} ${s.y} Q ${mx} ${my} ${t.x} ${t.y}`}
+                    d={`M ${a.x} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x} ${b.y}`}
                     fill="none"
-                    stroke={e.kind === "decision" ? "#94a3b8" : "#5eead4"}
-                    strokeOpacity={0.75}
-                    strokeWidth={1.4}
-                    strokeDasharray={e.kind === "decision" ? "3 3" : undefined}
+                    stroke={stroke}
+                    strokeOpacity={decision ? 0.55 : 0.75}
+                    strokeWidth={1.3}
+                    strokeDasharray={decision ? "3 3" : undefined}
                   />
                 );
               })}
-              {miniGraph.placed.map((n) => (
-                <g key={n.id} transform={`translate(${n.x}, ${n.y})`}>
-                  <circle r={4.5} fill="#0e1015" stroke="#e4e4e7" strokeWidth={1.5} />
-                  <text y={15} textAnchor="middle" fill="#8a8b94" fontSize={8.5}>
-                    {n.label.slice(0, 14)}
-                  </text>
-                </g>
-              ))}
+              {miniGraph.placed.map((n) => {
+                const isHub = n.id === miniGraph.hubId;
+                const label = n.label.length > 22 ? `${n.label.slice(0, 21)}…` : n.label;
+                return (
+                  <g key={n.id} transform={`translate(${n.x}, ${n.y})`}>
+                    <circle
+                      r={isHub ? 5.5 : 3.6}
+                      fill={isHub ? "#58cc7d" : "#0e1015"}
+                      stroke={isHub ? "#58cc7d" : "#d4d4d8"}
+                      strokeWidth={1.3}
+                    />
+                    <text
+                      x={isHub ? -11 : 9}
+                      y={3.2}
+                      textAnchor={n.anchor}
+                      fill={isHub ? "#f4f4f5" : "#a1a1aa"}
+                      fontSize={isHub ? 10 : 9.5}
+                    >
+                      {label}
+                    </text>
+                    {isHub && (
+                      <text x={-11} y={16} textAnchor="end" fill="#6b6b75" fontSize={8.5}>
+                        {miniGraph.vault}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
             </svg>
           </div>
 

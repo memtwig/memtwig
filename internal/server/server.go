@@ -964,22 +964,31 @@ func (s *Server) handleVaultItem(w http.ResponseWriter, r *http.Request, p princ
 func (s *Server) handleHarnesses(w http.ResponseWriter, r *http.Request, p principal) {
 	home, _ := os.UserHomeDir()
 	type hInfo struct {
-		ID       string `json:"id"`
-		Label    string `json:"label"`
-		Detected bool   `json:"detected"`
-		Marker   string `json:"marker"`
+		ID        string `json:"id"`
+		Label     string `json:"label"`
+		Detected  bool   `json:"detected"`
+		Connected bool   `json:"connected"`
+		Marker    string `json:"marker"`
 	}
 	defs := []struct{ id, label, rel string }{
 		{"claude", "Claude Code", ".claude"},
 		{"cursor", "Cursor", ".cursor"},
 		{"codex", "Codex", ".codex"},
 		{"antigravity", "Antigravity", ".gemini"},
+		{"hermes", "Hermes", ".hermes"},
 	}
 	out := make([]hInfo, 0, len(defs))
 	for _, d := range defs {
 		marker := filepath.Join(home, d.rel)
 		_, err := os.Stat(marker)
-		out = append(out, hInfo{ID: d.id, Label: d.label, Detected: err == nil, Marker: "~/" + d.rel})
+		info := hInfo{ID: d.id, Label: d.label, Detected: err == nil, Marker: "~/" + d.rel}
+		if info.Detected {
+			// A dry run that would change nothing means memtwig is already wired in.
+			if res, ierr := install.Install(d.id, "", home, true); ierr == nil && !res.Changed {
+				info.Connected = true
+			}
+		}
+		out = append(out, info)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"harnesses": out})
 }

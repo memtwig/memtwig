@@ -25,7 +25,7 @@ const views: StudioView[] = [
   },
   {
     id: "graph",
-    label: "Knowledge Graph",
+    label: "Graph",
     src: "/studio/graph.png",
     alt: "Memtwig Studio Knowledge Graph showing isolated per-vault clusters and note connections",
   },
@@ -36,10 +36,16 @@ const views: StudioView[] = [
     alt: "Memtwig Studio Notes workspace with instant search, rendered Markdown reader, raw view, and editor",
   },
   {
+    id: "proposals",
+    label: "Proposals",
+    src: "/studio/proposals.png",
+    alt: "Memtwig Studio Proposals queue with a line-numbered diff, author, reason, and approve or reject actions",
+  },
+  {
     id: "settings",
     label: "Settings",
     src: "/studio/settings.png",
-    alt: "Memtwig Studio Settings for configuring embedding providers, LLM curator, vaults, and AI harnesses",
+    alt: "Memtwig Studio Settings with local embeddings, the agent-native curator, and five connected AI harnesses",
   },
 ];
 
@@ -89,12 +95,12 @@ export function StudioShowcase() {
                 </span>
               </div>
 
-              <TabsList className="grid w-full grid-cols-2 gap-1 rounded-2xl sm:inline-flex sm:w-auto sm:gap-0 sm:rounded-full">
+              <TabsList className="grid w-full grid-cols-5 gap-0.5 rounded-2xl sm:inline-flex sm:w-auto sm:gap-0 sm:rounded-full">
                 {views.map((view) => (
                   <TabsTrigger
                     key={view.id}
                     value={view.id}
-                    className="relative z-10 rounded-xl px-3 text-xs text-zinc-400 transition-colors data-[state=active]:bg-transparent data-[state=active]:text-[#141415] data-[state=active]:shadow-none sm:rounded-full sm:text-sm"
+                    className="relative z-10 min-w-0 rounded-xl px-1 text-[11px] text-zinc-400 transition-colors data-[state=active]:bg-transparent data-[state=active]:text-[#141415] data-[state=active]:shadow-none sm:rounded-full sm:px-3 sm:text-sm"
                   >
                     {active === view.id && (
                       <motion.span

@@ -1,4 +1,6 @@
 import * as React from "react";
+import { Check, Copy } from "@phosphor-icons/react";
+import { highlight } from "@/lib/highlight";
 
 const META_HEADER_RE = /^(status|stato|updated|aggiornat[oa]|valid_from|valido\s+dal|owner|proprietario)\s*:/i;
 
@@ -43,16 +45,78 @@ function stripTopHeader(raw: string, skipTitle: boolean): { body: string; stripp
   return { body, strippedH1: seenH1 && skipTitle };
 }
 
+function CodeFence({ code, lang }: { code: string; lang: string }) {
+  const [copied, setCopied] = React.useState(false);
+  const lines = React.useMemo(() => highlight(code, lang || "text"), [code, lang]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // clipboard unavailable (insecure context)
+    }
+  };
+  return (
+    <figure className="group my-4 overflow-hidden rounded-lg border border-border bg-[#0c0c0f]">
+      <figcaption className="flex h-8 items-center justify-between border-b border-border/70 bg-[#121216] pr-1.5 pl-3.5">
+        <span className="font-mono text-[11px] text-muted-foreground">{lang || "text"}</span>
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={copied ? "Copied" : "Copy code"}
+          className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#58cc7d]"
+        >
+          {copied ? <Check size={13} className="text-[#58cc7d]" /> : <Copy size={13} />}
+        </button>
+      </figcaption>
+      <pre className="code-surface overflow-x-auto px-4 py-3 text-[12.5px] leading-[1.7] text-zinc-300 whitespace-pre">
+        <code>
+          {lines.map((line, li) => (
+            <React.Fragment key={li}>
+              {line.map(([t, cls], ti) =>
+                cls ? (
+                  <span key={ti} className={`tok-${cls}`}>
+                    {t}
+                  </span>
+                ) : (
+                  <React.Fragment key={ti}>{t}</React.Fragment>
+                ),
+              )}
+              {li < lines.length - 1 ? "\n" : null}
+            </React.Fragment>
+          ))}
+        </code>
+      </pre>
+    </figure>
+  );
+}
+
 function renderInline(text: string): React.ReactNode[] {
-  const tokens = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
+  const tokens = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\))/g);
   return tokens.map((tok, i) => {
     if (tok.startsWith("`") && tok.endsWith("`") && tok.length > 2) {
       return (
-        <span
+        <code
           key={i}
-          className="rounded-[4px] border border-border bg-[#16161a] px-1.5 py-0.5 text-[13px] font-medium text-zinc-200"
+          className="rounded-[4px] border border-border bg-[#141418] px-1.5 py-px font-mono text-[12.5px] text-[#ebc27e]"
         >
           {tok.slice(1, -1)}
+        </code>
+      );
+    }
+    if (tok.startsWith("[[") && tok.endsWith("]]")) {
+      return (
+        <span key={i} className="text-[#7ee09e] underline decoration-[#58cc7d]/35 underline-offset-[3px]">
+          {tok.slice(2, -2)}
+        </span>
+      );
+    }
+    const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok);
+    if (link) {
+      return (
+        <span key={i} className="text-[#7ee09e] underline decoration-[#58cc7d]/35 underline-offset-[3px]">
+          {link[1]}
         </span>
       );
     }
@@ -84,6 +148,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
     }
 
     if (trimmed.startsWith("```")) {
+      const lang = trimmed.slice(3).trim();
       const codeLines: string[] = [];
       i++;
       while (i < lines.length && !lines[i].trim().startsWith("```")) {
@@ -91,14 +156,7 @@ export function MarkdownView({ raw, skipTitle }: { raw: string; skipTitle?: bool
         i++;
       }
       i++;
-      blocks.push(
-        <div
-          key={`code-${i}`}
-          className="my-3 overflow-x-auto rounded-md border border-border bg-[#0f0f12] px-3.5 py-3 text-[13px] leading-relaxed text-zinc-300 whitespace-pre"
-        >
-          {codeLines.join("\n")}
-        </div>,
-      );
+      blocks.push(<CodeFence key={`code-${i}`} code={codeLines.join("\n")} lang={lang} />);
       continue;
     }
 

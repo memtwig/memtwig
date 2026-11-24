@@ -1,6 +1,7 @@
 ---
 import ArticleLayout from "@/layouts/ArticleLayout.astro";
 import VsDiagram from "@/components/VsDiagram.astro";
+import { CodeBlock } from "@/components/CodeBlock";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -112,16 +113,17 @@ const faqs = [
     </div>
   </section>
 
-  <section class="mt-10 overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#18181b]">
-    <div class="flex items-center justify-between border-b border-white/[0.08] bg-[#1c1c1f] px-5 py-3.5">
-      <span class="text-sm font-medium text-white">Migrate in 30 seconds</span>
-      <span class="text-xs text-zinc-400">shell</span>
-    </div>
-    <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{`memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
+  <section class="mt-10">
+    <CodeBlock
+      client:visible
+      title="Migrate in 30 seconds"
+      lang="bash"
+      code={`memtwig migrate personal ~/notes --kind personal --always-include "persona/**"
 memtwig index
 memtwig install claude
 memtwig install cursor
-memtwig install codex`}</code></pre>
+memtwig install codex`}
+    />
   </section>
 
   <div class="mt-12 flex flex-wrap gap-3">

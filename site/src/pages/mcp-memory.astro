@@ -1,6 +1,7 @@
 ---
 import ArticleLayout from "@/layouts/ArticleLayout.astro";
 import VsDiagram from "@/components/VsDiagram.astro";
+import { CodeBlock } from "@/components/CodeBlock";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -67,34 +68,32 @@ const faqs = [
     </table>
   </section>
 
-  <section class="mt-12 grid gap-4 sm:grid-cols-2">
-    <div class="overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#18181b]">
-      <div class="flex items-center justify-between border-b border-white/[0.08] bg-[#1c1c1f] px-5 py-3.5">
-        <span class="text-sm font-medium text-white">Local stdio</span>
-        <span class="text-xs text-zinc-400">mcp.json</span>
-      </div>
-      <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{`{
+  <section class="mt-12 grid gap-4 lg:grid-cols-2">
+    <CodeBlock
+      client:visible
+      title="Local stdio"
+      meta="mcp.json"
+      lang="json"
+      code={`{
   "mcpServers": {
     "memtwig": {
       "command": "memtwig",
       "args": ["mcp"]
     }
   }
-}`}</code></pre>
-    </div>
-
-    <div class="overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#18181b]">
-      <div class="flex items-center justify-between border-b border-white/[0.08] bg-[#1c1c1f] px-5 py-3.5">
-        <span class="text-sm font-medium text-white">Team HTTP + RBAC</span>
-        <span class="text-xs text-zinc-400">shell</span>
-      </div>
-      <pre class="overflow-x-auto p-5 text-sm leading-relaxed text-zinc-200"><code>{`memtwig serve --addr 127.0.0.1:8787
+}`}
+    />
+    <CodeBlock
+      client:visible
+      title="Team HTTP + RBAC"
+      lang="bash"
+      code={`memtwig serve --addr 127.0.0.1:8787
 
 # POST /mcp
 # GET  /api/v1/search?q=deploy
 # POST /api/v1/proposals
-# GET  /api/v1/audit`}</code></pre>
-    </div>
+# GET  /api/v1/audit`}
+    />
   </section>
 
   <div class="mt-12 flex flex-wrap gap-3">

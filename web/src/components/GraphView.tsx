@@ -33,6 +33,9 @@ export type GraphEdge = {
 type PositionedNode = GraphNode & {
   x: number;
   y: number;
+  /** cluster centre, used to push labels outward and bend edges inward */
+  cx: number;
+  cy: number;
 };
 
 type ClusterBox = {
@@ -44,6 +47,54 @@ type ClusterBox = {
   w: number;
   h: number;
 };
+
+type ClusterPlan = {
+  vault: GraphNode;
+  notes: GraphNode[];
+  w: number;
+  h: number;
+  rings: Array<{ notes: GraphNode[]; rx: number; ry: number; offset: number }>;
+};
+
+const LABEL_PAD_X = 146;
+const LABEL_PAD_Y = 64;
+const MAX_FIT_SCALE = 1.3;
+
+function useElementSize<T extends HTMLElement>(): [React.RefObject<T | null>, { w: number; h: number }] {
+  const ref = React.useRef<T>(null);
+  const [size, setSize] = React.useState({ w: 900, h: 640 });
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) setSize({ w: r.width, h: r.height });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, size];
+}
+
+/** Label placement pointing away from the cluster centre so text never sits on spokes. */
+function labelPlacement(n: PositionedNode, r: number) {
+  const dx = n.x - n.cx;
+  const dy = n.y - n.cy;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return { x: 0, y: r + 15, anchor: "middle" as const };
+  const ux = dx / len;
+  const uy = dy / len;
+  if (Math.abs(ux) < 0.28) {
+    return { x: 0, y: uy < 0 ? -(r + 8) : r + 15, anchor: "middle" as const };
+  }
+  return {
+    x: ux * (r + 7),
+    y: uy * (r + 4) + 4,
+    anchor: ux > 0 ? ("start" as const) : ("end" as const),
+  };
+}
 
 function truncateLabel(s: string, max = 20): string {
   return s.length > max ? s.slice(0, max - 1) + "…" : s;
@@ -89,7 +140,9 @@ export function GraphView({
     return deg;
   }, [filteredEdges]);
 
-  const { positioned, clusters, vaultNoteCounts, viewW, viewH } = React.useMemo(() => {
+  const [stageRef, stage] = useElementSize<HTMLDivElement>();
+
+  const { positioned, clusters, vaultNoteCounts, view } = React.useMemo(() => {
     const vaultNodes = filteredNodes
       .filter((n) => n.kind === "vault")
       .sort((a, b) => a.vault.localeCompare(b.vault));
@@ -102,76 +155,25 @@ export function GraphView({
       }
     }
 
-    const pos: PositionedNode[] = [];
-    const boxes: ClusterBox[] = [];
     const counts = new Map<string, number>();
-    const colGap = 40;
-    const padX = 36;
-    const padY = 44;
-    let cursorX = padX;
-    let maxH = 440;
-
-    const placeRing = (ringNotes: GraphNode[], cx: number, cy: number, r: number, angleOffset = 0) => {
-      ringNotes.forEach((nn, ni) => {
-        const angle = (2 * Math.PI * ni) / Math.max(1, ringNotes.length) - Math.PI / 2 + angleOffset;
-        pos.push({
-          ...nn,
-          x: cx + Math.cos(angle) * r,
-          y: cy + Math.sin(angle) * r,
-        });
-      });
-    };
-
-    vaultNodes.forEach((vn) => {
+    const plans: ClusterPlan[] = vaultNodes.map((vn) => {
       const vNotes = (notesByVault.get(vn.vault) ?? []).sort(
         (a, b) => (a.folder ?? "").localeCompare(b.folder ?? "") || (a.path ?? "").localeCompare(b.path ?? ""),
       );
       counts.set(vn.vault, vNotes.length);
-
       if (vNotes.length <= 20) {
-        const radius = Math.max(120, Math.min(200, 92 + vNotes.length * 18));
-        const boxW = radius * 2 + 190;
-        const boxH = radius * 2 + 128;
-        const cx = cursorX + boxW / 2;
-        const cy = padY + boxH / 2 + 12;
-
-        boxes.push({
-          vault: vn.vault,
-          vaultKind: vn.vault_kind,
-          defaultWrite: vn.default_write ?? "propose",
-          x: cursorX,
-          y: padY,
-          w: boxW,
-          h: boxH,
-        });
-        pos.push({ ...vn, x: cx, y: cy });
-        placeRing(vNotes, cx, cy, vNotes.length === 1 ? radius * 0.72 : radius);
-
-        cursorX += boxW + colGap;
-        if (boxH + padY * 2 > maxH) maxH = boxH + padY * 2;
-        return;
+        // Wider-than-tall ellipse keeps neighbouring labels apart near the top and bottom.
+        const r = vNotes.length <= 1 ? 70 : Math.max(96, Math.min(190, 52 + vNotes.length * 15));
+        const rx = r * 1.22;
+        const ry = r * 0.86;
+        return {
+          vault: vn,
+          notes: vNotes,
+          w: rx * 2 + LABEL_PAD_X * 2,
+          h: ry * 2 + LABEL_PAD_Y * 2,
+          rings: [{ notes: vNotes, rx, ry, offset: vNotes.length % 2 === 0 ? Math.PI / vNotes.length : 0 }],
+        };
       }
-
-      // Dense vault (>20 notes): pull hub notes to inner ring and stagger remaining notes across mid & outer rings
-      const rInner = 115;
-      const rMid = 225;
-      const rOuter = 320;
-      const boxW = rOuter * 2 + 200;
-      const boxH = rOuter * 2 + 140;
-      const cx = cursorX + boxW / 2;
-      const cy = padY + boxH / 2 + 12;
-
-      boxes.push({
-        vault: vn.vault,
-        vaultKind: vn.vault_kind,
-        defaultWrite: vn.default_write ?? "propose",
-        x: cursorX,
-        y: padY,
-        w: boxW,
-        h: boxH,
-      });
-      pos.push({ ...vn, x: cx, y: cy });
-
       const hubs = vNotes
         .filter((n) => (degreeById.get(n.id) ?? 0) >= 4)
         .sort((a, b) => (degreeById.get(b.id) ?? 0) - (degreeById.get(a.id) ?? 0) || (a.path ?? "").localeCompare(b.path ?? ""))
@@ -179,31 +181,95 @@ export function GraphView({
       const hubSet = new Set(hubs.map((n) => n.id));
       const remaining = vNotes.filter((n) => !hubSet.has(n.id));
       const midCount = Math.round(remaining.length * 0.4);
-      const midNotes = remaining.slice(0, midCount);
-      const outerNotes = remaining.slice(midCount);
-
-      if (hubs.length > 0) {
-        placeRing(hubs, cx, cy, rInner);
-      }
-      if (midNotes.length > 0) {
-        placeRing(midNotes, cx, cy, rMid, Math.PI / Math.max(1, midNotes.length));
-      }
-      if (outerNotes.length > 0) {
-        placeRing(outerNotes, cx, cy, rOuter);
-      }
-
-      cursorX += boxW + colGap;
-      if (boxH + padY * 2 > maxH) maxH = boxH + padY * 2;
+      const rings = [
+        { notes: hubs, rx: 130, ry: 105, offset: 0 },
+        { notes: remaining.slice(0, midCount), rx: 250, ry: 190, offset: Math.PI / Math.max(1, midCount) },
+        { notes: remaining.slice(midCount), rx: 360, ry: 270, offset: 0 },
+      ].filter((ring) => ring.notes.length > 0);
+      return { vault: vn, notes: vNotes, w: 360 * 2 + LABEL_PAD_X * 2, h: 270 * 2 + LABEL_PAD_Y * 2, rings };
     });
 
+    // Pack clusters into rows. Width-bound packings leave vertical slack, so each candidate first
+    // stretches its rings (up to a circle) into that slack; the packing covering most stage wins.
+    const gap = 28;
+    const measure = (rows: ClusterPlan[][]) => ({
+      W: Math.max(1, ...rows.map((row) => row.reduce((acc, p) => acc + p.w, 0) + gap * (row.length - 1))),
+      H: rows.reduce((acc, row) => acc + Math.max(...row.map((p) => p.h)), 0) + gap * Math.max(0, rows.length - 1),
+    });
+    let best: { rows: ClusterPlan[][]; W: number; H: number; scale: number; coverage: number } | null = null;
+    for (let perRow = 1; perRow <= Math.max(1, plans.length); perRow++) {
+      const rows: ClusterPlan[][] = [];
+      for (let i = 0; i < plans.length; i += perRow) {
+        rows.push(plans.slice(i, i + perRow).map((p) => ({ ...p, rings: p.rings.map((r) => ({ ...r })) })));
+      }
+      let { W, H } = measure(rows);
+      let scale = Math.min(stage.w / W, stage.h / H);
+      const extraPerRow = (stage.h / scale - H) / Math.max(1, rows.length);
+      if (extraPerRow > 8) {
+        for (const row of rows) {
+          for (const plan of row) {
+            if (plan.rings.length !== 1) continue;
+            const ring = plan.rings[0];
+            const grow = Math.min(extraPerRow * 0.45, ring.rx - ring.ry);
+            if (grow <= 0) continue;
+            ring.ry += grow;
+            plan.h += grow * 2;
+          }
+        }
+        ({ W, H } = measure(rows));
+        scale = Math.min(stage.w / W, stage.h / H);
+      }
+      const area = rows.flat().reduce((acc, p) => acc + p.w * p.h, 0);
+      const coverage = Math.min(MAX_FIT_SCALE, scale) ** 2 * area;
+      if (!best || coverage > best.coverage) best = { rows, W, H, scale, coverage };
+    }
+
+    const pos: PositionedNode[] = [];
+    const boxes: ClusterBox[] = [];
+    const W = best?.W ?? 1;
+    const H = best?.H ?? 1;
+    let cursorY = 0;
+    for (const row of best?.rows ?? []) {
+      const rowW = row.reduce((acc, p) => acc + p.w, 0) + gap * (row.length - 1);
+      const rowH = Math.max(...row.map((p) => p.h));
+      let cursorX = (W - rowW) / 2;
+      for (const plan of row) {
+        const x = cursorX;
+        const y = cursorY + (rowH - plan.h) / 2;
+        const cx = x + plan.w / 2;
+        const cy = y + plan.h / 2 + 8;
+        boxes.push({
+          vault: plan.vault.vault,
+          vaultKind: plan.vault.vault_kind,
+          defaultWrite: plan.vault.default_write ?? "propose",
+          x,
+          y,
+          w: plan.w,
+          h: plan.h,
+        });
+        pos.push({ ...plan.vault, x: cx, y: cy, cx, cy });
+        for (const ring of plan.rings) {
+          ring.notes.forEach((nn, ni) => {
+            const angle = (2 * Math.PI * ni) / Math.max(1, ring.notes.length) - Math.PI / 2 + ring.offset;
+            pos.push({ ...nn, x: cx + Math.cos(angle) * ring.rx, y: cy + Math.sin(angle) * ring.ry, cx, cy });
+          });
+        }
+        cursorX += plan.w + gap;
+      }
+      cursorY += rowH + gap;
+    }
+
+    // Fit the whole layout into the stage (centred), never blowing tiny graphs up past MAX_FIT_SCALE.
+    const scale = Math.min(stage.w / W, stage.h / H, MAX_FIT_SCALE) * 0.96;
+    const vw = stage.w / scale;
+    const vh = stage.h / scale;
     return {
       positioned: pos,
       clusters: boxes,
       vaultNoteCounts: counts,
-      viewW: Math.max(920, cursorX + padX - colGap),
-      viewH: Math.max(540, maxH),
+      view: { x: (W - vw) / 2, y: (H - vh) / 2, w: vw, h: vh },
     };
-  }, [filteredNodes, degreeById]);
+  }, [filteredNodes, degreeById, stage.w, stage.h]);
 
   const byId = React.useMemo(() => {
     const m = new Map<string, PositionedNode>();
@@ -335,7 +401,8 @@ export function GraphView({
         </div>
 
         <div
-          className="relative flex-1 cursor-grab overflow-hidden active:cursor-grabbing"
+          ref={stageRef}
+          className="relative min-h-0 flex-1 cursor-grab overflow-hidden active:cursor-grabbing"
           onMouseDown={(e) => {
             didDragRef.current = false;
             dragRef.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
@@ -365,7 +432,7 @@ export function GraphView({
         >
           <svg
             className="h-full w-full"
-            viewBox={`0 0 ${viewW} ${viewH}`}
+            viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
             onClick={() => {
               if (!didDragRef.current) setSelectedId(null);
             }}
@@ -375,15 +442,19 @@ export function GraphView({
                 <circle cx="1" cy="1" r="0.7" fill="#1e1e23" />
               </pattern>
               <marker id="arrow-link" viewBox="0 0 10 10" refX="16" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#5eead4" />
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#58cc7d" />
               </marker>
               <marker id="arrow-decision" viewBox="0 0 10 10" refX="16" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#a1a1aa" />
               </marker>
             </defs>
-            <rect width="100%" height="100%" fill="url(#mt-grid)" />
+            <rect x={view.x} y={view.y} width={view.w} height={view.h} fill="url(#mt-grid)" />
 
-            <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+            <g
+              transform={`translate(${pan.x * (view.w / stage.w) + (view.x + view.w / 2) * (1 - zoom)}, ${
+                pan.y * (view.h / stage.h) + (view.y + view.h / 2) * (1 - zoom)
+              }) scale(${zoom})`}
+            >
               {clusters.map((c) => (
                 <g key={c.vault}>
                   <rect
@@ -432,10 +503,10 @@ export function GraphView({
                 const isFocused = Boolean(activeFocus && (e.source === activeFocus || e.target === activeFocus));
                 const mx = (s.x + t.x) / 2;
                 const my = (s.y + t.y) / 2;
-                const dx = t.x - s.x;
-                const dy = t.y - s.y;
-                const cx = mx - dy * 0.16;
-                const cy = my + dx * 0.16;
+                const sameCluster = s.cx === t.cx && s.cy === t.cy;
+                const pull = sameCluster ? 0.32 : 0;
+                const cx = mx + (s.cx - mx) * pull;
+                const cy = my + (s.cy - my) * pull;
 
                 let stroke = e.kind === "decision" ? "#a1a1aa" : "#d4d4d8";
                 let strokeWidth = 1.6;
@@ -449,7 +520,7 @@ export function GraphView({
                     strokeWidth = 1;
                     markerEnd = undefined;
                   } else if (isFocused) {
-                    stroke = e.kind === "decision" ? "#a1a1aa" : "#5eead4";
+                    stroke = e.kind === "decision" ? "#a1a1aa" : "#58cc7d";
                     strokeOpacity = 0.9;
                     strokeWidth = 1.6;
                   } else {
@@ -532,10 +603,13 @@ export function GraphView({
                       />
                     )}
                     {!isVault && hasProps && <circle cx={r + 2} cy={-r + 1} r={3} fill="#22c55e" />}
-                    {showLabel && (
+                    {showLabel && (() => {
+                      const lp = isVault ? { x: 0, y: r + 16, anchor: "middle" as const } : labelPlacement(n, r);
+                      return (
                       <text
-                        y={r + 15}
-                        textAnchor="middle"
+                        x={lp.x}
+                        y={lp.y}
+                        textAnchor={lp.anchor}
                         fill={isSelected ? "#ffffff" : isVault ? "#a1a1aa" : "#d4d4d8"}
                         fontSize={11}
                         fontWeight={isSelected || isVault ? 500 : 400}
@@ -543,9 +617,10 @@ export function GraphView({
                         stroke="#0d0d10"
                         strokeWidth={3}
                       >
-                        {truncateLabel(n.label, 20)}
+                        {truncateLabel(n.label, isVault ? 16 : 21)}
                       </text>
-                    )}
+                      );
+                    })()}
                   </g>
                 );
               })}

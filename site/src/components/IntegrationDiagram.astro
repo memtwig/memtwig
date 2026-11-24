@@ -6,11 +6,14 @@ interface Props {
 }
 
 const { integration } = Astro.props;
+// Row centres of the three equal vault rows (gap-2.5 = 10px between rows).
+const rowTop = "calc((100% - 20px) / 6)";
+const rowBottom = "calc(100% - (100% - 20px) / 6)";
 ---
 
 <div class="rounded-[24px] border border-white/[0.08] bg-[#1c1c1f] p-5 sm:p-7">
-  <div class="grid items-stretch gap-4 md:grid-cols-3">
-    <!-- Left: Client / Agent -->
+  <div class="grid items-stretch md:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)_3.5rem_minmax(0,1fr)]">
+    <!-- Agent -->
     <div class="flex flex-col justify-between rounded-2xl border border-white/[0.07] bg-[#141415] p-5">
       <div class="flex items-center justify-between gap-2">
         <span class="text-xs text-zinc-400">{integration.maker}</span>
@@ -22,7 +25,13 @@ const { integration } = Astro.props;
       </div>
     </div>
 
-    <!-- Center: Transport & memtwig core -->
+    <!-- Agent -> memtwig -->
+    <div class="relative h-9 md:h-auto" aria-hidden="true">
+      <span class="rail-v rail-on top-0 bottom-0 left-1/2 md:hidden"><span class="rail-dot"></span></span>
+      <span class="rail-h rail-on top-1/2 right-0 left-0 hidden md:block"><span class="rail-dot"></span></span>
+    </div>
+
+    <!-- memtwig channel -->
     <div class="flex flex-col justify-between rounded-2xl border border-[#58cc7d]/30 bg-[#18221b]/70 p-5">
       <div class="flex items-center justify-between gap-2">
         <span class="rounded-full bg-[#58cc7d]/20 px-2.5 py-0.5 text-xs font-medium text-[#7ee09e]">
@@ -39,26 +48,45 @@ const { integration } = Astro.props;
       </div>
     </div>
 
-    <!-- Right: Vaults -->
-    <div class="flex flex-col justify-between gap-2.5">
-      <div class="rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
+    <!-- memtwig -> vaults: straight into persona rules, up into the active vault, isolated branch stays dark -->
+    <div class="relative h-9 md:h-auto" aria-hidden="true">
+      <span class="rail-v rail-on top-0 bottom-0 left-1/2 md:hidden"><span class="rail-dot" style="--delay:0.7s"></span></span>
+      <span class="hidden md:block">
+        <span class="rail-h rail-on top-1/2 right-0 left-0"><span class="rail-dot" style="--delay:0.7s"></span></span>
+        <span class="rail-v rail-on left-1/2" style={`top:${rowTop};bottom:50%`}><span class="rail-dot rail-rev" style="--delay:0.95s"></span></span>
+        <span class="rail-h rail-on right-0 left-1/2" style={`top:${rowTop}`}><span class="rail-dot" style="--delay:1.55s"></span></span>
+        <span class="rail-v rail-off left-1/2" style={`top:50%;bottom:calc(100% - ${rowBottom})`}></span>
+        <span class="rail-h rail-off right-0 left-1/2" style={`top:${rowBottom}`}></span>
+      </span>
+    </div>
+
+    <!-- Vaults -->
+    <div class="grid grid-rows-3 gap-2.5">
+      <div class="flex flex-col justify-center rounded-xl border border-[#58cc7d]/25 bg-[#141415] px-4 py-3">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-sm font-medium text-white">Active Vault</span>
+          <span class="text-sm font-medium text-white">Active vault</span>
           <span class="size-2 rounded-full bg-[#58cc7d]" aria-hidden="true"></span>
         </div>
         <div class="mt-0.5 text-xs text-[#7ee09e]">{integration.diagramNodes.vaultSub}</div>
       </div>
 
-      <div class="rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
+      <div class="flex flex-col justify-center rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-sm font-medium text-white">Personal Rules</span>
+          <span class="text-sm font-medium text-white">Personal rules</span>
           <span class="size-2 rounded-full bg-[#58cc7d]" aria-hidden="true"></span>
         </div>
         <div class="mt-0.5 text-xs text-zinc-400">SOUL.md · persona/**</div>
       </div>
 
-      <div class="rounded-xl border border-dashed border-white/10 bg-[#141415]/60 px-4 py-2.5 opacity-60">
-        <div class="text-xs font-medium text-zinc-400">Other Clients · isolated</div>
+      <div class="flex items-center justify-between gap-2 rounded-xl border border-dashed border-white/10 bg-[#141415]/60 px-4 py-3">
+        <div>
+          <div class="text-sm font-medium text-zinc-400">Other clients</div>
+          <div class="mt-0.5 text-xs text-zinc-500">isolated</div>
+        </div>
+        <svg viewBox="0 0 16 16" class="size-3.5 shrink-0 text-zinc-500" fill="none" aria-label="locked" role="img">
+          <rect x="3" y="7" width="10" height="7" rx="1.6" stroke="currentColor" stroke-width="1.4"></rect>
+          <path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path>
+        </svg>
       </div>
     </div>
   </div>

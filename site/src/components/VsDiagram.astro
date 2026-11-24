@@ -17,15 +17,17 @@ const { variant } = Astro.props;
           </span>
           <span class="text-xs text-[#7ee09e]">local · git-native</span>
         </div>
-        <div class="mt-5 space-y-2.5">
+        <div class="mt-5">
           <div class="rounded-xl border border-white/10 bg-[#141415] px-4 py-3">
             <div class="text-sm font-medium text-white">Workspace</div>
             <div class="text-xs text-zinc-400">~/work/acme · automatic cwd &amp; remote routing</div>
           </div>
+          <div class="relative mx-auto h-4 w-px" aria-hidden="true" style="--c:#58cc7d"><span class="rail-v rail-on top-0 bottom-0 left-0"><span class="rail-dot" style="--delay:0s"></span></span></div>
           <div class="rounded-xl border border-white/10 bg-[#141415] px-4 py-3">
             <div class="text-sm font-medium text-white">Git Markdown Vault</div>
             <div class="text-xs text-zinc-400">Readable .md files in your repo</div>
           </div>
+          <div class="relative mx-auto h-4 w-px" aria-hidden="true" style="--c:#58cc7d"><span class="rail-v rail-on top-0 bottom-0 left-0"><span class="rail-dot" style="--delay:0.7s"></span></span></div>
           <div class="flex items-center justify-between gap-3 rounded-xl border border-[#58cc7d]/30 bg-[#141415] px-4 py-3">
             <div>
               <div class="text-sm font-medium text-white">Diff Approval + Local Index</div>
@@ -41,15 +43,17 @@ const { variant } = Astro.props;
           <span class="text-lg font-medium text-zinc-300">Mem0</span>
           <span class="text-xs text-zinc-500">cloud · vector API</span>
         </div>
-        <div class="mt-5 space-y-2.5">
+        <div class="mt-5">
           <div class="rounded-xl border border-white/[0.06] bg-[#141415] px-4 py-3">
             <div class="text-sm font-medium text-zinc-200">App SDK</div>
             <div class="text-xs text-zinc-500">Manual tenant &amp; user IDs</div>
           </div>
+          <div class="relative mx-auto h-4 w-px" aria-hidden="true"><span class="rail-v rail-off top-0 bottom-0 left-0"></span></div>
           <div class="rounded-xl border border-white/[0.06] bg-[#141415] px-4 py-3">
             <div class="text-sm font-medium text-zinc-200">Cloud LLM Extractor</div>
             <div class="text-xs text-zinc-500">Requires API key &amp; network</div>
           </div>
+          <div class="relative mx-auto h-4 w-px" aria-hidden="true"><span class="rail-v rail-off top-0 bottom-0 left-0"></span></div>
           <div class="rounded-xl border border-dashed border-white/10 bg-[#141415]/60 px-4 py-3">
             <div class="text-sm font-medium text-zinc-400">Vector + Graph DB</div>
             <div class="text-xs text-zinc-500">Background overwrites · no Git diff</div>
@@ -80,13 +84,15 @@ const { variant } = Astro.props;
               <div class="text-xs text-[#7ee09e]">~400 chars / snippet</div>
             </div>
           </div>
-          <div class="rounded-xl border border-white/10 bg-[#141415] px-4 py-3">
+          <div class="rounded-xl border border-white/10 bg-[#141415] px-4 py-3" data-budget>
             <div class="flex items-center justify-between text-xs">
               <span class="font-medium text-white">Prompt context</span>
-              <span class="text-zinc-400">lean · per turn</span>
+              <span class="budget-count tabular-nums text-[#7ee09e]" style="--delay:0.9s">3 × ~400 chars</span>
             </div>
-            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <div class="h-full w-1/5 rounded-full bg-[#58cc7d]"></div>
+            <div class="mt-2 flex h-2 w-full gap-[3px] overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+              <div class="budget-fill h-full w-[6.5%] rounded-l-full bg-[#58cc7d]" style="--delay:0.1s"></div>
+              <div class="budget-fill h-full w-[6.5%] bg-[#58cc7d]" style="--delay:0.3s"></div>
+              <div class="budget-fill h-full w-[6.5%] rounded-r-full bg-[#58cc7d]" style="--delay:0.5s"></div>
             </div>
           </div>
           <div class="flex flex-wrap gap-2 pt-1 text-xs text-zinc-200">
@@ -108,12 +114,14 @@ const { variant } = Astro.props;
             <div class="rounded-xl border border-white/[0.06] bg-[#141415] py-3">AGENTS.md</div>
             <div class="rounded-xl border border-white/[0.06] bg-[#141415] py-3">.cursorrules</div>
           </div>
-          <div class="rounded-xl border border-white/[0.06] bg-[#141415] px-4 py-3">
+          <div class="rounded-xl border border-white/[0.06] bg-[#141415] px-4 py-3" data-budget>
             <div class="flex items-center justify-between text-xs">
               <span class="font-medium text-zinc-300">Prompt context</span>
-              <span class="text-zinc-500">100% loaded every turn</span>
+              <span class="budget-count text-zinc-500" style="--delay:1.1s">whole file, every turn</span>
             </div>
-            <div class="mt-2 h-2 w-full rounded-full bg-zinc-600"></div>
+            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+              <div class="budget-fill h-full w-full rounded-full bg-zinc-500" style="--delay:0.1s"></div>
+            </div>
           </div>
           <div class="rounded-xl border border-dashed border-white/10 bg-[#141415]/60 px-4 py-2.5 text-center text-xs text-zinc-500">
             Manual copy-paste · duplicated per repo
@@ -133,16 +141,18 @@ const { variant } = Astro.props;
           </span>
           <span class="text-xs text-[#7ee09e]">memtwig mcp</span>
         </div>
-        <div class="mt-5 space-y-2.5">
-          <div class="flex flex-wrap gap-2 text-xs text-zinc-200">
+        <div class="mt-5">
+          <div class="flex flex-wrap justify-center gap-2 text-xs text-zinc-200">
             <span class="rounded-full border border-white/10 bg-[#141415] px-3 py-1">Claude Code</span>
             <span class="rounded-full border border-white/10 bg-[#141415] px-3 py-1">Cursor</span>
             <span class="rounded-full border border-white/10 bg-[#141415] px-3 py-1">Codex</span>
           </div>
+          <div class="relative mx-auto h-4 w-px" aria-hidden="true" style="--c:#58cc7d"><span class="rail-v rail-on top-0 bottom-0 left-0"><span class="rail-dot" style="--delay:0s"></span></span></div>
           <div class="rounded-xl border border-white/10 bg-[#141415] px-4 py-3">
             <div class="text-sm font-medium text-white">memtwig mcp</div>
             <div class="text-xs text-zinc-400">6 scoped tools · zero network calls</div>
           </div>
+          <div class="relative mx-auto h-4 w-px" aria-hidden="true" style="--c:#58cc7d"><span class="rail-v rail-on top-0 bottom-0 left-0"><span class="rail-dot" style="--delay:0.7s"></span></span></div>
           <div class="rounded-xl border border-[#58cc7d]/30 bg-[#141415] px-4 py-3">
             <div class="text-sm font-medium text-white">Local Vaults</div>
             <div class="text-xs text-[#7ee09e]">cwd &amp; git remote isolation</div>
@@ -158,15 +168,17 @@ const { variant } = Astro.props;
           </span>
           <span class="text-xs text-[#6bb5ff]">memtwig serve</span>
         </div>
-        <div class="mt-5 space-y-2.5">
+        <div class="mt-5">
           <div class="rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
             <div class="text-sm font-medium text-white">Team Agents</div>
             <div class="text-xs text-zinc-400">POST /mcp · per-bot Bearer auth</div>
           </div>
+          <div class="relative mx-auto h-4 w-px" aria-hidden="true" style="--c:#6bb5ff"><span class="rail-v rail-on top-0 bottom-0 left-0"><span class="rail-dot" style="--delay:0s"></span></span></div>
           <div class="rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
             <div class="text-sm font-medium text-white">RBAC Gate</div>
             <div class="text-xs text-[#6bb5ff]">role + vault + path globs</div>
           </div>
+          <div class="relative mx-auto h-4 w-px" aria-hidden="true" style="--c:#6bb5ff"><span class="rail-v rail-on top-0 bottom-0 left-0"><span class="rail-dot" style="--delay:0.7s"></span></span></div>
           <div class="grid grid-cols-2 gap-2.5">
             <div class="rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-2.5">
               <div class="text-xs font-medium text-white">Audit Log</div>
@@ -182,3 +194,25 @@ const { variant } = Astro.props;
     </>
   )}
 </div>
+
+<script is:inline>
+  (() => {
+    const els = document.querySelectorAll("[data-budget]:not([data-reveal])");
+    if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add("is-visible");
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.6 },
+    );
+    els.forEach((el) => {
+      el.setAttribute("data-reveal", "");
+      io.observe(el);
+    });
+  })();
+</script>

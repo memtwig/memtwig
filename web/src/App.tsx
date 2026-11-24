@@ -522,7 +522,7 @@ export function App() {
                     y1={y1}
                     x2={x2}
                     y2={y2}
-                    stroke={lit ? "#5eead4" : "#2b2d36"}
+                    stroke={lit ? "#58cc7d" : "#2b2d36"}
                     strokeOpacity={lit ? 0.85 : 0.7}
                     strokeWidth={2}
                     strokeLinecap="round"

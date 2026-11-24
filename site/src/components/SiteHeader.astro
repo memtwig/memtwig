@@ -32,7 +32,7 @@ const isActive = (match: string) => {
   <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 sm:px-8 pointer-events-auto">
     <a
       href="/"
-      class="flex items-center gap-2.5 rounded-full border border-white/10 bg-[#18181b]/85 px-3 py-1.5 text-base font-semibold tracking-tight text-white backdrop-blur-xl md:border-transparent md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none"
+      class="flex items-center gap-2.5 rounded-full border border-white/10 bg-[#18181b]/85 px-3 py-1.5 text-base font-semibold tracking-tight text-white backdrop-blur-xl lg:border-transparent lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none"
     >
       <img src="/favicon.svg" alt="" width="28" height="28" class="rounded-lg shadow-[0_4px_16px_rgba(88,204,125,0.28)]" />
       <span>memtwig</span>
@@ -40,7 +40,7 @@ const isActive = (match: string) => {
 
     <nav
       aria-label="Primary"
-      class="hidden items-center gap-1 rounded-full border border-white/10 bg-[#1d1d20]/85 px-2 py-1.5 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.45)] md:flex"
+      class="hidden items-center gap-1 rounded-full border border-white/10 bg-[#1d1d20]/85 px-2 py-1.5 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.45)] lg:flex"
     >
       {navLinks.map((item) => (
         <a
@@ -59,7 +59,7 @@ const isActive = (match: string) => {
       ))}
     </nav>
 
-    <div class="hidden items-center gap-2.5 md:flex">
+    <div class="hidden items-center gap-2.5 lg:flex">
       <a href={repoUrl} target="_blank" rel="noreferrer" class={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
         GitHub
       </a>
@@ -71,7 +71,7 @@ const isActive = (match: string) => {
       </a>
     </div>
 
-    <div class="md:hidden">
+    <div class="lg:hidden">
       <MobileNav client:media="(max-width: 767px)" currentPath={currentPath} />
     </div>
   </div>

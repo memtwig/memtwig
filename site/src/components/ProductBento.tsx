@@ -128,6 +128,80 @@ const diffLines = [
   { text: "+ pool_max_conns: 40", cls: "bg-[#58cc7d]/14 text-[#7ee09e]" },
 ];
 
+/** Centre of column i in an n-column grid with `gap` px gutters, as a CSS length. */
+function colCenter(i: number, n: number, gap: number): string {
+  if (n === 1) return "50%";
+  const col = `((100% - ${(n - 1) * gap}px) / ${n})`;
+  return `calc(${col} * ${i + 0.5} + ${i * gap}px)`;
+}
+
+/**
+ * Orthogonal routing rails between a single node and a row of n columns.
+ * fork: one source above fans out to the columns below. merge: the reverse.
+ * Inactive columns get a dark dashed rail and no signal.
+ */
+function RailFork({
+  active,
+  gap = 10,
+  merge = false,
+  delay = 0,
+  className = "h-6",
+}: {
+  active: boolean[];
+  gap?: number;
+  merge?: boolean;
+  delay?: number;
+  className?: string;
+}) {
+  const n = active.length;
+  const centers = active.map((_, i) => colCenter(i, n, gap));
+  const mid = n % 2 === 1 ? Math.floor(n / 2) : -1;
+  const stemDelay = merge ? delay + 1.4 : delay;
+  const busDelay = delay + 0.7;
+  const dropDelay = merge ? delay : delay + 1.4;
+  return (
+    <div className={`relative ${className}`} aria-hidden="true">
+      <span
+        className={`rail-v rail-on left-1/2 ${merge ? "top-1/2 bottom-0" : "top-0 bottom-1/2"}`}
+      >
+        <span className="rail-dot" style={{ ["--delay" as string]: `${stemDelay}s` }} />
+      </span>
+      {centers.map((c, i) => {
+        const on = active[i];
+        const rail = on ? "rail-on" : "rail-off";
+        const left = i < n / 2 - (n % 2 ? 0.5 : 0);
+        const showBus = i !== mid;
+        // Fork: signal leaves the centre; merge: it travels toward the centre.
+        const towardEdge = !merge;
+        const busRev = left ? towardEdge : !towardEdge;
+        return (
+          <React.Fragment key={i}>
+            {showBus && (
+              <span
+                className={`rail-h ${rail} top-1/2`}
+                style={left ? { left: c, right: "50%" } : { left: "50%", right: `calc(100% - ${c})` }}
+              >
+                {on && (
+                  <span
+                    className={`rail-dot ${busRev ? "rail-rev" : ""}`}
+                    style={{ ["--delay" as string]: `${busDelay}s` }}
+                  />
+                )}
+              </span>
+            )}
+            <span
+              className={`rail-v ${rail} ${merge ? "top-0 bottom-1/2" : "top-1/2 bottom-0"}`}
+              style={{ left: c }}
+            >
+              {on && <span className="rail-dot" style={{ ["--delay" as string]: `${dropDelay}s` }} />}
+            </span>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ProductBento() {
   const [activeWs, setActiveWs] = React.useState("acme");
   const [mounted, setMounted] = React.useState(false);
@@ -233,9 +307,13 @@ export function ProductBento() {
                     transition={{ duration: 0.22 }}
                     className="space-y-3.5"
                   >
-                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-400">
+                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-400 sm:justify-center">
                       <span className="truncate">cwd: {ws.cwd}</span>
                       <span className="truncate">remote: {ws.remote}</span>
+                    </div>
+
+                    <div className="hidden sm:block">
+                      <RailFork key={ws.id} active={ws.vaults.map((v) => v.active)} className="-my-1 h-7" />
                     </div>
 
                     <div className="grid gap-2.5 sm:grid-cols-3">
@@ -545,9 +623,7 @@ export function ProductBento() {
               </span>
             </div>
 
-            <div className="relative mx-auto h-5 w-px border-l border-dashed border-white/20" aria-hidden="true">
-              <span className="pipeline-pulse absolute top-0 left-1/2 size-1.5 rounded-full bg-[#58cc7d] shadow-[0_0_8px_#58cc7d]" />
-            </div>
+            <RailFork active={[true, true]} className="h-7" />
 
             <div className="grid grid-cols-2 gap-2.5">
               <div className="rounded-xl border border-white/[0.07] bg-[#141415] p-3">
@@ -560,9 +636,7 @@ export function ProductBento() {
               </div>
             </div>
 
-            <div className="relative mx-auto h-5 w-px border-l border-dashed border-white/20" aria-hidden="true">
-              <span className="pipeline-pulse-delayed absolute top-0 left-1/2 size-1.5 rounded-full bg-[#58cc7d] shadow-[0_0_8px_#58cc7d]" />
-            </div>
+            <RailFork active={[true, true]} merge delay={2.1} className="h-7" />
 
             <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.07] bg-[#141415] px-4 py-3">
               <div>

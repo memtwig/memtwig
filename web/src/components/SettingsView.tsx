@@ -1,11 +1,11 @@
 import * as React from "react";
-import { Check, PlugsConnected, Plus, Trash } from "@phosphor-icons/react";
+import { Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-type SettingsTab = "providers" | "vaults" | "harnesses";
+type SettingsTab = "general" | "vaults";
 
 type EmbeddingsCfg = {
   provider: string;
@@ -40,6 +40,7 @@ type HarnessRow = {
   id: string;
   label: string;
   detected: boolean;
+  connected?: boolean;
   marker: string;
 };
 
@@ -67,6 +68,22 @@ function splitCSV(s: string): string[] {
     .filter(Boolean);
 }
 
+function StatusDot({ tone, children }: { tone: "ok" | "warn" | "off"; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+      <span
+        className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          tone === "ok" && "bg-[#58cc7d]",
+          tone === "warn" && "bg-amber-500",
+          tone === "off" && "bg-zinc-600",
+        )}
+      />
+      {children}
+    </span>
+  );
+}
+
 export function SettingsView({
   onChanged,
   flash,
@@ -74,7 +91,7 @@ export function SettingsView({
   onChanged: () => Promise<void>;
   flash: (msg: string) => void;
 }) {
-  const [subTab, setSubTab] = React.useState<SettingsTab>("providers");
+  const [subTab, setSubTab] = React.useState<SettingsTab>("general");
   const [emb, setEmb] = React.useState<EmbeddingsCfg>({
     provider: "none",
     model: "bge-m3",
@@ -215,9 +232,8 @@ export function SettingsView({
         <div className="flex items-center gap-1">
           {(
             [
-              ["providers", "Providers"],
+              ["general", "Providers & harnesses"],
               ["vaults", "Vaults"],
-              ["harnesses", "Harnesses"],
             ] as Array<[SettingsTab, string]>
           ).map(([id, label]) => (
             <Button
@@ -238,12 +254,12 @@ export function SettingsView({
 
       <div className="flex-1 overflow-y-auto p-5 md:p-8">
         <div className="mx-auto max-w-[760px]">
-          {subTab === "providers" && (
-            <form onSubmit={saveProviders} className="space-y-6">
+          {subTab === "general" && (
+            <div className="space-y-10">
+            <form onSubmit={saveProviders} className="space-y-5">
               <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="text-sm font-medium text-foreground">Embeddings &amp; Curator</h2>
+                <h2 className="text-sm font-medium text-foreground">Providers</h2>
                 <Button type="submit" size="sm" disabled={busy}>
-                  <Check size={14} />
                   Save
                 </Button>
               </div>
@@ -252,20 +268,14 @@ export function SettingsView({
                 <div className="space-y-3 rounded-md border border-border bg-[#0e0e11] p-4">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-foreground">Embeddings</span>
-                    {emb.api_key_env ? (
-                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            envStatus.embeddings ? "bg-emerald-500" : "bg-amber-500",
-                          )}
-                        />
+                    {emb.provider === "none" ? (
+                      <StatusDot tone="off">BM25 only</StatusDot>
+                    ) : emb.api_key_env ? (
+                      <StatusDot tone={envStatus.embeddings ? "ok" : "warn"}>
                         {envStatus.embeddings ? "env set" : "env missing"}
-                      </span>
+                      </StatusDot>
                     ) : (
-                      <span className="text-muted-foreground">
-                        {emb.provider === "none" ? "BM25 only" : "local"}
-                      </span>
+                      <StatusDot tone="ok">local</StatusDot>
                     )}
                   </div>
 
@@ -286,7 +296,7 @@ export function SettingsView({
                           }));
                         }}
                       >
-                        <option value="none">none</option>
+                        <option value="none">none (BM25)</option>
                         <option value="ollama">ollama</option>
                         <option value="openrouter">openrouter</option>
                         <option value="deepinfra">deepinfra</option>
@@ -309,37 +319,33 @@ export function SettingsView({
                     <Input
                       value={emb.model}
                       onChange={(e) => setEmb((c) => ({ ...c, model: e.target.value }))}
-                      placeholder="baai/bge-m3"
+                      placeholder="@cf/baai/bge-m3"
                     />
                   </label>
 
-                  <label className="block space-y-1 text-xs text-muted-foreground">
-                    <span>API key env</span>
-                    <Input
-                      value={emb.api_key_env}
-                      onChange={(e) => setEmb((c) => ({ ...c, api_key_env: e.target.value }))}
-                      placeholder="OPENROUTER_API_KEY"
-                    />
-                  </label>
+                  {emb.provider !== "none" && emb.provider !== "ollama" && (
+                    <label className="block space-y-1 text-xs text-muted-foreground">
+                      <span>API key env</span>
+                      <Input
+                        value={emb.api_key_env}
+                        onChange={(e) => setEmb((c) => ({ ...c, api_key_env: e.target.value }))}
+                        placeholder="CLOUDFLARE_API_TOKEN"
+                      />
+                    </label>
+                  )}
                 </div>
 
                 <div className="space-y-3 rounded-md border border-border bg-[#0e0e11] p-4">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-foreground">LLM Curator</span>
-                    {llm.api_key_env ? (
-                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            envStatus.llm ? "bg-emerald-500" : "bg-amber-500",
-                          )}
-                        />
+                    <span className="font-medium text-foreground">Curator</span>
+                    {llm.provider === "none" ? (
+                      <StatusDot tone="ok">agent-native</StatusDot>
+                    ) : llm.api_key_env ? (
+                      <StatusDot tone={envStatus.llm ? "ok" : "warn"}>
                         {envStatus.llm ? "env set" : "env missing"}
-                      </span>
+                      </StatusDot>
                     ) : (
-                      <span className="text-muted-foreground">
-                        {llm.provider === "none" ? "disabled" : "local"}
-                      </span>
+                      <StatusDot tone="ok">local</StatusDot>
                     )}
                   </div>
 
@@ -353,34 +359,78 @@ export function SettingsView({
                         setLLM((c) => ({ ...c, provider: p, model: pre.model, api_key_env: pre.env }));
                       }}
                     >
-                      <option value="none">none</option>
+                      <option value="none">agent-native (no key)</option>
+                      <option value="ollama">ollama</option>
                       <option value="groq">groq</option>
                       <option value="openrouter">openrouter</option>
                       <option value="openai">openai</option>
-                      <option value="ollama">ollama</option>
                     </Select>
                   </label>
 
-                  <label className="block space-y-1 text-xs text-muted-foreground">
-                    <span>Model</span>
-                    <Input
-                      value={llm.model}
-                      onChange={(e) => setLLM((c) => ({ ...c, model: e.target.value }))}
-                      placeholder="llama-3.3-70b-versatile"
-                    />
-                  </label>
-
-                  <label className="block space-y-1 text-xs text-muted-foreground">
-                    <span>API key env</span>
-                    <Input
-                      value={llm.api_key_env}
-                      onChange={(e) => setLLM((c) => ({ ...c, api_key_env: e.target.value }))}
-                      placeholder="GROQ_API_KEY"
-                    />
-                  </label>
+                  {llm.provider === "none" ? (
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <span>Nightly routine</span>
+                      <code className="block truncate rounded-md border border-border bg-[#0a0a0c] px-3 py-2 font-mono text-[12px] text-[#9fe0b4]">
+                        memtwig curate --candidates --json
+                      </code>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="block space-y-1 text-xs text-muted-foreground">
+                        <span>Model</span>
+                        <Input
+                          value={llm.model}
+                          onChange={(e) => setLLM((c) => ({ ...c, model: e.target.value }))}
+                          placeholder="llama3.2"
+                        />
+                      </label>
+                      {llm.provider !== "ollama" && (
+                        <label className="block space-y-1 text-xs text-muted-foreground">
+                          <span>API key env</span>
+                          <Input
+                            value={llm.api_key_env}
+                            onChange={(e) => setLLM((c) => ({ ...c, api_key_env: e.target.value }))}
+                            placeholder="OPENROUTER_API_KEY"
+                          />
+                        </label>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </form>
+
+            <section className="space-y-3">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <h2 className="text-sm font-medium text-foreground">Harnesses</h2>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {harnesses.filter((h) => h.connected).length}/{harnesses.length} connected
+                </span>
+              </div>
+              <div className="divide-y divide-border/70 rounded-md border border-border bg-[#0e0e11]">
+                {harnesses.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="w-28 shrink-0 font-medium text-foreground">{h.label}</span>
+                      <span className="truncate text-muted-foreground">{h.marker}</span>
+                    </div>
+                    {h.connected ? (
+                      <StatusDot tone="ok">connected</StatusDot>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void connectHarness(h.id, h.label)}
+                      >
+                        {h.detected ? "Connect" : "Not detected"}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+            </div>
           )}
 
           {subTab === "vaults" && (
@@ -470,7 +520,6 @@ export function SettingsView({
                     className="max-w-xs"
                   />
                   <Button type="submit" size="sm" disabled={busy || !vName.trim() || !vPath.trim()}>
-                    <Plus size={14} />
                     Add
                   </Button>
                 </div>
@@ -478,30 +527,6 @@ export function SettingsView({
             </div>
           )}
 
-          {subTab === "harnesses" && (
-            <div className="divide-y divide-border/70 rounded-md border border-border bg-[#0e0e11]">
-              {harnesses.map((h) => (
-                <div key={h.id} className="flex items-center justify-between gap-3 px-4 py-3 text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className={cn("h-1.5 w-1.5 rounded-full", h.detected ? "bg-emerald-500" : "bg-zinc-600")}
-                    />
-                    <span className="font-medium text-foreground">{h.label}</span>
-                    <span className="text-muted-foreground">{h.marker}</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => void connectHarness(h.id, h.label)}
-                  >
-                    <PlugsConnected size={13} />
-                    Connect
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </main>
