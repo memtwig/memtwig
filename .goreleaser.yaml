@@ -28,19 +28,3 @@ checksum:
 
 changelog:
   sort: asc
-
-brews:
-  - name: memtwig
-    homepage: "https://memtwig.com"
-    description: "Git-native, multi-org Markdown memory layer for AI agents"
-    license: "Apache-2.0"
-    skip_upload: '{{ if eq .Env.HOMEBREW_TAP_TOKEN "" }}true{{ else }}false{{ end }}'
-    repository:
-      owner: memtwig
-      name: homebrew-tap
-      branch: main
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    install: |
-      bin.install "memtwig"
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/memtwig --version")
