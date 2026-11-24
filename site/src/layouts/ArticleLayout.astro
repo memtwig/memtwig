@@ -26,6 +26,7 @@ const graph: Record<string, unknown>[] = [
     "@type": schemaType,
     "@id": `${canonicalUrl}#${schemaType === "WebPage" ? "webpage" : "article"}`,
     headline: title,
+    name: title,
     description,
     url: canonicalUrl,
     datePublished: "2026-11-23",
