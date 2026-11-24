@@ -2,6 +2,7 @@ package hook_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,7 +34,17 @@ func TestRunSessionStartInjectsSoulFile(t *testing.T) {
 	if err := hook.RunSessionStart("antigravity", cfg, &outAG); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(outAG.String(), "injectSteps") || !strings.Contains(outAG.String(), "Always answer concisely.") {
-		t.Fatalf("expected antigravity injectSteps, got %s", outAG.String())
+	var respAG struct {
+		InjectSteps []struct {
+			SystemMessage struct {
+				SystemMessage string `json:"systemMessage"`
+			} `json:"systemMessage"`
+		} `json:"injectSteps"`
+	}
+	if err := json.Unmarshal(outAG.Bytes(), &respAG); err != nil {
+		t.Fatalf("invalid antigravity JSON %s: %v", outAG.String(), err)
+	}
+	if len(respAG.InjectSteps) != 1 || !strings.Contains(respAG.InjectSteps[0].SystemMessage.SystemMessage, "Always answer concisely.") {
+		t.Fatalf("expected antigravity injectSteps.systemMessage.systemMessage, got %s", outAG.String())
 	}
 }

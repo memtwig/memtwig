@@ -73,10 +73,7 @@ func Run(ctx context.Context, harness string, cfg *config.Config, st *index.Stor
 	if cwd == "" {
 		cwd, _ = os.Getwd()
 	}
-	convID := getString(payload, "conversation_id")
-	if convID == "" {
-		convID = getString(payload, "session_id")
-	}
+	convID := firstNonEmpty(payload, "conversation_id", "conversationId", "session_id", "sessionId")
 
 	var rawPrompt string
 	switch harness {
@@ -155,7 +152,7 @@ func writeInjected(harness, text string, w io.Writer) error {
 	case "antigravity":
 		out = map[string]any{
 			"injectSteps": []map[string]any{
-				{"role": "system", "content": text},
+				{"systemMessage": map[string]any{"systemMessage": text}},
 			},
 		}
 	default: // claude, codex
@@ -172,6 +169,15 @@ func writeInjected(harness, text string, w io.Writer) error {
 	}
 	_, err = w.Write(append(b, '\n'))
 	return err
+}
+
+func firstNonEmpty(m map[string]any, keys ...string) string {
+	for _, k := range keys {
+		if v := getString(m, k); v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func getString(m map[string]any, key string) string {

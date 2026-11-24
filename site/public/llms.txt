@@ -5,7 +5,8 @@
 ## Key Facts
 - Website: https://memtwig.com
 - Repository: https://github.com/memtwig/memtwig
-- Latest Release: v1.4.2 (Apache 2.0) — https://github.com/memtwig/memtwig/releases/tag/v1.4.2
+- Latest Release: v1.4.3 (Apache 2.0) — https://github.com/memtwig/memtwig/releases/tag/v1.4.3
+- Homebrew Tap: `brew install memtwig/tap/memtwig` (https://github.com/memtwig/homebrew-tap)
 - Author: Vittorio Compagno (https://vittoriocompagno.com, https://github.com/vittoriocompagno)
 - Language / Distribution: Pure Go static binary (Linux, macOS, Windows), zero CGO, zero external vector DB.
 - Performance: 109 Markdown notes / 1,078 chunks indexed in ~105 ms.

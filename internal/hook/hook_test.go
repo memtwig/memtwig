@@ -87,9 +87,9 @@ func TestRunAntigravityUnwrap(t *testing.T) {
 
 	wrapped := "<t3_code_instructions>ignore</t3_code_instructions>\n<user_request>Check memtwig SQLite FTS5 port</user_request>\n<runtime_info>info</runtime_info>"
 	payload, _ := json.Marshal(map[string]any{
-		"lastUserInput":   wrapped,
-		"cwd":             cwd,
-		"conversation_id": "conv-agy",
+		"lastUserInput":  wrapped,
+		"cwd":            cwd,
+		"conversationId": "conv-agy",
 	})
 	var out bytes.Buffer
 	if err := Run(context.Background(), "antigravity", cfg, st, bytes.NewReader(payload), &out); err != nil {
@@ -97,18 +97,27 @@ func TestRunAntigravityUnwrap(t *testing.T) {
 	}
 	var resp struct {
 		InjectSteps []struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
+			SystemMessage struct {
+				SystemMessage string `json:"systemMessage"`
+			} `json:"systemMessage"`
 		} `json:"injectSteps"`
 	}
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
 		t.Fatalf("invalid JSON %q: %v", out.String(), err)
 	}
-	if len(resp.InjectSteps) != 1 || resp.InjectSteps[0].Role != "system" {
-		t.Fatalf("unexpected injectSteps: %+v", resp.InjectSteps)
+	if len(resp.InjectSteps) != 1 || resp.InjectSteps[0].SystemMessage.SystemMessage == "" {
+		t.Fatalf("unexpected injectSteps: %+v (%s)", resp.InjectSteps, out.String())
 	}
-	if !strings.Contains(resp.InjectSteps[0].Content, "projects/deploy.md") {
-		t.Errorf("expected deploy.md snippet in %q", resp.InjectSteps[0].Content)
+	if !strings.Contains(resp.InjectSteps[0].SystemMessage.SystemMessage, "projects/deploy.md") {
+		t.Errorf("expected deploy.md snippet in %q", resp.InjectSteps[0].SystemMessage.SystemMessage)
+	}
+
+	var second bytes.Buffer
+	if err := Run(context.Background(), "antigravity", cfg, st, bytes.NewReader(payload), &second); err != nil {
+		t.Fatalf("antigravity repeat Run failed: %v", err)
+	}
+	if strings.TrimSpace(second.String()) != "{}" {
+		t.Errorf("expected repeat call with camelCase conversationId to dedup to {}, got %q", second.String())
 	}
 }
 

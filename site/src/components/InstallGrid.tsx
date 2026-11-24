@@ -63,7 +63,7 @@ const installCards: CardSpec[] = [
   },
   {
     id: "desktop-os",
-    badge: "v1.4.2",
+    badge: "v1.4.3",
     title: "macOS, Linux & Windows",
     body: "Zero runtime dependencies, Antigravity PreInvocation hooks, embedded Studio UI & TUI.",
     bg: "#f09a7a",

@@ -1,13 +1,15 @@
-# memtwig — Complete Technical Reference (v1.4.2)
+# memtwig — Complete Technical Reference (v1.4.3)
 
 memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory layer for AI coding agents and assistants, distributed as a single static Go binary (`CGO_ENABLED=0`, ~14 MB, Linux/macOS/Windows) with an embedded dark local Studio Web UI (`memtwig ui`, featuring Notes reader/editor, Knowledge Graph, Proposals diff reviewer, Audit log, and self-service Settings for providers, vaults, and harnesses) and interactive TUI (`memtwig tui`).
 
 ## Install
 ```bash
+brew install memtwig/tap/memtwig
+# or shell installer:
 curl -fsSL https://memtwig.com/install.sh | sh
 # Ensure ~/.local/bin is in PATH:
 export PATH="$HOME/.local/bin:$PATH"
-memtwig version   # memtwig 1.4.2
+memtwig --version   # memtwig version 1.4.3
 ```
 Or with Go:
 ```bash
@@ -144,7 +146,7 @@ owner: vittorio
 - **Secret scanner**: `memtwig check --all` detects leaked API keys/tokens/private keys and blocks `memtwig sync`.
 
 ## MCP & HTTP API Reference
-- **Stdio MCP (`memtwig mcp`)**: exposes `memory_search`, `memory_get`, `memory_status`, `memory_propose`, `memory_write`, `memory_proposals_list`.
+- **Stdio MCP (`memtwig mcp`)**: exposes `memory_search`, `memory_read`, `memory_write`, `memory_propose`, `memory_decide`, `memory_status`.
 - **HTTP Server (`memtwig serve` / `memtwig ui`)**:
   - `GET /health`
   - `POST /mcp` (Streamable HTTP MCP with Bearer RBAC)

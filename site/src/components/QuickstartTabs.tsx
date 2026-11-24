@@ -14,7 +14,8 @@ const snippets: Snippet[] = [
   {
     id: "install",
     label: "Install",
-    code: `curl -fsSL https://memtwig.com/install.sh | sh
+    code: `brew install memtwig/tap/memtwig
+# or: curl -fsSL https://memtwig.com/install.sh | sh
 # or: go install github.com/memtwig/memtwig/cmd/memtwig@latest
 
 memtwig setup

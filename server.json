@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.memtwig/memtwig",
+  "title": "memtwig",
+  "description": "Git-native multi-org Markdown memory layer for AI agents with isolated vaults and SQLite FTS5.",
+  "version": "1.4.3",
+  "websiteUrl": "https://memtwig.com",
+  "repository": {
+    "url": "https://github.com/memtwig/memtwig",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://memtwig.com/favicon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": [
+        "any"
+      ]
+    }
+  ]
+}

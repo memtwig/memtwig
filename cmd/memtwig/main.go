@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	version    = "1.4.2"
+	version    = "1.4.3"
 	cfgPath    string
 	dbPath     string
 	vaultFlag  string
@@ -47,6 +47,7 @@ func main() {
 	root := &cobra.Command{
 		Use:          "memtwig",
 		Short:        "Git-native, multi-org Markdown memory layer for AI agents",
+		Version:      version,
 		SilenceUsage: true,
 	}
 	root.PersistentFlags().StringVar(&cfgPath, "config", "", "path to config.toml (default ~/.config/memtwig/config.toml)")

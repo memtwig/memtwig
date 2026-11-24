@@ -16,6 +16,8 @@ Git-native, multi-org Markdown memory layer for AI agents — shipped as a singl
 ## Install
 
 ```bash
+brew install memtwig/tap/memtwig
+# or shell installer (macOS & Linux)
 curl -fsSL https://memtwig.com/install.sh | sh
 # or with Go
 go install github.com/memtwig/memtwig/cmd/memtwig@latest
