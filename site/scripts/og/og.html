@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:GSF;src:url(../../node_modules/@fontsource-variable/google-sans-flex/files/google-sans-flex-latin-wght-normal.woff2) format("woff2");font-weight:100 1000}
+@font-face{font-family:JBM;src:url(../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2) format("woff2");font-weight:100 800}
+*{box-sizing:border-box;margin:0}
+body{width:1200px;height:630px;overflow:hidden;background:#141415;font-family:GSF,sans-serif;color:#f5f5f7;position:relative}
+.glow{position:absolute;right:-180px;top:-220px;width:760px;height:760px;border-radius:50%;background:radial-gradient(circle,rgba(88,204,125,.20),transparent 62%)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:40px 40px;mask-image:linear-gradient(90deg,transparent,#000 60%)}
+.left{position:absolute;left:72px;top:68px;width:500px;height:494px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:14px;font-size:30px;font-weight:500;letter-spacing:-.02em}
+h1{margin-top:auto;font-size:66px;line-height:1.02;font-weight:500;letter-spacing:-.045em}
+p{margin-top:22px;font-size:23px;line-height:1.4;color:#9b9ba6;max-width:440px}
+.foot{margin-top:auto;font-family:JBM,monospace;font-size:17px;color:#9b9ba6;display:flex;gap:18px;align-items:center}
+.foot b{color:#58cc7d;font-weight:500}
+.deck{position:absolute;left:640px;top:92px;width:640px;height:600px}
+.c{position:absolute;inset:0;border-radius:22px}
+.win{position:absolute;inset:0;border-radius:18px;overflow:hidden;background:#1c1c1f;border:1px solid rgba(255,255,255,.10);box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.bar{height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;background:#1a1a1d;border-bottom:1px solid rgba(255,255,255,.07)}
+.bar i{width:10px;height:10px;border-radius:50%;background:#3a3a40}
+.bar span{margin-left:10px;font-family:JBM,monospace;font-size:12px;color:#6e6e78}
+.win img{display:block;width:900px;margin-left:-6px}
+</style></head><body>
+<div class="glow"></div><div class="grid"></div>
+<div class="left">
+  <div class="brand"><svg width="46" height="46" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#58cc7d"/><path d="M16 24.5V8" stroke="#111312" stroke-width="2.6" stroke-linecap="round"/><path d="M16 18.2L22 12.2" stroke="#111312" stroke-width="2.6" stroke-linecap="round"/><path d="M16 13.8L10.2 9.4" stroke="#111312" stroke-width="2.6" stroke-linecap="round"/><circle cx="22.5" cy="11.7" r="2.2" fill="#111312"/></svg>memtwig</div>
+  <h1>Git-native memory for every AI&nbsp;agent.</h1>
+  <p>Plain Markdown vaults, isolated per client, in one local binary.</p>
+  <div class="foot"><b>memtwig.com</b><span>open source</span></div>
+</div>
+<div class="deck">
+  <div class="c" style="background:#ebb85e;transform:translateY(-42px) scale(.88);transform-origin:50% 0;filter:brightness(.6)"></div>
+  <div class="c" style="background:#d5a8f8;transform:translateY(-28px) scale(.92);transform-origin:50% 0;filter:brightness(.7)"></div>
+  <div class="c" style="background:#6bb5ff;transform:translateY(-14px) scale(.96);transform-origin:50% 0;filter:brightness(.8)"></div>
+  <div class="win"><div class="bar"><i></i><i></i><i></i><span>memtwig ui · graph</span></div><img src="../../public/studio/graph.png"></div>
+</div>
+</body></html>
