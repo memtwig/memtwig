@@ -26,6 +26,7 @@ export function HeroTwigBadge() {
         onTap={fire}
         className="twig-badge mx-1.5 inline-block size-11 cursor-pointer align-[-0.14em] rounded-2xl shadow-[0_12px_36px_rgba(88,204,125,0.32)] sm:mx-2.5 sm:size-16 xl:size-[4.25rem]"
         aria-hidden="true"
+        tabIndex={-1}
       >
         <svg viewBox="0 0 32 32" className="block size-full" fill="none">
           <rect width="32" height="32" rx="8" fill="#58cc7d" />

@@ -349,7 +349,7 @@ memtwig status --cwd ~/work/acme/api`,
     transportLabel: "Stdio MCP + Hooks",
     tagline: "Add memtwig MCP tools to ~/.codex/config.toml in one command with multi-org routing.",
     description:
-      "Configure OpenAI Codex CLI with memtwig stdio MCP and prompt hooks for Git-native, client-isolated Markdown memory.",
+      "Configure OpenAI Codex CLI with the memtwig stdio MCP server and prompt hooks for Git-native, client-isolated Markdown memory in one command.",
     diagramNodes: {
       clientSub: "~/.codex/config.toml",
       channelLabel: "stdio MCP",

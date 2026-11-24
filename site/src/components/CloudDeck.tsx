@@ -67,6 +67,8 @@ export function CloudDeck({ showHeader = true }: { showHeader?: boolean }) {
   const [mounted, setMounted] = React.useState(false);
   const [paused, setPaused] = React.useState(false);
   const [manual, setManual] = React.useState(false);
+  // Cards sit under the section h2 on the home page, directly under the h1 on /cloud.
+  const CardTitle = showHeader ? "h3" : "h2";
   const [swipeDir, setSwipeDir] = React.useState<1 | -1>(1);
   // Card currently flying from the front to the back of the deck.
   const [leavingId, setLeavingId] = React.useState<string | null>(null);
@@ -254,9 +256,9 @@ export function CloudDeck({ showHeader = true }: { showHeader?: boolean }) {
                     className="mt-8 flex flex-col-reverse gap-6 sm:flex-row sm:items-end sm:justify-between"
                   >
                     <div className="max-w-md">
-                      <h3 className="text-3xl font-medium leading-[1.04] tracking-[-0.035em] text-[#111312] sm:text-5xl">
+                      <CardTitle className="text-3xl font-medium leading-[1.04] tracking-[-0.035em] text-[#111312] sm:text-5xl">
                         {card.title}
-                      </h3>
+                      </CardTitle>
                       <p className="mt-3 text-sm leading-relaxed text-[#111312]/80 sm:text-base">{card.body}</p>
                     </div>
                     <motion.div

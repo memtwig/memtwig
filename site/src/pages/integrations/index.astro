@@ -11,6 +11,24 @@ const accents = ["#58cc7d", "#6bb5ff", "#d5a8f8", "#ebb85e", "#f09a7a"];
   title="Integrations — Use memtwig with your AI agents"
   description="Connect memtwig to Hermes Agent, Grok Bot, OpenBot, T3 Code, Claude Code, Cursor, OpenAI Codex, and Antigravity using MCP and native per-turn hooks."
   path="/integrations"
+  faqs={[
+    {
+      q: "Which agents does memtwig work with?",
+      a: "Any agent that speaks MCP. memtwig ships one-command setup for Claude Code, Cursor, OpenAI Codex, Antigravity, and Hermes Agent, and documents Grok Bot, OpenBot, and T3 Code. Run memtwig install all to wire every harness it finds on the machine.",
+    },
+    {
+      q: "Do all my agents share the same memory?",
+      a: "Yes. Every harness reads the same Markdown vaults through the same binary, so a decision recorded from Claude Code is visible to Codex or Cursor on the next turn. Client vaults stay isolated by folder or git remote whichever agent you use.",
+    },
+    {
+      q: "What is the difference between MCP and hooks?",
+      a: "MCP gives the agent search, read, write, and decision tools it can call on demand. Hooks run before each prompt and inject the most relevant notes automatically, so the agent gets context even when it does not think to ask.",
+    },
+    {
+      q: "Does anything leave my machine?",
+      a: "No. The stdio MCP server, hooks, and index all run locally. Embeddings are optional, and only the provider you configure sees the text it embeds.",
+    },
+  ]}
 >
   <header class="max-w-3xl">
     <h1 class="text-balance text-5xl font-medium leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl">

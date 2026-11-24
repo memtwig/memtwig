@@ -222,6 +222,13 @@ export function WaitlistForm() {
         <Button type="submit" size="lg" disabled={submitting} className="w-full sm:w-auto">
           {submitting ? "Joining..." : "Join early access"}
         </Button>
+        <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+          We only email you about Memtwig Cloud. See the{" "}
+          <a href="/privacy" className="underline underline-offset-4 hover:text-zinc-300">
+            privacy policy
+          </a>
+          .
+        </p>
       </div>
     </form>
   );

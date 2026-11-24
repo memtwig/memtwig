@@ -1,0 +1,41 @@
+---
+import ArticleLayout from "@/layouts/ArticleLayout.astro";
+
+const contact = "ciao@vittoriocompagno.com";
+---
+
+<ArticleLayout
+  title="Privacy policy"
+  description="What memtwig.com collects, why, where it is stored, and how to have it deleted. No cookies, no analytics, and the memtwig binary sends nothing home."
+  path="/privacy"
+>
+  <article class="max-w-2xl text-base leading-relaxed text-zinc-300 [&_h2]:mt-12 [&_h2]:text-2xl [&_h2]:font-medium [&_h2]:tracking-[-0.02em] [&_h2]:text-white [&_p]:mt-4 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_a]:text-[#58cc7d] [&_a]:underline-offset-4 hover:[&_a]:underline">
+    <h1 class="text-balance text-5xl font-medium leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl">Privacy policy</h1>
+    <p class="mt-6 text-zinc-400">This policy covers the website memtwig.com. The memtwig software runs on your own machine and is covered separately below.</p>
+
+    <h2>Who is responsible</h2>
+    <p>The site is run by Vittorio Compagno, Italy, who is the data controller. Write to <a href={`mailto:${contact}`}>{contact}</a> for any request about your data.</p>
+
+    <h2>What we collect</h2>
+    <p>Only what you type into the Memtwig Cloud waitlist form on <a href="/cloud">/cloud</a>:</p>
+    <ul>
+      <li>your email address;</li>
+      <li>the plan, team size, and main agent you pick, if any;</li>
+      <li>the date you signed up.</li>
+    </ul>
+    <p>We use it only to tell you when Memtwig Cloud opens and to understand which plans people want. We never sell it or share it for marketing.</p>
+    <p>The legal basis is your consent, given when you submit the form (GDPR art. 6(1)(a)). You can withdraw it at any time by writing to us.</p>
+
+    <h2>Where it is stored and for how long</h2>
+    <p>Waitlist entries are stored in Cloudflare Workers KV, operated by Cloudflare, Inc. as our processor, which may process data outside the EU under the EU Standard Contractual Clauses. We keep each entry until Memtwig Cloud launches and for at most 12 months after you sign up, unless you ask us to delete it sooner.</p>
+
+    <h2>Cookies, analytics, and logs</h2>
+    <p>memtwig.com sets no cookies and runs no analytics or tracking scripts. Fonts and assets are served from memtwig.com itself. Cloudflare, which hosts the site, processes technical data such as IP addresses to deliver pages and block attacks; we do not use it to profile visitors.</p>
+
+    <h2>The memtwig software</h2>
+    <p>The memtwig binary keeps your notes and index on your machine and sends no telemetry. If you configure an embeddings provider, the text being embedded goes to that provider under its own terms.</p>
+
+    <h2>Your rights</h2>
+    <p>You can ask to access, correct, delete, or export your data, or object to its use, by writing to <a href={`mailto:${contact}`}>{contact}</a>. You can also complain to your data protection authority; in Italy that is the <a href="https://www.garanteprivacy.it" target="_blank" rel="noreferrer">Garante per la protezione dei dati personali</a>.</p>
+  </article>
+</ArticleLayout>
