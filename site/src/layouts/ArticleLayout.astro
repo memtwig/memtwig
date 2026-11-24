@@ -11,9 +11,11 @@ interface Props {
   noindex?: boolean;
   /** Visible "last updated" date; also used as dateModified. Set false to hide (e.g. 404). */
   updated?: string | false;
+  /** Schema type for the page entity: TechArticle for docs-style pages, WebPage for legal/utility pages. */
+  schemaType?: "TechArticle" | "WebPage";
 }
 
-const { title, description, path, faqs = [], noindex = false, updated = "2026-11-24" } = Astro.props;
+const { title, description, path, faqs = [], noindex = false, updated = "2026-11-24", schemaType = "TechArticle" } = Astro.props;
 const siteUrl = "https://memtwig.com";
 const ogImage = `${siteUrl}/og-image.png?v=2`;
 const canonicalUrl = `${siteUrl}${path}`;
@@ -21,8 +23,8 @@ const docsUrl = "https://github.com/memtwig/memtwig/tree/main/docs";
 
 const graph: Record<string, unknown>[] = [
   {
-    "@type": "TechArticle",
-    "@id": `${canonicalUrl}#article`,
+    "@type": schemaType,
+    "@id": `${canonicalUrl}#${schemaType === "WebPage" ? "webpage" : "article"}`,
     headline: title,
     description,
     url: canonicalUrl,
@@ -79,7 +81,7 @@ const jsonLd = {
     <link rel="alternate" type="text/markdown" href={`${siteUrl}/llms.txt`} title="LLMs summary" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <meta property="og:type" content="article" />
+    <meta property="og:type" content={schemaType === "WebPage" ? "website" : "article"} />
     <meta property="og:site_name" content="memtwig" />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:title" content={`${title} — memtwig`} />
