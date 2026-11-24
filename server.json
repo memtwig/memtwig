@@ -3,7 +3,7 @@
   "name": "io.github.memtwig/memtwig",
   "title": "memtwig",
   "description": "Git-native multi-org Markdown memory layer for AI agents with isolated vaults and SQLite FTS5.",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "websiteUrl": "https://memtwig.com",
   "repository": {
     "url": "https://github.com/memtwig/memtwig",
