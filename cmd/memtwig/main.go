@@ -943,41 +943,150 @@ func cmdCurate() *cobra.Command {
 	var staleDays int
 	var useLLM bool
 	var maxPairs int
+	var candidatesOnly bool
+	var asJSON bool
+	var minCosine float64
+	var allPairs bool
+	var markJudged bool
+	var markPairs []string
 	cmd := &cobra.Command{
 		Use:   "curate",
-		Short: "Run deterministic curation pass (and optional --llm semantic contradiction check)",
+		Short: "Run deterministic curation, output --candidates for agent review, or run --llm",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(cfgPath)
 			if err != nil {
 				return err
 			}
+			effectiveDB := dbPath
+			if effectiveDB == "" {
+				effectiveDB, _ = config.DefaultDBPath()
+			}
 			active := scope.Resolve(cfg, cwdFlag, vaultFlag)
+			var writable []scope.ActiveVault
 			for _, av := range active {
-				if !av.FullAccess {
-					continue
+				if av.FullAccess {
+					writable = append(writable, av)
 				}
+			}
+
+			if len(markPairs) > 0 {
+				if len(writable) == 0 {
+					return fmt.Errorf("no writable vault resolved")
+				}
+				for _, rawPair := range markPairs {
+					parts := strings.SplitN(rawPair, ",", 2)
+					if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
+						return fmt.Errorf("invalid --mark-pair %q: expected noteA.md,noteB.md", rawPair)
+					}
+					marked := false
+					var lastErr error
+					for _, av := range writable {
+						root := config.ExpandHome(av.Config.Path)
+						if err := curator.MarkPairJudged(root, parts[0], parts[1]); err != nil {
+							lastErr = err
+							continue
+						}
+						fmt.Printf("[%s] marked judged: %s <-> %s\n", av.Name, strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+						marked = true
+						if vaultFlag != "" || len(writable) == 1 {
+							break
+						}
+					}
+					if !marked && lastErr != nil {
+						return lastErr
+					}
+				}
+				return nil
+			}
+
+			if candidatesOnly {
+				allCands := make([]curator.CandidatePair, 0)
+				for _, av := range writable {
+					root := config.ExpandHome(av.Config.Path)
+					pairs, err := curator.FindCandidatePairs(av.Name, root, curator.CandidateOptions{
+						DBPath:       effectiveDB,
+						MaxPairs:     maxPairs,
+						MinCosine:    minCosine,
+						IgnoreJudged: allPairs,
+					})
+					if err != nil {
+						return err
+					}
+					if markJudged && len(pairs) > 0 {
+						if err := curator.MarkPairsJudged(root, pairs); err != nil {
+							return err
+						}
+					}
+					allCands = append(allCands, pairs...)
+				}
+				if asJSON {
+					enc := json.NewEncoder(os.Stdout)
+					enc.SetIndent("", "  ")
+					return enc.Encode(allCands)
+				}
+				if len(allCands) == 0 {
+					fmt.Println("No candidate note pairs found.")
+					return nil
+				}
+				for _, c := range allCands {
+					fmt.Printf("[%s] score=%.4f method=%s %s <-> %s\n", c.Vault, c.Score, c.Method, c.NoteA, c.NoteB)
+					fmt.Printf("  --- %s ---\n  %s\n", c.NoteA, strings.ReplaceAll(c.ExcerptA, "\n", "\n  "))
+					fmt.Printf("  --- %s ---\n  %s\n\n", c.NoteB, strings.ReplaceAll(c.ExcerptB, "\n", "\n  "))
+				}
+				return nil
+			}
+
+			type curateJSONEntry struct {
+				curator.CurateReport
+				Semantic *curator.SemanticReport `json:"semantic,omitempty"`
+			}
+			var jsonOut []curateJSONEntry
+			for _, av := range writable {
 				root := config.ExpandHome(av.Config.Path)
 				rep, err := curator.Curate(av.Name, root, av.Config.MaxNoteBytes, staleDays)
 				if err != nil {
 					return err
 				}
-				fmt.Printf("[%s] notes=%d oversize=%d stale=%d unsynced_decisions=%d proposals_created=%d\n",
-					rep.VaultName, rep.IndexNotes, rep.OversizeNotes, rep.StaleNotes, rep.UnsyncedDecisions, rep.ProposalsCreated)
+				if !asJSON {
+					fmt.Printf("[%s] notes=%d oversize=%d stale=%d unsynced_decisions=%d proposals_created=%d\n",
+						rep.VaultName, rep.IndexNotes, rep.OversizeNotes, rep.StaleNotes, rep.UnsyncedDecisions, rep.ProposalsCreated)
+				}
+				entry := curateJSONEntry{CurateReport: rep}
 				if useLLM {
-					srep, err := curator.CurateSemantic(context.Background(), av.Name, root, cfg.LLM, maxPairs)
+					srep, err := curator.CurateSemanticWithOptions(context.Background(), av.Name, root, cfg.LLM, curator.CandidateOptions{
+						DBPath:       effectiveDB,
+						MaxPairs:     maxPairs,
+						MinCosine:    minCosine,
+						IgnoreJudged: allPairs,
+					})
 					if err != nil {
 						return err
 					}
-					fmt.Printf("[%s/llm] pairs=%d findings=%d proposals_created=%d\n",
-						srep.VaultName, srep.PairsExamined, len(srep.Findings), srep.ProposalsCreated)
+					entry.Semantic = &srep
+					if !asJSON {
+						fmt.Printf("[%s/llm] pairs=%d findings=%d proposals_created=%d\n",
+							srep.VaultName, srep.PairsExamined, len(srep.Findings), srep.ProposalsCreated)
+					}
 				}
+				jsonOut = append(jsonOut, entry)
+			}
+			if asJSON {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				return enc.Encode(jsonOut)
 			}
 			return nil
 		},
 	}
 	cmd.Flags().IntVar(&staleDays, "stale-days", 90, "flag active notes not updated in N days")
 	cmd.Flags().BoolVar(&useLLM, "llm", false, "also run semantic contradiction check using configured [llm] provider")
-	cmd.Flags().IntVar(&maxPairs, "max-pairs", 6, "max note pairs to inspect in --llm mode")
+	cmd.Flags().IntVar(&maxPairs, "max-pairs", 6, "max note pairs to inspect in --candidates or --llm mode")
+	cmd.Flags().BoolVar(&candidatesOnly, "candidates", false, "output vector/keyword candidate pairs as inputs for an agent (no LLM call)")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "JSON output")
+	cmd.Flags().Float64Var(&minCosine, "min-cosine", 0.55, "minimum cosine similarity for vector candidate selection")
+	cmd.Flags().BoolVar(&allPairs, "all-pairs", false, "ignore .curator/judged_pairs.json rotation state")
+	cmd.Flags().BoolVar(&markJudged, "mark-judged", false, "with --candidates, record returned pairs in .curator/judged_pairs.json")
+	cmd.Flags().StringSliceVar(&markPairs, "mark-pair", nil, "mark note pair \"noteA.md,noteB.md\" as judged without running curation")
 	return cmd
 }
 

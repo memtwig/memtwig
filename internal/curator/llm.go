@@ -14,7 +14,6 @@ import (
 
 	"github.com/memtwig/memtwig/internal/config"
 	"github.com/memtwig/memtwig/internal/proposal"
-	"github.com/memtwig/memtwig/internal/vault"
 )
 
 type SemanticFinding struct {
@@ -34,25 +33,38 @@ type SemanticReport struct {
 // CurateSemantic compares pairs of related notes in a vault using an OpenAI-compatible or Ollama LLM endpoint.
 // It NEVER modifies live notes directly; all findings become proposals in .curator/proposals.json.
 func CurateSemantic(ctx context.Context, vaultName, vaultRoot string, llmCfg config.LLMConfig, maxPairs int) (SemanticReport, error) {
+	return CurateSemanticWithOptions(ctx, vaultName, vaultRoot, llmCfg, CandidateOptions{MaxPairs: maxPairs})
+}
+
+// CurateSemanticWithOptions compares candidate note pairs using opts and persists reviewed pairs in .curator/judged_pairs.json.
+func CurateSemanticWithOptions(ctx context.Context, vaultName, vaultRoot string, llmCfg config.LLMConfig, opts CandidateOptions) (SemanticReport, error) {
 	rep := SemanticReport{VaultName: vaultName}
 	if llmCfg.Provider == "" || llmCfg.Provider == "none" {
-		return rep, errors.New("LLM provider is disabled in config ([llm] provider = \"openai\" | \"ollama\")")
+		return rep, errors.New("LLM provider is disabled in config ([llm] provider = \"openai\" | \"ollama\" | \"openrouter\" | \"groq\")")
 	}
-	if maxPairs <= 0 {
-		maxPairs = 6
+	if opts.MaxPairs <= 0 {
+		opts.MaxPairs = defaultMaxCandidatePairs
 	}
 
-	notes, err := vault.WalkNotes(vaultName, vaultRoot)
+	cands, err := FindCandidatePairs(vaultName, vaultRoot, opts)
 	if err != nil {
 		return rep, err
 	}
-	pairs := pickRelatedPairs(notes, maxPairs)
-	client := &http.Client{Timeout: time.Duration(llmCfg.TimeoutMS) * time.Millisecond}
+	timeout := time.Duration(llmCfg.TimeoutMS) * time.Millisecond
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	client := &http.Client{Timeout: timeout}
 
-	for _, pair := range pairs {
+	var examinedOK []CandidatePair
+	for _, cand := range cands {
 		rep.PairsExamined++
-		finding, err := comparePairWithLLM(ctx, client, llmCfg, pair[0], pair[1])
-		if err != nil || finding == nil {
+		finding, err := compareCandidateWithLLM(ctx, client, llmCfg, cand)
+		if err != nil {
+			continue
+		}
+		examinedOK = append(examinedOK, cand)
+		if finding == nil {
 			continue
 		}
 		rep.Findings = append(rep.Findings, *finding)
@@ -67,60 +79,20 @@ func CurateSemantic(ctx context.Context, vaultName, vaultRoot string, llmCfg con
 			rep.ProposalsCreated++
 		}
 	}
+	if len(examinedOK) > 0 {
+		_ = MarkPairsJudged(vaultRoot, examinedOK)
+	}
 	return rep, nil
 }
 
-// pickRelatedPairs selects note pairs sharing directory or significant title/content tokens.
-func pickRelatedPairs(notes []vault.Note, maxPairs int) [][2]vault.Note {
-	var out [][2]vault.Note
-	for i := 0; i < len(notes) && len(out) < maxPairs; i++ {
-		for j := i + 1; j < len(notes) && len(out) < maxPairs; j++ {
-			a, b := notes[i], notes[j]
-			if a.Status == "closed" || b.Status == "closed" {
-				continue
-			}
-			if shareTopDir(a.RelPath, b.RelPath) && shareKeywords(a.Title+" "+a.RelPath, b.Title+" "+b.RelPath) {
-				out = append(out, [2]vault.Note{a, b})
-			}
-		}
-	}
-	return out
-}
-
-func shareTopDir(a, b string) bool {
-	pa := strings.Split(a, "/")[0]
-	pb := strings.Split(b, "/")[0]
-	return pa != "" && pa == pb
-}
-
-func shareKeywords(a, b string) bool {
-	wordsA := map[string]bool{}
-	for _, w := range strings.Fields(strings.ToLower(strings.NewReplacer("-", " ", "_", " ", "/", " ", ".", " ").Replace(a))) {
-		if len(w) >= 4 {
-			wordsA[w] = true
-		}
-	}
-	for _, w := range strings.Fields(strings.ToLower(strings.NewReplacer("-", " ", "_", " ", "/", " ", ".", " ").Replace(b))) {
-		if len(w) >= 4 && wordsA[w] {
-			return true
-		}
-	}
-	return false
-}
-
-func comparePairWithLLM(ctx context.Context, client *http.Client, cfg config.LLMConfig, a, b vault.Note) (*SemanticFinding, error) {
-	trim := func(s string, max int) string {
-		if len(s) <= max {
-			return s
-		}
-		return s[:max] + "\n...[truncated]"
-	}
+func compareCandidateWithLLM(ctx context.Context, client *http.Client, cfg config.LLMConfig, cand CandidatePair) (*SemanticFinding, error) {
 	prompt := fmt.Sprintf(
-		"Compare these two Markdown memory notes for factual contradictions or duplicate stale facts.\n"+
+		"Compare these two Markdown memory excerpts for factual contradictions or duplicate stale facts (dates, prices, service hosts, active decisions).\n"+
+			"Notes contain dated chronological entries. If a newer dated entry corrects or supersedes an older one, that is NOT a contradiction.\n"+
 			"Return strictly JSON: {\"has_issue\": bool, \"issue\": string, \"suggestion\": string}.\n"+
 			"If there is no clear contradiction or duplication, return {\"has_issue\": false}.\n\n"+
 			"=== NOTE A: %s ===\n%s\n\n=== NOTE B: %s ===\n%s\n",
-		a.RelPath, trim(a.Body, 2500), b.RelPath, trim(b.Body, 2500),
+		cand.NoteA, cand.ExcerptA, cand.NoteB, cand.ExcerptB,
 	)
 
 	endpoint := cfg.Endpoint
@@ -219,12 +191,15 @@ func comparePairWithLLM(ctx context.Context, client *http.Client, cfg config.LLM
 		Issue      string `json:"issue"`
 		Suggestion string `json:"suggestion"`
 	}
-	if err := json.Unmarshal([]byte(content), &parsed); err != nil || !parsed.HasIssue {
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		return nil, fmt.Errorf("parse LLM JSON: %w", err)
+	}
+	if !parsed.HasIssue {
 		return nil, nil
 	}
 	return &SemanticFinding{
-		NoteA:      a.RelPath,
-		NoteB:      b.RelPath,
+		NoteA:      cand.NoteA,
+		NoteB:      cand.NoteB,
 		Issue:      parsed.Issue,
 		Suggestion: parsed.Suggestion,
 	}, nil
