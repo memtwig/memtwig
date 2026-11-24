@@ -49,7 +49,8 @@ const views: StudioView[] = [
   },
 ];
 
-export function StudioShowcase() {
+// flat: no scroll-linked tilt (inside a dialog the page does not scroll under it).
+export function StudioShowcase({ flat = false }: { flat?: boolean }) {
   const [active, setActive] = React.useState("overview");
   const [mounted, setMounted] = React.useState(false);
   const stageRef = React.useRef<HTMLDivElement>(null);
@@ -79,7 +80,7 @@ export function StudioShowcase() {
     <MotionConfig reducedMotion="user">
       <div ref={stageRef} style={{ perspective: "1400px" }}>
         <motion.div
-          style={reduceMotion ? undefined : { rotateX, scale, transformOrigin: "50% 25%" }}
+          style={reduceMotion || flat ? undefined : { rotateX, scale, transformOrigin: "50% 25%" }}
           className="overflow-hidden rounded-[24px] border border-white/12 bg-[#1a1a1d] shadow-[0_32px_100px_rgba(0,0,0,0.72)]"
         >
           <Tabs value={active} onValueChange={setActive} className="w-full">

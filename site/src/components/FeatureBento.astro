@@ -1,0 +1,165 @@
+---
+// Six benefits of memtwig, each with one true picture of it. MCP tools, hooks, search and curation
+// live in TechDetails.astro, opened from the section's dialog.
+// Desktop (3 columns), alternating rhythm: [markdown 1 | isolation 2] [local 2 | diffs 1] [fresh 1 | agents 2].
+const card = "surface relative flex min-w-0 flex-col overflow-hidden rounded-[32px]";
+const pad = "p-7 sm:p-10";
+const h3 = "text-2xl leading-tight font-medium tracking-[-0.025em] text-white sm:text-3xl";
+const sub = "mt-3 max-w-md text-base leading-relaxed text-zinc-400";
+const row = "flex items-center justify-between gap-3 rounded-2xl border border-white/[0.05] bg-white/[0.03] px-4 py-3";
+const agents = ["Claude Code", "Codex", "Cursor", "Antigravity", "Hermes", "Grok Bot", "OpenBot", "T3 Code"];
+---
+
+<div class="grid gap-4 lg:grid-cols-3">
+  <!-- Plain Markdown, zero lock-in -->
+  <article class:list={[card, pad, "justify-between gap-10"]}>
+    <div>
+      <h3 class={h3}>Plain Markdown, zero lock-in</h3>
+      <p class={sub}>Readable files in your own Git repo. Open them in any editor, diff them, keep them forever.</p>
+    </div>
+    <div class="grid gap-3 rounded-3xl border border-white/[0.06] bg-[linear-gradient(160deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <span class="w-fit rounded-full bg-[#58cc7d]/12 px-2.5 py-0.5 text-xs font-medium text-[#8be3a6]">Plain Git</span>
+      {
+        ["projects/api.md", "decisions/2026-11.md"].map((f) => (
+          <span class="code-surface rounded-2xl bg-white/[0.03] px-4 py-3 text-sm break-all text-zinc-200">{f}</span>
+        ))
+      }
+    </div>
+  </article>
+
+  <!-- Isolated per client -->
+  <article class:list={[card, "lg:col-span-2 lg:min-h-[27rem] lg:justify-center"]}>
+    <img
+      src="/illustrations/bento-isolation.webp"
+      alt=""
+      width="1000"
+      height="667"
+      loading="lazy"
+      decoding="async"
+      class="render relative block aspect-[3/2] h-auto w-full lg:absolute lg:top-1/2 lg:right-[-3%] lg:w-[64%] lg:-translate-y-1/2"
+    />
+    <div class:list={[pad, "relative -mt-6 flex flex-col justify-between gap-8 lg:mt-0 lg:w-[46%] lg:self-stretch"]}>
+      <div>
+        <h3 class={h3}>Isolated per client</h3>
+        <p class={sub}>Each folder opens only its own vault. Client A's repo never sees Client B's notes.</p>
+      </div>
+      <ul class="grid gap-2.5 text-sm" role="list">
+        {
+          ["client-a", "client-b"].map((c) => (
+            <li class={row}>
+              <span class="code-surface truncate text-zinc-200">{c}/</span>
+              <span class="shrink-0 font-medium text-[#8be3a6]">{c} vault</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </article>
+
+  <!-- Local-first, offline, $0 -->
+  <article class:list={[card, "lg:col-span-2 lg:min-h-[27rem] lg:justify-center"]}>
+    <img
+      src="/illustrations/bento-git-local.webp"
+      alt=""
+      width="1000"
+      height="667"
+      loading="lazy"
+      decoding="async"
+      class="render relative block aspect-[3/2] h-auto w-full lg:absolute lg:top-1/2 lg:left-[-3%] lg:w-[64%] lg:-translate-y-1/2"
+    />
+    <div class:list={[pad, "relative -mt-6 flex flex-col justify-between gap-8 lg:mt-0 lg:ml-auto lg:w-[46%] lg:self-stretch"]}>
+      <div>
+        <h3 class={h3}>Local-first, offline, $0</h3>
+        <p class={sub}>One binary on your machine. Search works with no network and no API key.</p>
+      </div>
+      <dl class="grid gap-2.5 text-sm">
+        {
+          ["Account", "Cloud required", "Telemetry"].map((t) => (
+            <div class={row}>
+              <dt class="truncate text-zinc-200">{t}</dt>
+              <dd class="shrink-0 font-medium text-[#8be3a6]">None</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </article>
+
+  <!-- Diff approval for teams -->
+  <article class:list={[card, pad, "justify-between gap-10"]}>
+    <div>
+      <svg viewBox="0 0 64 72" class="mb-8 h-[72px] w-16 drop-shadow-[0_0_18px_rgba(88,204,125,0.35)]" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="mt-shield-rim" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#c8f5d6" />
+            <stop offset="0.45" stop-color="#58cc7d" />
+            <stop offset="1" stop-color="#2b6b40" />
+          </linearGradient>
+          <linearGradient id="mt-shield-face" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2a2a2f" />
+            <stop offset="1" stop-color="#121214" />
+          </linearGradient>
+        </defs>
+        <path d="M32 3 59 13v20c0 17-11.5 30-27 36C16.5 63 5 50 5 33V13L32 3Z" fill="url(#mt-shield-face)" stroke="url(#mt-shield-rim)" stroke-width="2.5" stroke-linejoin="round" />
+        <path d="M21 35.5 29 43l15-17" stroke="#58cc7d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <h3 class={h3}>Diff approval for teams</h3>
+      <p class={sub}>Agents propose, people approve. Shared notes change only after review.</p>
+    </div>
+    <dl class="grid gap-2.5 text-sm">
+      <div class={row}>
+        <dt class="truncate text-zinc-200">Personal vault</dt>
+        <dd class="shrink-0 text-zinc-400">Direct</dd>
+      </div>
+      <div class={row}>
+        <dt class="truncate text-zinc-200">Team vault</dt>
+        <dd class="shrink-0 font-medium text-[#8be3a6]">Diff review</dd>
+      </div>
+    </dl>
+  </article>
+
+  <!-- Fresh memory, zero rot -->
+  <article class:list={[card, pad, "justify-between gap-10"]}>
+    <div>
+      <h3 class={h3}>Fresh memory, zero rot</h3>
+      <p class={sub}>Old facts get archived, not forgotten in place. Decisions keep their date.</p>
+    </div>
+    <dl class="grid gap-2.5 text-sm">
+      {
+        [
+          ["Active notes", "Linted"],
+          ["Superseded lines", "Archived"],
+          ["Decisions", "Dated"],
+        ].map(([k, v]) => (
+          <div class={row}>
+            <dt class="truncate text-zinc-200">{k}</dt>
+            <dd class="shrink-0 font-medium text-[#8be3a6]">{v}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </article>
+
+  <!-- One setup, every coding agent -->
+  <article class:list={[card, pad, "justify-between gap-10 lg:col-span-2"]}>
+    <div>
+      <h3 class={h3}>One setup, every coding agent</h3>
+      <p class={sub}>One command for the harnesses on your machine, standard MCP for the rest.</p>
+    </div>
+    <div class="grid gap-6">
+      <ul class="flex flex-wrap gap-2.5" role="list">
+        {
+          agents.map((a) => (
+            <li class="inline-flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] py-2 pr-4 pl-3 text-sm font-medium text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:text-base">
+              <span class="size-2 rounded-full bg-[#58cc7d] shadow-[0_0_8px_#58cc7d]" aria-hidden="true" />
+              {a}
+            </li>
+          ))
+        }
+      </ul>
+      <p class="code-surface w-fit rounded-xl border border-white/[0.06] bg-[#111113] px-4 py-2.5 text-sm text-zinc-300">
+        <span class="text-zinc-500">$ </span><span class="tok-cmd">memtwig</span> install all
+      </p>
+    </div>
+  </article>
+</div>
