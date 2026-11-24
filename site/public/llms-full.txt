@@ -1,4 +1,4 @@
-# memtwig — Complete Technical Reference (v1.5.0)
+# Memtwig: Complete Technical Reference (v1.5.0)
 
 memtwig is an open-source (Apache 2.0), git-native, multi-org Markdown memory layer for AI coding agents and assistants, distributed as a single static Go binary (`CGO_ENABLED=0`, ~14 MB, Linux/macOS/Windows) with an embedded dark local Studio Web UI (`memtwig ui`, featuring Notes reader/editor, Knowledge Graph, Proposals diff reviewer, Audit log, and self-service Settings for providers, vaults, and harnesses) and interactive TUI (`memtwig tui`).
 

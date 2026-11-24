@@ -581,7 +581,7 @@ export function ProductBento() {
                     <span>
                       {diffState === "approved"
                         ? "Committed to Git · acme/infra/postgres.md"
-                        : "Proposal dismissed — vault untouched"}
+                        : "Proposal dismissed. Vault untouched"}
                     </span>
                   </div>
                   <div className="mt-4 flex justify-end">

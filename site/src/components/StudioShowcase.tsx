@@ -91,7 +91,7 @@ export function StudioShowcase() {
                   <span className="size-3 rounded-full bg-[#28c840]" />
                 </div>
                 <span className="hidden text-xs font-medium text-zinc-400 sm:inline tabular-nums">
-                  memtwig ui — localhost:4197
+                  memtwig ui · localhost:4197
                 </span>
               </div>
 

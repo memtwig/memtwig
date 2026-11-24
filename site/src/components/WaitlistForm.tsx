@@ -99,7 +99,7 @@ export function WaitlistForm() {
           <Check size={18} className="text-[#58cc7d]" />
           <span>
             {status === "already_joined"
-              ? "Preferences updated — you're already on the waitlist."
+              ? "Preferences updated. You're already on the waitlist."
               : "You're on the waitlist."}
           </span>
         </div>
